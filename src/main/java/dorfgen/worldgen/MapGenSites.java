@@ -34,17 +34,16 @@ import net.minecraftforge.common.DungeonHooks;
 
 public class MapGenSites extends MapGenVillage
 {
+	HashSet<Integer> set = new HashSet();
 	HashSet<Integer> made = new HashSet();
 	public MapGenSites()
 	{
 		super();
-		// TODO Auto-generated constructor stub
 	}
 
 	public MapGenSites(Map p_i2093_1_)
 	{
 		super(p_i2093_1_);
-		// TODO Auto-generated constructor stub
 	}
 
 	@Override
@@ -79,9 +78,9 @@ public class MapGenSites extends MapGenVillage
 			int key5 = (x5)+ 2048 * (z5);
 			
 			boolean mid = key != key2 && key != key3 && key != key4 && key != key5;
-			if(mid && DorfMap.sitesByCoord.containsKey(key) && !made.contains(key))
+			if(mid && DorfMap.sitesByCoord.containsKey(key) && !set.contains(key))
 			{
-				made.add(key);
+				set.add(key);
 				return true;
 			}
 			return false;
@@ -93,7 +92,13 @@ public class MapGenSites extends MapGenVillage
     protected StructureStart getStructureStart(int x, int z)
     {
 		Site site = WorldGenerator.instance.dorfs.getSiteForCoords(x*16, z*16);
+		int key= (x/16)+ 2048 * (z/16);
+//		if(made.contains(key))
+//			return new Start(worldObj, rand, x, z, -1);
+//		made.add(key);
+		
 		System.out.println(site);
+		
 		if(site==null)
 		{
 			return super.getStructureStart(x, z);

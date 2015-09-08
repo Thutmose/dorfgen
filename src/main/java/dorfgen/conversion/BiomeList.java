@@ -44,7 +44,7 @@ public class BiomeList {
 		{
 			boolean freezing = temperature < FREEZING;
 			boolean matched = false;
-			if(freezing)
+			if(freezing && (BiomeDictionary.isBiomeOfType(b, Type.OCEAN)||BiomeDictionary.isBiomeOfType(b, Type.RIVER)||BiomeDictionary.isBiomeOfType(b, Type.BEACH)))
 			{
 				BiomeGenBase temp = getMatch(b, Type.SNOWY);
 				if(temp!=b)
@@ -59,7 +59,7 @@ public class BiomeList {
 			}
 			else if(b!=BiomeGenBase.river)
 			{
-				b = getMatch(b, Type.COLD);
+				//b = getMatch(b, Type.COLD);
 			}
 		}
 		

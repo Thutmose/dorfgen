@@ -11,12 +11,16 @@ import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.MathHelper;
+import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.gen.ChunkProviderServer;
 
 public class ItemDebug extends Item
 {
@@ -31,11 +35,31 @@ public class ItemDebug extends Item
     @Override
     public ItemStack onItemRightClick(ItemStack itemstack, World world, EntityPlayer player)
     {
+
+    	int x = MathHelper.floor_double(player.posX);
+    	int y = (int) player.posY;
+    	int z = MathHelper.floor_double(player.posZ);
+//    	Chunk chunk;
+//    	System.out.println((chunk = world.getChunkFromBlockCoords(x, z))+" "+world);
+//    	
+//    	try {
+//        	System.out.println(world.getChunkProvider()+" "+chunk.getBlock(x&15, y, z&15)+" "+y);
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		for(int i = (int) player.posY - 1; i<300; i++)
+//    	try {
+//			//chunk.func_150807_a(x&15, i, z&15, Blocks.gold_block, 0);
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+
     	if(world.isRemote)
     		return itemstack;
+    	
     	DorfMap dorfs = WorldGenerator.instance.dorfs;
-    	int x = MathHelper.floor_double(player.posX);
-    	int z = MathHelper.floor_double(player.posZ);
     	int n = 0;
     	Region region = dorfs.getRegionForCoords(x, z);
     	Site site = dorfs.getSiteForCoords(x, z);
@@ -52,10 +76,10 @@ public class ItemDebug extends Item
     	if(!mess.isEmpty())
     		player.addChatMessage(new ChatComponentText(mess));
     	
-    	for(Site s: dorfs.sitesById.values())
-    	{
-    		System.out.println(s);
-    	}
+//    	for(Site s: dorfs.sitesById.values())
+//    	{
+//    		System.out.println(s);
+//    	}
     	
 //    	int x = MathHelper.floor_double(player.posX)/(scale * 16);
 //    	int z = MathHelper.floor_double(player.posZ)/(scale * 16);
@@ -73,26 +97,16 @@ public class ItemDebug extends Item
 //    		player.addChatMessage(new ChatComponentText(mess));
 //    	}
     	
-    	x = MathHelper.floor_double(player.posX)/WorldGenerator.scale;
-    	z = MathHelper.floor_double(player.posZ)/WorldGenerator.scale;
+//    	x = MathHelper.floor_double(player.posX)/WorldGenerator.scale;
+//    	z = MathHelper.floor_double(player.posZ)/WorldGenerator.scale;
     	
-    	CachedBicubicInterpolator heightInterpolator = new CachedBicubicInterpolator();
-    	BicubicInterpolator			biomeInterpolator	= new BicubicInterpolator();
-    	heightInterpolator.updateCoefficients(dorfs.temperatureMap, x, z);
-    	int t1 = heightInterpolator.interpolateHeight(8, x, z, 
-    			MathHelper.floor_double(player.posX)%8, MathHelper.floor_double(player.posZ)%8, 
-    			dorfs.temperatureMap);
-    	int v = dorfs.vegitationMap[x][z];
-    	mess = t1+" "+v;
-    	
-    	int n1 = biomeInterpolator.interpolateBiome(8, x, z, 
-    			MathHelper.floor_double(player.posX)%8, MathHelper.floor_double(player.posZ)%8, 
-    			dorfs.biomeMap);
-
-    	int n2 = BiomeList.getBiomeFromValues(n1, t1, 128, 128, 128, region);
-    	
-    	mess += " "+BiomeGenBase.getBiome(n1).biomeName+" "+BiomeGenBase.getBiome(n1).theBiomeDecorator.treesPerChunk;
-    	player.addChatMessage(new ChatComponentText(mess));
+//    	CachedBicubicInterpolator heightInterpolator = new CachedBicubicInterpolator();
+//    	BicubicInterpolator			biomeInterpolator	= new BicubicInterpolator();
+//    	
+//    	int t1 = heightInterpolator.interpolateHeight(WorldGenerator.scale, x, z, dorfs.elevationMap);
+//    	int v = dorfs.vegitationMap[x/scale][z/scale];
+//    	mess = t1+" "+v;
+//    	player.addChatMessage(new ChatComponentText(mess));
     	
     	return itemstack;
     }

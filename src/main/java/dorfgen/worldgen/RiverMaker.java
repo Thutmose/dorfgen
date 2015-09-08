@@ -47,7 +47,7 @@ public class RiverMaker {
 					continue;
 				dx2 = dz2 = 0;
 				int j = 0;
-				for(j = 255; j>1; j--)
+				for(j = 255; j>1; j--)//TODO replace 255 with height value of world
 				{
 					index = j << 0 | (i1) << 12 | (k1) << 8;
 					if(blocks[index]!=null)
@@ -55,12 +55,12 @@ public class RiverMaker {
 						break;
 					}
 				}
-				h = Math.max(j, 63);
+				h = Math.max(j, 63);//TODO use sea level
 
-				for (j = h - scale / 2; j < 255; j++) {
+				for (j = h - scale / 2; j < 255; j++) {//TODO replace 255 with height value of world
 					index = j << 0 | (i1) << 12 | (k1) << 8;
 
-					if (j == h - scale / 2)
+					if (j == h - scale / 2)//TODO slope bottom
 						blocks[index] = Blocks.stone;
 					else if (j < h) {
 						blocks[index] = Blocks.water;

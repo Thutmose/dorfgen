@@ -16,7 +16,7 @@ public class Config {
 		Configuration config = new Configuration(e.getSuggestedConfigurationFile());
 		config.load();
 		
-		WorldGenerator.scale = config.getInt("scale", config.CATEGORY_GENERAL, 8, 1, 16, "number of blocks per pixel, allowed values are from 1 to 16");
+		WorldGenerator.scale = config.getInt("scale", config.CATEGORY_GENERAL, 8, 1, 256, "number of blocks per pixel");
 		WorldGenerator.finite = config.getBoolean("finite", config.CATEGORY_GENERAL, true, "Whether everything outside the bounds of the image is deep ocean");
 		boolean spawnpixel = config.getBoolean("pixel", config.CATEGORY_GENERAL, false, "Whether the x and z coordinates for spawn given are pixel or block locations");
 		String[] spawnLoc = config.getStringList("worldspawn", config.CATEGORY_GENERAL, new String[]{"0","64","0"}, "spawn location for the world");

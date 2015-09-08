@@ -5,6 +5,7 @@ import java.util.Random;
 import dorfgen.BlockUGGrass;
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap.Region;
+import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.MathHelper;
@@ -14,6 +15,8 @@ import net.minecraft.world.gen.MapGenCaves;
 
 public class MapGenUGRegions extends MapGenCaves {
 
+	public CachedBicubicInterpolator	heightInterpolator	= new CachedBicubicInterpolator();
+	
     protected void makeCaves(long seed, int chunkx, int chunkz, Block[] blocks, double x, double y, double z)
     {
         this.makeCave(seed, chunkx, chunkz, blocks, x, y, z, 1.0F + this.rand.nextFloat() * 6.0F, 0.0F, 0.0F, -1, -1, 0.5D);
@@ -223,19 +226,31 @@ public class MapGenUGRegions extends MapGenCaves {
             int d2 = (z * 16 + this.rand.nextInt(16));
             int k1 = 1;
             
-            int h = world.getHeightValue(d0, d2);
+            int h = 0;
+            
+        	int xAbs = d0 - WorldGenerator.shift.posX;
+        	int zAbs =  d2 - WorldGenerator.shift.posZ;
+        	if(xAbs >=0 && xAbs <WorldGenerator.instance.dorfs.elevationMap.length && zAbs >=0 && zAbs <WorldGenerator.instance.dorfs.elevationMap[0].length)
+        	{
+    	    	h = heightInterpolator.interpolateHeight(WorldGenerator.scale, xAbs, zAbs, WorldGenerator.instance.dorfs.elevationMap);
+        	}
+        	else
+        	{
+        		h = world.getHeightValue(d0, d2);
+        	}
+        	h /= 2;
             
             for(int i = 0; i<=5; i++)
             {
             	if(regions[i])
             	{
             		regions[i] = false;
-            		d1 = h * (5 - i) + 8;
+            		d1 = h * (5 - i)/5d + 8;
             		break;
             	}
             }
             
-            if(d1==-1)
+            if(d1<0)
             	continue;
 
             if (this.rand.nextInt(4) == 0)
@@ -278,6 +293,14 @@ public class MapGenUGRegions extends MapGenCaves {
     //Vanilla bugs to make sure that we generate the map the same way vanilla does.
     private boolean isTopBlock(Block[] data, int index, int x, int y, int z, int chunkX, int chunkZ)
     {
+    	int xAbs = x + chunkX * 16 - WorldGenerator.shift.posX;
+    	int zAbs =  z + chunkZ * 16 - WorldGenerator.shift.posZ;
+    	if(xAbs >=0 && xAbs <WorldGenerator.instance.dorfs.elevationMap.length && zAbs >=0 && zAbs <WorldGenerator.instance.dorfs.elevationMap[0].length)
+    	{
+	    	int h = heightInterpolator.interpolateHeight(WorldGenerator.scale, xAbs, zAbs, WorldGenerator.instance.dorfs.elevationMap);
+	    	return h <= y;
+    	}
+    	
         BiomeGenBase biome = worldObj.getBiomeGenForCoords(x + chunkX * 16, z + chunkZ * 16);
         return (isExceptionBiome(biome) ? data[index] == Blocks.grass : data[index] == biome.topBlock);
     }

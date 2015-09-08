@@ -59,7 +59,7 @@ public class WorldChunkManagerFinite extends WorldChunkManager
 		if (x >= 0 && z >= 0 && (x + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap.length
 				&& (z + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap[0].length)
 		{
-			makeBiomes(biomes, scale, x / scale, z / scale);
+			makeBiomes(biomes, scale, x, z);
 		}
 
 		return biomes;
@@ -77,49 +77,43 @@ public class WorldChunkManagerFinite extends WorldChunkManager
 		if (x >= 0 && z >= 0 && (x + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap.length
 				&& (z + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap[0].length) {
 
-		return biomes = makeBiomes(biomes, scale, x / scale, z / scale); }
+		x += WorldGenerator.shift.posX;
+		z += WorldGenerator.shift.posZ;
+			
+		return biomes = makeBiomes(biomes, scale, x, z); }
 		return biomes;
 	}
 
 	/** Takes Blocks Coordinates
 	 * 
 	 * @param scale     - number of blocks per pixel
-	 * @param x      - x coordinate of the pixel being used
-	 * @param z  - y coordinate of the pixel being used
+	 * @param x      - x coordinate of the block being used
+	 * @param z  - y coordinate of the block being used
 	 * @param blocks */
 	private BiomeGenBase[] makeBiomes(BiomeGenBase[] biomes, int scale, int x, int z)
 	{
-		// TODO remove hardcoding here with stuff with temperature map
 		int index;
 		for (int i1 = 0; i1 < 16; i1++)
 		{
 			for (int k1 = 0; k1 < 16; k1++)
 			{
 				index = (i1) + (k1) * 16;
-				biomes[index] = BiomeGenBase.getBiome(getBiomeFromMaps(x, z, i1, k1));
+				biomes[index] = BiomeGenBase.getBiome(getBiomeFromMaps(x + i1 - WorldGenerator.shift.posX, z + k1 - WorldGenerator.shift.posZ));
 			}
 		}
-		// System.out.println("modified "+n+" Biomes");
 		return biomes;
 	}
 
-	private int getBiomeFromMaps(int x, int z, int i1, int k1)
+	private int getBiomeFromMaps(int x, int z)
 	{
 		DorfMap dorfs = WorldGenerator.instance.dorfs;
-		
-		int b1 = biomeInterpolator.interpolateBiome(scale, x + i1 / scale, z + k1 / scale, i1 % scale,
-				k1 % scale, dorfs.biomeMap);
+
+		int b1 = biomeInterpolator.interpolateBiome(dorfs.biomeMap, x, z, scale);
 		boolean hasHeightmap = dorfs.elevationMap.length > 0;
 		boolean hasThermalMap = dorfs.temperatureMap.length > 0;
-		if (hasHeightmap) heightInterpolator.updateCoefficients(dorfs.elevationMap
-				,x , z);
-		if (hasThermalMap) miscInterpolator.updateCoefficients(dorfs.temperatureMap
-				, x, z);
 		
-		int h1 = hasHeightmap ? heightInterpolator.interpolateHeight(scale, x, z,
-				scale/2, scale/2, dorfs.elevationMap) : 64;
-		int t1 = hasThermalMap? miscInterpolator.interpolateHeight(scale, x, z,
-				scale/2, scale/2, dorfs.temperatureMap) : 128;
+		int h1 = hasHeightmap ? heightInterpolator.interpolateHeight(scale, x, z, dorfs.elevationMap) : 64;
+		int t1 = hasThermalMap? miscInterpolator.interpolateHeight(scale, x, z, dorfs.temperatureMap) : 128;
 		
 		if (h1 > 60 && (b1 == BiomeGenBase.deepOcean.biomeID || b1 == BiomeGenBase.ocean.biomeID))
 		{

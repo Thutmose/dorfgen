@@ -1,6 +1,7 @@
 package dorfgen.worldgen;
 
 import java.awt.image.BufferedImage;
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Random;
 
@@ -14,6 +15,7 @@ import net.minecraft.util.MathHelper;
 import net.minecraft.world.ChunkPosition;
 import net.minecraft.world.SpawnerAnimals;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 import net.minecraft.world.WorldType;
 import net.minecraft.world.biome.BiomeGenBase;
 import net.minecraft.world.chunk.Chunk;
@@ -79,31 +81,21 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 	}
 
 	/**
-	 * Takes Blocks Coordinates
-	 * 
-	 * @param scale
-	 *            - number of blocks per pixel
-	 * @param x
-	 *            - x coordinate of the pixel being used
-	 * @param z
-	 *            - y coordinate of the pixel being used
-	 * @param blocks
+	 * Takes Chunk Coordinates
 	 */
-	public void populateBlocksFromImage(int scale, int x, int z, Block[] blocks) {
+	public void populateBlocksFromImage(int scale, int chunkX, int chunkZ, Block[] blocks) {
 		int index;
 		int x1, z1, h, w;
+		int x = chunkX * 16;
+		int z = chunkZ * 16;
 		boolean water = false;
 		double dx,dz;
 		for (int i1 = 0; i1 < 16; i1++) {
 			for (int k1 = 0; k1 < 16; k1++) {
-				x1 = x+i1/scale;
-				z1 = z+k1/scale;
-				dx = (i1%scale)/(double)scale;
-				dz = (k1%scale)/(double)scale;
-				h = WorldGenerator.instance.dorfs.elevationMap[x1][z1];
+				x1 = (x+i1)/scale;
+				z1 = (z+k1)/scale;
 				w = WorldGenerator.instance.dorfs.waterMap[x1][z1];
-				
-				int h1 =bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1, dx, dz);
+				int h1 =bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x + i1, z + k1, scale);
 				h1 = Math.max(h1, 10);
 				water = w > 0 || (WorldGenerator.instance.dorfs.countLarger(0,WorldGenerator.instance.dorfs.waterMap, x1, z1, 1) > 0);
 				
@@ -113,7 +105,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 
 				}
 				if(w<=0)
-					w = 63;
+					w = 63;//TODO replace with sea level
 				if(water)
 				for (int j = h1; j < w; j++) {
 					index = j << 0 | (i1) << 12 | (k1) << 8;
@@ -157,6 +149,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 	public Chunk provideChunk(int chunkX, int chunkZ) {
 		this.rand.setSeed((long) chunkX * 341873128712L + (long) chunkZ
 				* 132897987541L);
+		
 		Block[] ablock = new Block[65536];
 		byte[] abyte = new byte[65536];
 		this.biomesForGeneration = this.worldObj.getWorldChunkManager()
@@ -175,7 +168,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 
 			int x = imgX;
 			int z = imgZ;
-			populateBlocksFromImage(scale, x/scale, z/scale, ablock);
+			populateBlocksFromImage(scale, chunkX, chunkZ, ablock);
 			riverMaker.makeRiversForChunk(chunkX, chunkZ, ablock, biomesForGeneration);
 			makeBeaches(scale, x/scale, z/scale, ablock);
 		} else if (WorldGenerator.finite) {
@@ -200,7 +193,12 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 //					chunkX, chunkZ, ablock);
 		}
 
-		Chunk chunk = new Chunk(this.worldObj, ablock, abyte, chunkX, chunkZ);
+		Chunk chunk;// = new BigChunk(this.worldObj, ablock, abyte, chunkX, chunkZ);
+		try {
+			chunk = (Chunk) WorldGenerator.chunkClass.getConstructor(World.class, Block[].class, byte[].class, int.class, int.class).newInstance(this.worldObj, ablock, abyte, chunkX, chunkZ);
+		} catch (Exception e) {
+			chunk = null;
+		}
 		byte[] abyte1 = chunk.getBiomeArray();
 
 		for (int k = 0; k < abyte1.length; ++k) {
@@ -214,6 +212,8 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 	@Override
     public void recreateStructures(int p_82695_1_, int p_82695_2_)
     {
+//        if(true)
+//        	return;
         if (this.mapFeaturesEnabled)
         {
             this.mineshaftGenerator.func_151539_a(this, this.worldObj, p_82695_1_, p_82695_2_, (Block[])null);
@@ -241,10 +241,12 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 
         MinecraftForge.EVENT_BUS.post(new PopulateChunkEvent.Pre(provider, worldObj, rand, x, z, flag));
 
+//	        if(true)
+//	        	return;
         if (this.mapFeaturesEnabled)
         {
             this.mineshaftGenerator.generateStructuresInChunk(this.worldObj, this.rand, x, z);
-            flag = this.villageGenerator.generateStructuresInChunk(this.worldObj, this.rand, x, z);
+            flag = this.villageGenerator.generateStructuresInChunk(this.worldObj, this.rand, x, z);//TODO
 //            this.scatteredFeatureGenerator.generateStructuresInChunk(this.worldObj, this.rand, p_73153_2_, p_73153_3_);
         }
 
@@ -279,7 +281,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
             l1 = k + this.rand.nextInt(16) + 8;
             i2 = this.rand.nextInt(256);
             int j2 = l + this.rand.nextInt(16) + 8;
-            (new WorldGenDungeons()).generate(this.worldObj, this.rand, l1, i2, j2);
+            (new WorldGenDungeons()).generate(this.worldObj, this.rand, l1, i2, j2);//TODO
         }
 
         biomegenbase.decorate(this.worldObj, this.rand, k, l);

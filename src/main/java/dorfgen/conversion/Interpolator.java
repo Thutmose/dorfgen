@@ -22,8 +22,11 @@ public class Interpolator {
 			return getValue(arr, x);
 		}
 		
-		public int interpolate(int[][] image, int pixelX, int pixelY, double x, double y)
+		public int interpolate(int[][] image, int xAbs, int yAbs, int scale)
 		{
+			int pixelX = xAbs/scale;
+			int pixelY = yAbs/scale;
+			double x = (xAbs - scale * pixelX)/(double)scale,y = (yAbs - scale * pixelY)/(double)scale;
 			double[][] arr = new double[4][4];
 			int n = 0;
 			for(int i = -1; i<=2; i++)
@@ -44,9 +47,14 @@ public class Interpolator {
 			return (int) Math.round(getValue(arr, x, y));
 		}
 		
-		public int interpolateBiome(int[][] image, int pixelX, int pixelY, double x, double y)
+		public int interpolateBiome(int[][] image, int xAbs, int yAbs, int scale)
 		{
+			int pixelX = xAbs/scale;
+			int pixelY = yAbs/scale;
+			
 			int val = image[pixelX][pixelY];
+			double x = (xAbs - scale * pixelX)/(double)scale,y = (yAbs - scale * pixelY)/(double)scale;
+			
 			double max = -1;
 			int index = -1;
 			int[] biomes = new int[16];
@@ -83,13 +91,6 @@ public class Interpolator {
 			
 			return val;
 		}
-		
-		public int interpolateBiome(int scale, int pixelX, int pixelY, int xRel, int yRel, int[][] image)
-		{
-			double x = xRel/(double)scale;
-			double y = yRel/(double)scale;
-			return interpolateBiome(image, pixelX, pixelY, x, y);
-		}
 	}
 
 	public static class CachedBicubicInterpolator
@@ -101,22 +102,34 @@ public class Interpolator {
 
 		private double[][] arr = new double[4][4];
 		
+		private int lastX, lastY;
+		private int[][] lastArr;
+		
 		public int interpolate(double x, double y)
 		{
 			return (int) Math.round(getValue(x, y));
 		}
 		
-		public int interpolateHeight(int scale, int pixelX, int pixelY, int xRel, int yRel, int[][] image)
+		public int interpolateHeight(int scale, int xAbs, int yAbs, int[][] image)
 		{
+			int pixelX = xAbs/scale;
+			int pixelY = yAbs/scale;
+			updateCoefficients(image, pixelX, pixelY);
 			int val = image[pixelX][pixelY];
-			double x = xRel/(double)scale;
-			double y = yRel/(double)scale;
+			double x = (xAbs - scale * pixelX)/(double)scale,y = (yAbs - scale * pixelY)/(double)scale;
 			val = interpolate(x, y);
 			return val;
 		}
 		
-		public void updateCoefficients(int[][] image, int pixelX, int pixelY)
+		private void updateCoefficients(int[][] image, int pixelX, int pixelY)
 		{
+			if(image==lastArr && pixelX == lastX && pixelY==lastY)
+			{
+				return;
+			}
+			lastArr = image;
+			lastX = pixelX;
+			lastY = pixelY;
 			for(int i = 0; i<16; i++)
 			{
 				arr[i%4][i/4] = image[pixelX][pixelY];
