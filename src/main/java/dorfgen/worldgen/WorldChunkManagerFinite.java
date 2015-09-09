@@ -109,11 +109,21 @@ public class WorldChunkManagerFinite extends WorldChunkManager
 		DorfMap dorfs = WorldGenerator.instance.dorfs;
 
 		int b1 = biomeInterpolator.interpolateBiome(dorfs.biomeMap, x, z, scale);
+		if(dorfs.riverMap.length > 0)
+		{
+			int r1 = miscInterpolator.interpolateHeight(scale, x, z, dorfs.riverMap);
+			if(r1>0)
+			{
+				b1 = BiomeGenBase.river.biomeID;
+			}
+		}
+		
 		boolean hasHeightmap = dorfs.elevationMap.length > 0;
 		boolean hasThermalMap = dorfs.temperatureMap.length > 0;
 		
 		int h1 = hasHeightmap ? heightInterpolator.interpolateHeight(scale, x, z, dorfs.elevationMap) : 64;
 		int t1 = hasThermalMap? miscInterpolator.interpolateHeight(scale, x, z, dorfs.temperatureMap) : 128;
+		
 		
 		if (h1 > 60 && (b1 == BiomeGenBase.deepOcean.biomeID || b1 == BiomeGenBase.ocean.biomeID))
 		{

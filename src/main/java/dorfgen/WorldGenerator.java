@@ -98,9 +98,6 @@ public class WorldGenerator {
 		String folder = file.getAbsolutePath();
 		String name = file.getName();
 		FileLoader.biomes = folder.replace(name, MODID + seperator + "biomes.csv");
-		FileLoader.biome = folder.replace(name, MODID + seperator + "biome");
-		FileLoader.elevation = folder.replace(name, MODID + seperator + "elevation");
-		FileLoader.elevationWater = folder.replace(name, MODID + seperator + "elevationWater");
 		//
 		MapGenStructureIO.func_143031_a(Start.class, "dorfsitestart");
 		MapGenStructureIO.registerStructure(Start.class, "dorfsitestart");
@@ -139,7 +136,15 @@ public class WorldGenerator {
 						int x = s.x * 16 * scale;
 						int y = 0;
 						int z = s.z * 16 * scale;
-						y = dorfs.elevationMap[(x - shift.posX) / scale][(z - shift.posZ) / scale];
+						try
+						{
+							y = dorfs.elevationMap[(x - shift.posX) / scale][(z - shift.posZ) / scale];
+						}
+						catch (Exception e)
+						{
+							System.out.println(s+" "+dorfs.elevationMap.length);
+							e.printStackTrace();
+						}
 						evt.world.setSpawnLocation(x + 16 * scale / 2, y, z + 16 * scale / 2);
 						return;
 					}

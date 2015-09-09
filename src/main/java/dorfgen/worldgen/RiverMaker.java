@@ -9,45 +9,45 @@ import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
 
 public class RiverMaker {
-	public BicubicInterpolator bicubicInterpolator = new BicubicInterpolator();
+	public static BicubicInterpolator bicubicInterpolator = new BicubicInterpolator();
 	
 	public RiverMaker() {
 		// TODO Auto-generated constructor stub
 	}
 
-	public void makeRiversForChunk(int chunkX, int chunkY, Block[] blocks, BiomeGenBase[] biomes) {
+	public void makeRiversForChunk(World world, int chunkX, int chunkZ, Block[] blocks, BiomeGenBase[] biomes) {
 		int index;
-		int x = (chunkX * 16 - WorldGenerator.shift.posX)/scale;
-		int z = (chunkX * 16 - WorldGenerator.shift.posZ)/scale;
-		int x1, z1, h, w, r, h1, b1, id;
+		int x = (chunkX * 16 - WorldGenerator.shift.posX);
+		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
+		int x1, z1, h, w, r, b1, id;
 		boolean water = false;
 		double dx, dz, dx2, dz2;
 		int n = 0;
 		for (int i1 = 0; i1 < 16; i1++) {
 			for (int k1 = 0; k1 < 16; k1++) {
-				x1 = x + i1 / scale;
-				z1 = z + k1 / scale;
-				dx = (i1 % scale) / (double) scale;
-				dz = (k1 % scale) / (double) scale;
-				h = h1 = WorldGenerator.instance.dorfs.elevationMap[x1][z1];
-				r = WorldGenerator.instance.dorfs.riverMap[x1][z1];
+				x1 = (x + i1) / scale;
+				z1 = (z + k1) / scale;
+				
+				dx = (x + i1 - scale * x1)/(double)scale;
+				dz = (z + k1 - scale * z1)/(double)scale;
+				
+				
+				h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x + i1, z + k1, scale);
+				r = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.riverMap, x + i1, z + k1, scale);
+				
 				id = biomes[i1+16*k1].biomeID;
-				boolean river = id == BiomeGenBase.river.biomeID
-						|| id == BiomeGenBase.frozenRiver.biomeID;
-				
-				if(instance.dorfs.biomeMap.length>0)
-				{
-				//	river = river || BiomeGenBase.river.biomeID == bicubicInterpolator.interpolateBiome(instance.dorfs.biomeMap, x1, z1, dx, dz);
-				}
-				
+				boolean river;
+				river = r > 0;
 				if(!river)
 					continue;
+				
 				dx2 = dz2 = 0;
 				int j = 0;
-				for(j = 255; j>1; j--)//TODO replace 255 with height value of world
+				for(j = world.getHeight()-1; j>1; j--)
 				{
 					index = j << 0 | (i1) << 12 | (k1) << 8;
 					if(blocks[index]!=null)
@@ -55,33 +55,41 @@ public class RiverMaker {
 						break;
 					}
 				}
-				h = Math.max(j, 63);//TODO use sea level
-
-				for (j = h - scale / 2; j < 255; j++) {//TODO replace 255 with height value of world
+				h = Math.max(j, (int) (world.provider.getHorizon()));
+				int dh = Math.max(0, ((r - 80)/8));
+				dh = Math.min(dh, 8);
+				for (j = h - dh; j < world.getHeight()-1; j++) {
 					index = j << 0 | (i1) << 12 | (k1) << 8;
 
-					if (j == h - scale / 2)//TODO slope bottom
+					if (j == dh)
 						blocks[index] = Blocks.stone;
 					else if (j < h) {
 						blocks[index] = Blocks.water;
-					} else if(j >= h)
+					} else if(j >= h && r > 80)
 						blocks[index] = null;
 				}
 			}
 		}
 	}
-	EnumFacing[] dirs = {EAST,WEST,NORTH,SOUTH};
-	EnumFacing[] getRiverDirection(int pixelX, int pixelY)
+	static EnumFacing[] dirs = {EAST,WEST,NORTH,SOUTH};
+	public static EnumFacing[] getRiverDirection(int xAbs, int zAbs, int width)
 	{
+		int pixelX = xAbs/scale;
+		int pixelY = zAbs/scale;
+		int r = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.riverMap, xAbs, zAbs, scale);
+		
 		EnumFacing[] ret = new EnumFacing[4];
 		int b;
 		for(int i = 0; i<4; i++)
 		{
-			int x = pixelX + dirs[i].getFrontOffsetX();
-			int y = pixelY + dirs[i].getFrontOffsetY();
-			if(WorldGenerator.instance.dorfs.riverMap[x][y]>0)
+			int x1 = xAbs + dirs[i].getFrontOffsetX() * width;
+			int z1 = zAbs + dirs[i].getFrontOffsetZ() * width;
+			
+			r = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.riverMap, x1, z1, scale);
+			
+			if(r>0)
 			{
-				ret[i] = dirs[(i+2)%4];
+				ret[i] = dirs[i];
 			}
 		}
 		return ret;

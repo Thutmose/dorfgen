@@ -24,6 +24,7 @@ public class MapGenUGRegions extends MapGenCaves {
 
     protected void makeCave(long seed, int chunkx, int chunkz, Block[] blocks, double x, double y, double z, float p_151541_12_, float p_151541_13_, float p_151541_14_, int p_151541_15_, int p_151541_16_, double p_151541_17_)
     {
+    	if(true)return;//TODO improve this
         double d4 = (double)(chunkx * 16 + 8);
         double d5 = (double)(chunkz * 16 + 8);
         float f3 = 0.0F;

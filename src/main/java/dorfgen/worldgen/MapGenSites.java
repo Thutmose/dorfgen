@@ -302,7 +302,7 @@ public class MapGenSites extends MapGenVillage
 
                     world_.setBlock(x1, h, z1, Blocks.mob_spawner, 0, 2);
                     TileEntityMobSpawner tileentitymobspawner = (TileEntityMobSpawner)world_.getTileEntity(x1, h, z1);
-                    System.out.println(x1+" "+h+" "+z1);
+                    
                     if (tileentitymobspawner != null)
                     {
                         tileentitymobspawner.func_145881_a().setEntityName(DungeonHooks.getRandomDungeonMob(rand));

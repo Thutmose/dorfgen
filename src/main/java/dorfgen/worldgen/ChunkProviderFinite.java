@@ -62,6 +62,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 	/** Holds ravine generator */
 	private MapGenBase ravineGenerator = new MapGenRavine();
 	private RiverMaker riverMaker = new RiverMaker();
+	private WorldConstructionMaker constructor = new WorldConstructionMaker();
 	/** The biomes that are used to generate the chunk */
 	private BiomeGenBase[] biomesForGeneration;
 	public BicubicInterpolator bicubicInterpolator = new BicubicInterpolator();
@@ -99,13 +100,17 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 				h1 = Math.max(h1, 10);
 				water = w > 0 || (WorldGenerator.instance.dorfs.countLarger(0,WorldGenerator.instance.dorfs.waterMap, x1, z1, 1) > 0);
 				
+				double s = worldObj.provider.getHeight() / 256d;
+				if(h1 > worldObj.provider.getHorizon())
+					h1 = (int) (h1 * s);
+				
 				for (int j = 0; j < h1; j++) {
 					index = j << 0 | (i1) << 12 | (k1) << 8;
 					blocks[index] = Blocks.stone;
 
 				}
 				if(w<=0)
-					w = 63;//TODO replace with sea level
+					w = (int) (worldObj.provider.getHorizon());
 				if(water)
 				for (int j = h1; j < w; j++) {
 					index = j << 0 | (i1) << 12 | (k1) << 8;
@@ -116,7 +121,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 	}
 
 	public void fillOceans(int x, int z, Block[] blocks) {
-		byte b0 = 63;// Sea Level
+		byte b0 = (byte) (worldObj.provider.getHorizon());
 		int index;
 		for (int i = 0; i < 16; i++)
 			for (int k = 0; k < 16; k++) {
@@ -150,8 +155,8 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 		this.rand.setSeed((long) chunkX * 341873128712L + (long) chunkZ
 				* 132897987541L);
 		
-		Block[] ablock = new Block[65536];
-		byte[] abyte = new byte[65536];
+		Block[] ablock = new Block[256 * worldObj.getHeight()];
+		byte[] abyte = new byte[256 * worldObj.getHeight()];
 		this.biomesForGeneration = this.worldObj.getWorldChunkManager()
 				.loadBlockGeneratorData(this.biomesForGeneration, chunkX * 16,
 						chunkZ * 16, 16, 16);
@@ -169,7 +174,8 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 			int x = imgX;
 			int z = imgZ;
 			populateBlocksFromImage(scale, chunkX, chunkZ, ablock);
-			riverMaker.makeRiversForChunk(chunkX, chunkZ, ablock, biomesForGeneration);
+			riverMaker.makeRiversForChunk(worldObj, chunkX, chunkZ, ablock, biomesForGeneration);
+			constructor.buildRoads(worldObj, chunkX, chunkZ, ablock);
 			makeBeaches(scale, x/scale, z/scale, ablock);
 		} else if (WorldGenerator.finite) {
 			this.fillOceans(chunkX, chunkZ, ablock);
@@ -258,7 +264,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
             && TerrainGen.populate(provider, worldObj, rand, x, z, flag, LAKE))
         {
             k1 = k + this.rand.nextInt(16) + 8;
-            l1 = this.rand.nextInt(256);
+            l1 = this.rand.nextInt(worldObj.getHeight());
             i2 = l + this.rand.nextInt(16) + 8;
             (new WorldGenLakes(Blocks.water)).generate(this.worldObj, this.rand, k1, l1, i2);
         }
@@ -266,7 +272,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
         if (TerrainGen.populate(provider, worldObj, rand, x, z, flag, LAVA) && !flag && this.rand.nextInt(8) == 0)
         {
             k1 = k + this.rand.nextInt(16) + 8;
-            l1 = this.rand.nextInt(this.rand.nextInt(248) + 8);
+            l1 = this.rand.nextInt(this.rand.nextInt(worldObj.getHeight()-8) + 8);
             i2 = l + this.rand.nextInt(16) + 8;
 
             if (l1 < 63 || this.rand.nextInt(10) == 0)
@@ -279,7 +285,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
         for (k1 = 0; doGen && k1 < 8; ++k1)
         {
             l1 = k + this.rand.nextInt(16) + 8;
-            i2 = this.rand.nextInt(256);
+            i2 = this.rand.nextInt(worldObj.getHeight());
             int j2 = l + this.rand.nextInt(16) + 8;
             (new WorldGenDungeons()).generate(this.worldObj, this.rand, l1, i2, j2);//TODO
         }
@@ -358,7 +364,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 				}
 				if(beach)
 				{
-					for(int j = h1+1; j<63; j++)//TODO replace with sea level
+					for(int j = h1+1; j<worldObj.provider.getHorizon(); j++)
 					{
 						index = j << 0 | (i1) << 12 | (k1) << 8;
 						blocks[index] = Blocks.water;

@@ -34,6 +34,8 @@ public class DorfMap {
 	public static HashMap<Integer, Region> regionsByCoord = new HashMap();
 	public static HashMap<Integer, Region> ugRegionsById = new HashMap();
 	public static HashMap<Integer, Region> ugRegionsByCoord = new HashMap();
+	public static HashMap<Integer, WorldConstruction> constructionsById = new HashMap();
+	public static HashMap<Integer, HashSet<WorldConstruction>> constructionsByCoord = new HashMap();
 	static int waterShift = -35;
 	
 	public BicubicInterpolator			biomeInterpolator	= new BicubicInterpolator();
@@ -136,8 +138,6 @@ public class DorfMap {
                 {
                     waterMap[x][y] = -1;
                     riverMap[x][y] = b;
-                    if(biomeMap.length>0)
-                    	biomeMap[x][y] = BiomeGenBase.river.biomeID;
                 }
                 else
                 {
@@ -232,11 +232,7 @@ public class DorfMap {
             		{
             			int[] dir = getDirToWater(x, y);
             			riverMap[x+dir[0]][y+dir[1]] = r;
-                        if(biomeMap.length>0)
-                        	biomeMap[x+dir[0]][y+dir[1]] = BiomeGenBase.river.biomeID;
             			riverMap[x+2*dir[0]][y+2*dir[1]] = r;
-                        if(biomeMap.length>0)
-                        	biomeMap[x+2*dir[0]][y+2*dir[1]] = BiomeGenBase.river.biomeID;
             			
             		}
             	}
@@ -346,6 +342,14 @@ public class DorfMap {
     	return sitesByCoord.get(key);
 	}
 	
+	public HashSet<WorldConstruction> getConstructionsForCoords(int x, int z)
+	{
+    	x = x/(scale * 16);
+    	z = z/(scale * 16);
+    	int key = x + 2048 * z;
+    	return constructionsByCoord.get(key);
+	}
+	
 	public void postProcessRegions()
 	{
 		for(Region region: regionsById.values())
@@ -423,12 +427,17 @@ public class DorfMap {
 	
 	public static class Site
 	{
+		public final int WORLDSITERATIO = 51;
+		public final int LOCALRATIO = 9;
+		
 		public final String name;
 		public final int id;
 		public final SiteType type;
 		public final int x;
 		public final int z;
 		public final Set<Structure> structures = new HashSet<DorfMap.Structure>();
+		public BufferedImage map;
+		
 		public Site(String name_, int id_, SiteType type_, int x_, int z_)
 		{
 			name = name_;
@@ -461,6 +470,13 @@ public class DorfMap {
 				return ((Site)o).id == id;
 			}
 			return super.equals(o);
+		}
+		
+		public int[] globalToLocal(int xin, int zin)
+		{
+			int[] ret = new int[2];
+			
+			return ret;
 		}
 	}
 	
@@ -562,6 +578,51 @@ public class DorfMap {
 			if(o instanceof Region)
 			{
 				return ((Region)o).id == id;
+			}
+			return super.equals(o);
+		}
+		
+		@Override
+		public String toString()
+		{
+			return id+" "+name+" "+type;
+		}
+	}
+	
+	public static enum ConstructionType
+	{
+		ROAD,
+		BRIDGE,
+		TUNNEL;
+	}
+	
+	public static class WorldConstruction
+	{
+		public final int id;
+		public final String name;
+		public final ConstructionType type;
+		public final HashSet<Integer> coords = new HashSet();
+		
+		public WorldConstruction(int id_, String name_, ConstructionType type_)
+		{
+			id = id_;
+			name = name_;
+			type = type_;
+		}
+		
+		public boolean isInRegion(int x, int z)
+		{
+	    	x = x/(scale * 16);
+	    	z = z/(scale * 16);
+	    	int key = x + 2048 * z;
+			return coords.contains(key);
+		}
+		@Override
+		public boolean equals(Object o)
+		{
+			if(o instanceof WorldConstruction)
+			{
+				return ((WorldConstruction)o).id == id;
 			}
 			return super.equals(o);
 		}
