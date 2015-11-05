@@ -32,6 +32,8 @@ public class Config {
 		
 		WorldGenerator.spawn = new ChunkCoordinates(x, Integer.parseInt(spawnLoc[1]), z);
 		
+		WorldGenerator.spawnSite = config.getString("spawnSite", config.CATEGORY_GENERAL, "", "Default Site for Spawning in, overrides random spawn and coord based spawn.");
+		
 		spawnLoc = config.getStringList("imageShift", config.CATEGORY_GENERAL, new String[]{"0","0"}, "offset of the image in world in blocks");
 		WorldGenerator.shift = new ChunkCoordinates(Integer.parseInt(spawnLoc[0]), 0, Integer.parseInt(spawnLoc[1]));
 		

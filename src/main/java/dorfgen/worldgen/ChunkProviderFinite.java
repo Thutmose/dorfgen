@@ -260,7 +260,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
         int l1;
         int i2;
 
-        if (biomegenbase != BiomeGenBase.desert && biomegenbase != BiomeGenBase.desertHills && !flag && this.rand.nextInt(4) == 0
+        if (biomegenbase != BiomeGenBase.desert && biomegenbase != BiomeGenBase.desertHills && !flag && this.rand.nextInt(8) == 0
             && TerrainGen.populate(provider, worldObj, rand, x, z, flag, LAKE))
         {
             k1 = k + this.rand.nextInt(16) + 8;
@@ -269,7 +269,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
             (new WorldGenLakes(Blocks.water)).generate(this.worldObj, this.rand, k1, l1, i2);
         }
 
-        if (TerrainGen.populate(provider, worldObj, rand, x, z, flag, LAVA) && !flag && this.rand.nextInt(8) == 0)
+        if (TerrainGen.populate(provider, worldObj, rand, x, z, flag, LAVA) && !flag && this.rand.nextInt(16) == 0)
         {
             k1 = k + this.rand.nextInt(16) + 8;
             l1 = this.rand.nextInt(this.rand.nextInt(worldObj.getHeight()-8) + 8);
@@ -293,7 +293,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
         biomegenbase.decorate(this.worldObj, this.rand, k, l);
         if (TerrainGen.populate(provider, worldObj, rand, x, z, flag, ANIMALS))
         {
-        SpawnerAnimals.performWorldGenSpawning(this.worldObj, biomegenbase, k + 8, l + 8, 16, 16, this.rand);
+        	SpawnerAnimals.performWorldGenSpawning(this.worldObj, biomegenbase, k + 8, l + 8, 16, 16, this.rand);
         }
         k += 8;
         l += 8;

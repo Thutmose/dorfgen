@@ -60,14 +60,21 @@ public class ItemDebug extends Item {
 			int x1 = site.x * 16 * scale + 16 * scale / 2;
 			int z1 = site.z * 16 * scale + 16 * scale / 2;
 		}
-		WorldGenerator.spawn.posX = 2629;
-		WorldGenerator.spawn.posY = 100;
-		WorldGenerator.spawn.posZ = 2502;
+		
+		for(Site s: WorldGenerator.instance.dorfs.sitesById.values())
+		{
+			System.out.println(s);
+		}
 		
 		
-		WorldConstructionMaker maker = new WorldConstructionMaker();
-		int chunkX = x/16;
-		int chunkZ = z/16;
+//		WorldGenerator.spawn.posX = 2629;
+//		WorldGenerator.spawn.posY = 100;
+//		WorldGenerator.spawn.posZ = 2502;
+		
+		
+//		WorldConstructionMaker maker = new WorldConstructionMaker();
+//		int chunkX = x/16;
+//		int chunkZ = z/16;
 		mess += " "+dorfs.getConstructionsForCoords(x, z);
 		
 		if (!mess.isEmpty())

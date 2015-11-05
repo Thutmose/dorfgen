@@ -3,6 +3,10 @@ package dorfgen;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collections;
+
+import com.ibm.icu.text.DisplayContext.Type;
 
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
@@ -41,6 +45,7 @@ import dorfgen.conversion.Config;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.FileLoader;
 import dorfgen.conversion.DorfMap.Site;
+import dorfgen.conversion.DorfMap.SiteType;
 import dorfgen.worldgen.ChunkProviderFinite;
 import dorfgen.worldgen.MapGenSites;
 import dorfgen.worldgen.WorldChunkManagerFinite;
@@ -71,6 +76,7 @@ public class WorldGenerator {
 	public static boolean finite;
 	public static ChunkCoordinates spawn;
 	public static ChunkCoordinates shift;
+	public static String spawnSite = "";
 	public static boolean randomSpawn;
 
 	public WorldType finiteWorldType;
@@ -130,9 +136,41 @@ public class WorldGenerator {
 	public void genEvent(Load evt) {
 		if (evt.world.provider.worldChunkMgr instanceof WorldChunkManagerFinite) {
 
+			if(!spawnSite.isEmpty())
+			{
+				ArrayList<Site> sites = new ArrayList(dorfs.sitesById.values());
+				for(Site s: sites)
+				{
+					if(s.name.equalsIgnoreCase(spawnSite))
+					{
+						int x = s.x * 16 * scale;
+						int y = 0;
+						int z = s.z * 16 * scale;
+						try
+						{
+							y = dorfs.elevationMap[(x - shift.posX) / scale][(z - shift.posZ) / scale];
+						}
+						catch (Exception e)
+						{
+							System.out.println(s+" "+dorfs.elevationMap.length);
+							e.printStackTrace();
+						}
+						evt.world.setSpawnLocation(x + 16 * scale / 2, y, z + 16 * scale / 2);
+						return;
+					}
+				}
+				
+			}
+			
+			
+			
 			if (randomSpawn) {
-				for (Site s : dorfs.sitesById.values()) {
-					if (s.type.isVillage()) {
+				ArrayList<Site> sites = new ArrayList(dorfs.sitesById.values());
+				
+				Collections.shuffle(sites, evt.world.rand);
+				
+				for (Site s : sites) {
+					if (s.type.isVillage() && s.type != SiteType.HIPPYHUTS) {
 						int x = s.x * 16 * scale;
 						int y = 0;
 						int z = s.z * 16 * scale;
