@@ -39,6 +39,7 @@ import cpw.mods.fml.common.Mod.EventHandler;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
+import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.registry.GameRegistry;
 import dorfgen.conversion.Config;
@@ -132,6 +133,12 @@ public class WorldGenerator {
 			}
 		}
 	}
+	
+    @EventHandler
+    public void serverLoad(FMLServerStartingEvent event)
+    {
+    	event.registerServerCommand(new Commands());
+    }
 
 	@SubscribeEvent
 	public void genEvent(Load evt) {
