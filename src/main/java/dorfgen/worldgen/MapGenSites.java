@@ -11,6 +11,7 @@ import java.util.Random;
 
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
+import dorfgen.conversion.SiteTerrain;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.SiteType;
 import net.minecraft.init.Blocks;
@@ -53,6 +54,7 @@ public class MapGenSites extends MapGenVillage
 		z *= 16;
 		x -= WorldGenerator.shift.posX;
 		z -= WorldGenerator.shift.posZ;
+		
 
 		int dx = 16 * scale/2 + scale;
 		int dz = 16 * scale/2 + scale;
@@ -63,25 +65,48 @@ public class MapGenSites extends MapGenVillage
 			z = z/scale;
 			int x1 = (x)/16;
 			int z1 = (z)/16;
-			int x2 = (x)/16;
-			int z2 = (z + dz/scale)/16;
-			int x3 = (x)/16;
-			int z3 = (z - dz/scale)/16;
-			int x4 = (x + dx/scale)/16;
-			int z4 = (z)/16;
-			int x5 = (x - dx/scale)/16;
-			int z5 = (z)/16;
+//			int x2 = (x)/16;
+//			int z2 = (z + dz/scale)/16;
+//			int x3 = (x)/16;
+//			int z3 = (z - dz/scale)/16;
+//			int x4 = (x + dx/scale)/16;
+//			int z4 = (z)/16;
+//			int x5 = (x - dx/scale)/16;
+//			int z5 = (z)/16;
 			int key= (x1)+ 2048 * (z1);
-			int key2 = (x2)+ 2048 * (z2);
-			int key3 = (x3)+ 2048 * (z3);
-			int key4 = (x4)+ 2048 * (z4);
-			int key5 = (x5)+ 2048 * (z5);
+//			int key2 = (x2)+ 2048 * (z2);
+//			int key3 = (x3)+ 2048 * (z3);
+//			int key4 = (x4)+ 2048 * (z4);
+//			int key5 = (x5)+ 2048 * (z5);
+//			
+//			boolean mid = key != key2 && key != key3 && key != key4 && key != key5;
 			
-			boolean mid = key != key2 && key != key3 && key != key4 && key != key5;
-			if(mid && DorfMap.sitesByCoord.containsKey(key) && !set.contains(key))
+			
+			
+//			if(mid && DorfMap.sitesByCoord.containsKey(key) && !set.contains(key))
+//			{
+//				set.add(key);
+//				return true;
+//			}
+			
+			//if(DorfMap.sitesByCoord.containsKey(key) && !set.contains(key))
+			if(!set.contains(key))
 			{
-				set.add(key);
-				return true;
+				if(WorldGenerator.instance.dorfs.structureMap.length > 0)
+				{
+					int rgb = WorldGenerator.instance.dorfs.structureMap[x][z];
+					SiteTerrain site = SiteTerrain.getMatch(rgb);
+					if(site==SiteTerrain.BUILDINGS)
+					{
+						set.add(key);
+						return true;
+					}
+				}
+				else
+				{
+					set.add(key);
+					return true;
+				}
 			}
 			return false;
 		}
@@ -98,7 +123,7 @@ public class MapGenSites extends MapGenVillage
 //		made.add(key);
 		
 		System.out.println(site);
-		new Exception().printStackTrace();
+	//	new Exception().printStackTrace();
 		
 		if(site==null)
 		{

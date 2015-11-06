@@ -69,6 +69,7 @@ public class WorldGenerator {
 	public BufferedImage rainMap;
 	public BufferedImage drainageMap;
 	public BufferedImage vegitationMap;
+	public BufferedImage structuresMap;
 
 	public DorfMap dorfs;
 

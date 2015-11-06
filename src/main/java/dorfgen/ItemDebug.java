@@ -6,12 +6,14 @@ import static net.minecraft.util.EnumFacing.NORTH;
 import static net.minecraft.util.EnumFacing.SOUTH;
 import static net.minecraft.util.EnumFacing.WEST;
 
+import java.awt.Color;
 import java.util.Arrays;
 import java.util.HashSet;
 
 import dorfgen.conversion.BiomeList;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.FileLoader;
+import dorfgen.conversion.SiteTerrain;
 import dorfgen.conversion.DorfMap.Region;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.SiteType;
@@ -85,36 +87,10 @@ public class ItemDebug extends Item {
 		HashSet<WorldConstruction> constructs;
 		mess += " "+(constructs = dorfs.getConstructionsForCoords(x, z));
 		
-	//	EnumFacing[] dirs = maker.getRoadDirection(x, z);
-		EnumFacing[] dirs = { EAST, WEST, NORTH, SOUTH };
-		EnumFacing[] ret = maker.getRoadDirection(x, z);
-
+		int rgb = WorldGenerator.instance.dorfs.structureMap[x/scale][z/scale];
 		
-//		for(WorldConstruction con: constructs)
-//		{
-//			if(!con.isInConstruct(x, 0, z))
-//				continue;
-//			if(con.isInConstruct(x - scale, 0, z))
-//			{
-//				ret[1] = dirs[1];
-//			}
-//			if(con.isInConstruct(x + scale, 0, z))
-//			{
-//				ret[0] = dirs[0];
-//			}
-//			if(con.isInConstruct(x, 0, z - scale))
-//			{
-//				ret[2] = dirs[2];
-//			}
-//			if(con.isInConstruct(x, 0, z + scale))
-//			{
-//				ret[3] = dirs[3];
-//			}
-//		}
-		
-		System.out.println(Arrays.toString(ret)+" "+maker.shouldRoadPlace(x, z, ret, 4));
-		
-		
+		Color colour = new Color(rgb);
+		System.out.println(SiteTerrain.getMatch(rgb)+" ");
 		
 		if (!mess.isEmpty())
 			player.addChatMessage(new ChatComponentText(mess));

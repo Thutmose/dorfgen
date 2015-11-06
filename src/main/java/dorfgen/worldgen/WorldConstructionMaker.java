@@ -14,6 +14,7 @@ import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.ConstructionType;
 import dorfgen.conversion.DorfMap.WorldConstruction;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
+import dorfgen.conversion.SiteTerrain;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.EnumFacing;
@@ -61,6 +62,54 @@ public class WorldConstructionMaker
 		}
 		return false;
 	}
+	
+	public void buildSites(World world, int chunkX, int chunkZ, Block[] blocks, BiomeGenBase[] biomes)
+	{
+		if(dorfs.structureMap.length==0)
+			return;
+		int index;
+		int x = (chunkX * 16 - WorldGenerator.shift.posX);
+		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
+		int x1, z1, h, rgb, r, b1, id;
+		double dx, dz, dx2, dz2;
+		int n = 0;
+		for (int i1 = 0; i1 < 16; i1++)
+		{
+			for (int k1 = 0; k1 < 16; k1++)
+			{
+				x1 = (x + i1) / scale;
+				z1 = (z + k1) / scale;
+
+				dx = (x + i1 - scale * x1) / (double) scale;
+				dz = (z + k1 - scale * z1) / (double) scale;
+
+				h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x + i1, z + k1, scale);
+				
+				rgb = bicubicInterpolator.interpolateBiome(dorfs.structureMap,  x + i1, z + k1, scale);
+				
+				SiteTerrain site = SiteTerrain.getMatch(rgb);
+				if(site==null)
+					continue;
+				
+				int j = h - 1;
+				
+				index = j << 0 | (i1) << 12 | (k1) << 8;
+
+				BiomeGenBase biome = biomes[i1+16*k1];
+				
+				Block surface = getSurfaceBlockForSite(site, 0);
+				Block above = getSurfaceBlockForSite(site, 1);
+				if(surface==null || blocks[index - 1] == Blocks.water || blocks[index] == Blocks.water)
+					continue;
+				blocks[index] = surface;
+				index = (j - 1) << 0 | (i1) << 12 | (k1) << 8;
+				blocks[index] = Blocks.cobblestone;
+				index = (j + 1) << 0 | (i1) << 12 | (k1) << 8;
+				blocks[index] = above;
+
+			}
+		}
+	}
 
 	public void buildRoads(World world, int chunkX, int chunkZ, Block[] blocks, BiomeGenBase[] biomes)
 	{
@@ -98,11 +147,7 @@ public class WorldConstructionMaker
 
 				BiomeGenBase biome = biomes[i1+16*k1];
 				
-				Block surface = Blocks.gravel;
-				
-				if(BiomeDictionary.isBiomeOfType(biome, Type.HILLS))
-					surface = Blocks.sand;
-				surface = BlockRoadSurface.uggrass;
+				Block surface =  BlockRoadSurface.uggrass;
 				
 				blocks[index] = surface;
 				blocks[index - 1] = Blocks.cobblestone;
@@ -269,26 +314,21 @@ public class WorldConstructionMaker
 				ret[3] = dirs[3];
 			}
 		}
-		
-//		for (int i = 0; i < 4; i++)
-//		{
-//			int x1 = pixelX + dirs[i].getFrontOffsetX();
-//			int z1 = pixelZ + dirs[i].getFrontOffsetZ();
-//			int index = x1 + 2048 * z1;
-//			HashSet<WorldConstruction> constructs = DorfMap.constructionsByCoord.get(index);
-//			if (constructs != null)
-//			{
-//				for (WorldConstruction c : constructs)
-//				{
-//					if (c.type == ConstructionType.ROAD && c.isInConstruct(xAbs, 0, zAbs))
-//					{
-//						System.out.println(c);
-//						ret[i] = dirs[i];
-//						break;
-//					}
-//				}
-//			}
-//		}
 		return ret;
+	}
+	
+	public static Block getSurfaceBlockForSite(SiteTerrain site, int num)
+	{
+		switch (site)
+		{
+		case BUILDINGS: return num==0?Blocks.brick_block:null;
+		case WALLS: return Blocks.stonebrick;
+		case FARMYELLOW: return num==0?Blocks.sand:null;
+		case FARMORANGE: return num==0?Blocks.dirt:null;
+		case FARMLIMEGREEN: return num==0?Blocks.clay:null;
+		case FARMORANGELIGHT: return num==0?Blocks.hardened_clay:null;
+		case FARMGREEN: return num==0?Blocks.stained_hardened_clay:null;
+		default: return null;
+		}
 	}
 }

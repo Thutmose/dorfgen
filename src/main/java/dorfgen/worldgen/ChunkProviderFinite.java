@@ -175,6 +175,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 			int z = imgZ;
 			populateBlocksFromImage(scale, chunkX, chunkZ, ablock);
 			riverMaker.makeRiversForChunk(worldObj, chunkX, chunkZ, ablock, biomesForGeneration);
+			constructor.buildSites(worldObj, chunkX, chunkZ, ablock, biomesForGeneration);
 			constructor.buildRoads(worldObj, chunkX, chunkZ, ablock, biomesForGeneration);
 			makeBeaches(scale, x/scale, z/scale, ablock);
 		} else if (WorldGenerator.finite) {

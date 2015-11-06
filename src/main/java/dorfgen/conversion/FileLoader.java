@@ -54,6 +54,7 @@ public class FileLoader
 	public String	rain					= "";
 	public String	volcanism				= "";
 	public String	vegitation				= "";
+	public String 	structs					= "";
 	public String	legends					= "";
 	public String	legendsPlus				= "";
 	public String	constructionFineCoords	= "";
@@ -125,6 +126,10 @@ public class FileLoader
 					{
 						evil = s;
 					}
+					else if(s.contains("-str."))
+					{
+						structs = s;
+					}
 				}
 			}
 			else if (!f.isDirectory())
@@ -166,6 +171,7 @@ public class FileLoader
 		WorldGenerator.instance.elevationWaterMap = getImage(elevationWater);
 		WorldGenerator.instance.temperatureMap = getImage(temperature);
 		WorldGenerator.instance.vegitationMap = getImage(vegitation);
+		WorldGenerator.instance.structuresMap = getImage(structs);
 
 		loadBiomes(biomes);
 	}
