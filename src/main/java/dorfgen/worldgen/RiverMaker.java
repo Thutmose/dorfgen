@@ -35,7 +35,6 @@ public class RiverMaker {
 				dx = (x + i1 - scale * x1)/(double)scale;
 				dz = (z + k1 - scale * z1)/(double)scale;
 				
-				
 				h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x + i1, z + k1, scale);
 				r = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.riverMap, x + i1, z + k1, scale);
 				

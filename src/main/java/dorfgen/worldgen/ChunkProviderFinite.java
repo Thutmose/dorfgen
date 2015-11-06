@@ -175,7 +175,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 			int z = imgZ;
 			populateBlocksFromImage(scale, chunkX, chunkZ, ablock);
 			riverMaker.makeRiversForChunk(worldObj, chunkX, chunkZ, ablock, biomesForGeneration);
-			constructor.buildRoads(worldObj, chunkX, chunkZ, ablock);
+			constructor.buildRoads(worldObj, chunkX, chunkZ, ablock, biomesForGeneration);
 			makeBeaches(scale, x/scale, z/scale, ablock);
 		} else if (WorldGenerator.finite) {
 			this.fillOceans(chunkX, chunkZ, ablock);
@@ -218,8 +218,8 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 	@Override
     public void recreateStructures(int p_82695_1_, int p_82695_2_)
     {
-//        if(true)
-//        	return;
+        if(true)//TODO find out why this keeps being called, it keeps spawning lairs.
+        	return;
         if (this.mapFeaturesEnabled)
         {
             this.mineshaftGenerator.func_151539_a(this, this.worldObj, p_82695_1_, p_82695_2_, (Block[])null);

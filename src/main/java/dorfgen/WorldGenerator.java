@@ -99,7 +99,7 @@ public class WorldGenerator {
 		String seperator = System.getProperty("file.separator");
 
 		GameRegistry.registerItem(new ItemDebug().setTextureName("diamond"), "debugItem");
-		GameRegistry.registerBlock(new BlockUGGrass().setBlockName("darkgrass"), "darkgrass");
+		GameRegistry.registerBlock(new BlockRoadSurface().setBlockName("roadgravel"), "roadgravel");
 
 		String folder = file.getAbsolutePath();
 		String name = file.getName();

@@ -46,16 +46,17 @@ public class FileLoader
 
 	public static String biomes = "";
 
-	public String	elevation		= "";
-	public String	elevationWater	= "";
-	public String	biome			= "";
-	public String	temperature		= "";
-	public String	evil			= "";
-	public String	rain			= "";
-	public String	volcanism		= "";
-	public String	vegitation		= "";
-	public String	legends			= "";
-	public String	legendsPlus		= "";
+	public String	elevation				= "";
+	public String	elevationWater			= "";
+	public String	biome					= "";
+	public String	temperature				= "";
+	public String	evil					= "";
+	public String	rain					= "";
+	public String	volcanism				= "";
+	public String	vegitation				= "";
+	public String	legends					= "";
+	public String	legendsPlus				= "";
+	public String	constructionFineCoords	= "";
 
 	public static HashMap<Integer, BufferedImage> sites = new HashMap();
 
@@ -126,29 +127,39 @@ public class FileLoader
 					}
 				}
 			}
-			else if(!f.isDirectory())
+			else if (!f.isDirectory())
 			{
 				s = f.getAbsolutePath();
-				if (s.contains("-legends."))
+				if (s.contains("-legends") && !s.contains("plus"))
 				{
 					legends = s;
 				}
-				else if (s.contains("-legends_plus."))
+				else if (s.contains("-legends_plus"))
 				{
 					legendsPlus = s;
 				}
+				else if(s.contains("constructs.txt"))
+				{
+					constructionFineCoords = s;
+				}
 			}
 		}
-		MappedTruncate.ReadTruncateAndOutput(legends, legends.replace(".xml", "_trunc.xml"), "</world_constructions>",
-				"\n</df_world>");
-		MappedTruncate.ReadTruncateAndOutput(legendsPlus, legendsPlus.replace(".xml", "_trunc.xml"), "</world_constructions>",
-				"\n</df_world>");
 
-		legends = legends.replace(".xml", "_trunc.xml");
-		legendsPlus = legendsPlus.replace(".xml", "_trunc.xml");
-
+		if(!legends.contains("trunc"))
+		{
+			MappedTruncate.ReadTruncateAndOutput(legends, legends.replace(".xml", "_trunc.xml"), "</world_constructions>",
+					"\n</df_world>");
+			legends = legends.replace(".xml", "_trunc.xml");
+		}
+		if(!legendsPlus.contains("trunc"))
+		{
+			MappedTruncate.ReadTruncateAndOutput(legendsPlus, legendsPlus.replace(".xml", "_trunc.xml"),
+					"</world_constructions>", "\n</df_world>");
+			legendsPlus = legendsPlus.replace(".xml", "_trunc.xml");
+		}
 		loadLegends(legends);
 		loadLegendsPlus(legendsPlus);
+		loadFineConstructLocations(constructionFineCoords);
 
 		WorldGenerator.instance.biomeMap = getImage(biome);
 		WorldGenerator.instance.elevationMap = getImage(elevation);
@@ -491,11 +502,11 @@ public class FileLoader
 					{
 						coords = node.getFirstChild().getNodeValue();
 					}
-					if(nodeName.equals("name"))
+					if (nodeName.equals("name"))
 					{
 						name = node.getFirstChild().getNodeValue();
 					}
-					if(nodeName.equals("type"))
+					if (nodeName.equals("type"))
 					{
 						type = node.getFirstChild().getNodeValue();
 					}
@@ -505,19 +516,19 @@ public class FileLoader
 				// "+coords);
 				if (id != -1 && toAdd != null)
 				{
-					ConstructionType cType = ConstructionType.valueOf(type.toUpperCase()); 
-					if(cType!=null)
+					ConstructionType cType = ConstructionType.valueOf(type.toUpperCase());
+					if (cType != null)
 					{
 						WorldConstruction construct = new WorldConstruction(id, name, cType);
-						construct.coords.clear();
+						construct.worldCoords.clear();
 						for (String s : toAdd)
 						{
 							int x = Integer.parseInt(s.split(",")[0]);
 							int z = Integer.parseInt(s.split(",")[1]);
 							int index = x + 2048 * z;
-							construct.coords.add(index);
+							construct.worldCoords.add(index);
 							HashSet constructs = DorfMap.constructionsByCoord.get(index);
-							if(constructs == null)
+							if (constructs == null)
 							{
 								constructs = new HashSet<>();
 								DorfMap.constructionsByCoord.put(index, constructs);
@@ -525,8 +536,6 @@ public class FileLoader
 							constructs.add(construct);
 						}
 						DorfMap.constructionsById.put(id, construct);
-						
-						
 					}
 					else
 					{
@@ -538,6 +547,52 @@ public class FileLoader
 		catch (Exception e)
 		{
 			e.printStackTrace();
+		}
+	}
+
+	public static void loadFineConstructLocations(String file)
+	{
+		ArrayList<String> rows = new ArrayList<String>();
+		BufferedReader br = null;
+		String line = "";
+
+		try
+		{
+			InputStream res = new FileInputStream(file);
+			br = new BufferedReader(new InputStreamReader(res));
+			int n = 0;
+			while ((line = br.readLine()) != null)
+			{
+				rows.add(line);
+				n++;
+			}
+
+			for (String entry : rows)
+			{
+				String[] args = entry.split(":");
+				int id = Integer.parseInt(args[0]);
+				WorldConstruction construct = DorfMap.constructionsById.get(id);
+				if (construct != null)
+				{
+					for (int i = 1; i < args.length; i++)
+					{
+						String[] coordString = args[i].split(",");
+						int x = Integer.parseInt(coordString[0]);
+						int y = Integer.parseInt(coordString[1]);
+						int z = Integer.parseInt(coordString[2]);
+						int index = x + 8192 * z;
+						construct.embarkCoords.put(index, y);
+					}
+				}
+				else
+				{
+					new NullPointerException("Cannot Find Construction for id:" + id).printStackTrace();
+				}
+			}
+		}
+		catch (Exception e)
+		{
+
 		}
 	}
 

@@ -1,14 +1,20 @@
 package dorfgen;
 
 import static dorfgen.WorldGenerator.scale;
+import static net.minecraft.util.EnumFacing.EAST;
+import static net.minecraft.util.EnumFacing.NORTH;
+import static net.minecraft.util.EnumFacing.SOUTH;
+import static net.minecraft.util.EnumFacing.WEST;
 
 import java.util.Arrays;
+import java.util.HashSet;
 
 import dorfgen.conversion.BiomeList;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.FileLoader;
 import dorfgen.conversion.DorfMap.Region;
 import dorfgen.conversion.DorfMap.Site;
+import dorfgen.conversion.DorfMap.SiteType;
 import dorfgen.conversion.DorfMap.WorldConstruction;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
@@ -63,7 +69,8 @@ public class ItemDebug extends Item {
 		
 		for(Site s: WorldGenerator.instance.dorfs.sitesById.values())
 		{
-			System.out.println(s);
+			if(s.name.contains("drums"))
+				System.out.println(s);
 		}
 		
 		
@@ -72,10 +79,42 @@ public class ItemDebug extends Item {
 //		WorldGenerator.spawn.posZ = 2502;
 		
 		
-//		WorldConstructionMaker maker = new WorldConstructionMaker();
+		WorldConstructionMaker maker = new WorldConstructionMaker();
 //		int chunkX = x/16;
 //		int chunkZ = z/16;
-		mess += " "+dorfs.getConstructionsForCoords(x, z);
+		HashSet<WorldConstruction> constructs;
+		mess += " "+(constructs = dorfs.getConstructionsForCoords(x, z));
+		
+	//	EnumFacing[] dirs = maker.getRoadDirection(x, z);
+		EnumFacing[] dirs = { EAST, WEST, NORTH, SOUTH };
+		EnumFacing[] ret = maker.getRoadDirection(x, z);
+
+		
+//		for(WorldConstruction con: constructs)
+//		{
+//			if(!con.isInConstruct(x, 0, z))
+//				continue;
+//			if(con.isInConstruct(x - scale, 0, z))
+//			{
+//				ret[1] = dirs[1];
+//			}
+//			if(con.isInConstruct(x + scale, 0, z))
+//			{
+//				ret[0] = dirs[0];
+//			}
+//			if(con.isInConstruct(x, 0, z - scale))
+//			{
+//				ret[2] = dirs[2];
+//			}
+//			if(con.isInConstruct(x, 0, z + scale))
+//			{
+//				ret[3] = dirs[3];
+//			}
+//		}
+		
+		System.out.println(Arrays.toString(ret)+" "+maker.shouldRoadPlace(x, z, ret, 4));
+		
+		
 		
 		if (!mess.isEmpty())
 			player.addChatMessage(new ChatComponentText(mess));

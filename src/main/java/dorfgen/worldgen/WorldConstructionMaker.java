@@ -8,6 +8,7 @@ import static net.minecraft.util.EnumFacing.WEST;
 
 import java.util.HashSet;
 
+import dorfgen.BlockRoadSurface;
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.ConstructionType;
@@ -17,6 +18,9 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.world.World;
+import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraftforge.common.BiomeDictionary;
+import net.minecraftforge.common.BiomeDictionary.Type;
 
 public class WorldConstructionMaker
 {
@@ -41,64 +45,15 @@ public class WorldConstructionMaker
 		if (x >= 0 && z >= 0 && (x + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap.length
 				&& (z + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap[0].length)
 		{
-			x = x / scale;
-			z = z / scale;
-			int x1 = (x) / 16;
-			int z1 = (z) / 16;
-			int x2 = (x) / 16;
-			int z2 = (z + dz / scale) / 16;
-			int x3 = (x) / 16;
-			int z3 = (z - dz / scale) / 16;
-			int x4 = (x + dx / scale) / 16;
-			int z4 = (z) / 16;
-			int x5 = (x - dx / scale) / 16;
-			int z5 = (z) / 16;
+			int x1 = (x/ scale) / 16;
+			int z1 = (z/ scale) / 16;
 			int key = (x1) + 2048 * (z1);
-			int key2 = (x2) + 2048 * (z2);
-			int key3 = (x3) + 2048 * (z3);
-			int key4 = (x4) + 2048 * (z4);
-			int key5 = (x5) + 2048 * (z5);
-
-			boolean mid = true;
-			EnumFacing[] dirs = getRoadDirection(chunkX * 16, chunkZ * 16);
-			if (dirs[0] != null)
-			{
-				mid = mid && DorfMap.constructionsByCoord.containsKey(key5);
-			}
-			else if (dirs[1] == null)
-			{
-				mid = mid && key != key5;
-			}
-			if (dirs[1] != null)
-			{
-				mid = mid && DorfMap.constructionsByCoord.containsKey(key4);
-
-			}
-			else if (dirs[0] == null)
-			{
-				mid = mid && key != key4;
-			}
-			if (dirs[2] != null)
-			{
-				mid = mid && DorfMap.constructionsByCoord.containsKey(key3);
-			}
-			else if (dirs[3] == null)
-			{
-				mid = mid && key != key3;
-			}
-			if (dirs[3] != null)
-			{
-				mid = mid && DorfMap.constructionsByCoord.containsKey(key2);
-			}
-			else if (dirs[2] == null)
-			{
-				mid = mid && key != key2;
-			}
-			if (mid && DorfMap.constructionsByCoord.containsKey(key))
+			
+			if (DorfMap.constructionsByCoord.containsKey(key))
 			{
 				for (WorldConstruction construct : DorfMap.constructionsByCoord.get(key))
 				{
-					if (construct.type == type) return true;
+					if (construct.type == type && construct.isInConstruct(x, 0, z)) return true;
 				}
 				return false;
 			}
@@ -107,33 +62,8 @@ public class WorldConstructionMaker
 		return false;
 	}
 
-	public void buildRoads(World world, int chunkX, int chunkZ, Block[] blocks)
+	public void buildRoads(World world, int chunkX, int chunkZ, Block[] blocks, BiomeGenBase[] biomes)
 	{
-		if (!shouldConstruct(chunkX, chunkZ, ConstructionType.ROAD)) return;
-		EnumFacing[] dirs = getRoadDirection(chunkX * 16, chunkZ * 16);
-
-		//Deal with corners
-		if ((dirs[1] == null && dirs[0] != null))
-		{
-			int z1 = ((chunkZ / scale) * scale + scale) - chunkZ;
-			if (z1 > scale / 2) return;
-		}
-		if ((dirs[2] == null && dirs[3] != null))
-		{
-			int x1 = ((chunkX / scale) * scale + scale) - chunkX;
-			if (x1 < scale / 2) return;
-		}
-		if ((dirs[0] == null && dirs[1] != null))
-		{
-			int z1 = ((chunkZ / scale) * scale + scale) - chunkZ;
-			if (z1 < scale / 2) return;
-		}
-		if ((dirs[3] == null && dirs[2] != null))
-		{
-			int x1 = ((chunkX / scale) * scale + scale) - chunkX;
-			if (x1 > scale / 2) return;
-		}
-
 		int index;
 		int x = (chunkX * 16 - WorldGenerator.shift.posX);
 		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
@@ -152,14 +82,29 @@ public class WorldConstructionMaker
 
 				h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x + i1, z + k1, scale);
 
+				HashSet<WorldConstruction> constructs = WorldGenerator.instance.dorfs.getConstructionsForCoords(x + i1, z + k1);
+				
+				if(constructs == null)
+					continue;
+				
+				EnumFacing[] dirs = getRoadDirection(x + i1, z + k1);
+				
 				dx2 = dz2 = 0;
 				int j = h - 1;
 
-				if (!shouldRoadPlace(x + i1, z + k1, dirs, 4)) continue;
+				if (!shouldRoadPlace(x + i1, z + k1, dirs, 2)) continue;
 
 				index = j << 0 | (i1) << 12 | (k1) << 8;
 
-				blocks[index] = Blocks.gravel;
+				BiomeGenBase biome = biomes[i1+16*k1];
+				
+				Block surface = Blocks.gravel;
+				
+				if(BiomeDictionary.isBiomeOfType(biome, Type.HILLS))
+					surface = Blocks.sand;
+				surface = BlockRoadSurface.uggrass;
+				
+				blocks[index] = surface;
 				blocks[index - 1] = Blocks.cobblestone;
 
 			}
@@ -168,27 +113,42 @@ public class WorldConstructionMaker
 
 	public boolean shouldRoadPlace(int xAbs, int zAbs, EnumFacing[] dirs, int width)
 	{
-		int xRel = xAbs % (16 * scale);
-		int zRel = zAbs % (16 * scale);
+		int xRel = xAbs % (scale);
+		int zRel = zAbs % (scale);
 
-		int shift = scale * 16 / 2;
+		int shift = scale / 2;
 
-		// System.out.println("z:" + zRel + " x:" + xRel);
-
+		boolean in = false;
+		
+		HashSet<WorldConstruction> constructs = WorldGenerator.instance.dorfs.getConstructionsForCoords(xAbs, zAbs);
+		
+		for(WorldConstruction con: constructs)
+		{
+			if(con.isInConstruct(xAbs, 0, zAbs))
+			{
+				in = true;
+				break;
+			}
+		}
+		
+		if(!in)
+			return false;
+		
+		
 		// no NS
 		if (dirs[2] == null && dirs[3] == null)
 		{
 			// EW
 			if (dirs[0] != null && dirs[1] != null)
 			{
-				return zRel < shift + width / 2 && zRel > shift - width / 2;
+				return zRel <= shift + width / 2 && zRel >= shift - width / 2;
 			}
 			else if (dirs[0] != null) // E
 			{
-				return zRel < shift + width / 2;
+				return zRel <=shift + width / 2;
 			}
 			else if (dirs[1] != null) // W
-			{ return zRel > shift - width / 2; }
+			{ return zRel >= shift - width / 2; }
 		}
 		// no EW
 		if (dirs[0] == null && dirs[1] == null)
@@ -196,14 +156,14 @@ public class WorldConstructionMaker
 			// NS
 			if (dirs[2] != null && dirs[3] != null)
 			{
-				return xRel < shift + width / 2 && xRel > shift - width / 2;
+				return xRel <= shift + width / 2 && xRel >= shift - width / 2;
 			}
 			else if (dirs[2] != null) // N
 			{
-				return xRel < shift + width / 2;
+				return xRel <= shift + width / 2;
 			}
 			else if (dirs[3] != null) // S
-			{ return xRel > shift - width / 2; }
+			{ return xRel >= shift - width / 2; }
 		}
 		// NE
 		if (dirs[0] != null && dirs[2] != null && dirs[1] == null && dirs[3] == null)
@@ -220,21 +180,56 @@ public class WorldConstructionMaker
 			return false;
 		}
 		// SE
-		if (dirs[0] != null && dirs[3] != null && dirs[1] == null && dirs[2] == null)
+		if (dirs[1] != null && dirs[3] != null && dirs[0] == null && dirs[2] == null)
 		{
 			if (xRel <= shift + width / 2 && xRel >= shift - width / 2 && zRel >= shift + width / 2) return true;
 			if (zRel <= shift + width / 2 && zRel >= shift - width / 2 && xRel <= shift + width / 2) return true;
 			return false;
 		}
 		// SW
-		if (dirs[1] != null && dirs[3] != null && dirs[0] == null && dirs[2] == null)
+		if (dirs[0] != null && dirs[3] != null && dirs[1] == null && dirs[2] == null)
 		{
-			if (xRel <= shift + width / 2 && xRel >= shift - width / 2 && zRel >= shift + width / 2) return true;
+			if (xRel <= shift + width / 2 && xRel >= shift - width / 2 && zRel >= shift - width / 2) return true;
 			if (zRel <= shift + width / 2 && zRel >= shift - width / 2 && xRel >= shift + width / 2) return true;
 			return false;
 		}
+		
 
-		return true;
+		// NSE
+		if (dirs[0] != null && dirs[2] != null && dirs[1] == null && dirs[3] != null)
+		{
+			if (xRel <= shift + width / 2 && xRel >= shift - width / 2 && zRel <= shift + width / 2) return true;
+			if (zRel <= shift + width / 2 && zRel >= shift - width / 2 && xRel >= shift + width / 2) return true;
+			if (xRel <= shift + width / 2 && xRel >= shift - width / 2) return true;//This part is just NS check
+			return false;
+		}
+		// NSW
+		if (dirs[1] != null && dirs[2] != null && dirs[0] == null && dirs[3] != null)
+		{
+			if (xRel <= shift + width / 2 && xRel >= shift - width / 2 && zRel <= shift + width / 2) return true;
+			if (zRel <= shift + width / 2 && zRel >= shift - width / 2 && xRel <= shift + width / 2) return true;
+			if (xRel <= shift + width / 2 && xRel >= shift - width / 2) return true;//This part is just NS check
+			return false;
+		}
+		
+		// SEW
+		if (dirs[0] != null && dirs[3] != null && dirs[1] != null && dirs[2] == null)
+		{
+			if (xRel <= shift + width / 2 && xRel >= shift - width / 2 && zRel >= shift + width / 2) return true;
+			if (zRel <= shift + width / 2 && zRel >= shift - width / 2 && xRel <= shift + width / 2) return true;
+			if (zRel <= shift + width / 2 && zRel >= shift - width / 2) return true;//This part is just EW check
+			return false;
+		}
+
+		// NWE
+		if (dirs[1] != null && dirs[2] != null && dirs[0] != null && dirs[3] == null)
+		{
+			if (xRel <= shift + width / 2 && xRel >= shift - width / 2 && zRel <= shift + width / 2) return true;
+			if (zRel <= shift + width / 2 && zRel >= shift - width / 2 && xRel <= shift + width / 2) return true;
+			if (zRel <= shift + width / 2 && zRel >= shift - width / 2) return true;//This part is just EW check
+			return false;
+		}
+		return false;
 	}
 
 	static EnumFacing[] dirs = { EAST, WEST, NORTH, SOUTH };
@@ -243,27 +238,57 @@ public class WorldConstructionMaker
 	{
 		int pixelX = xAbs / (scale * 16);
 		int pixelZ = zAbs / (scale * 16);
-
+		
 		EnumFacing[] ret = new EnumFacing[4];
 		int b;
-		for (int i = 0; i < 4; i++)
+		
+		HashSet<WorldConstruction> constructs = WorldGenerator.instance.dorfs.getConstructionsForCoords(xAbs, zAbs);
+		
+		if(constructs==null)
+			return ret;
+		
+		for(WorldConstruction con: constructs)
 		{
-			int x1 = pixelX + dirs[i].getFrontOffsetX();
-			int z1 = pixelZ + dirs[i].getFrontOffsetZ();
-			int index = x1 + 2048 * z1;
-			HashSet<WorldConstruction> constructs = DorfMap.constructionsByCoord.get(index);
-			if (constructs != null)
+			if(!con.isInConstruct(xAbs, 0, zAbs))
+				continue;
+			
+			if(con.isInConstruct(xAbs - scale, 0, zAbs))
 			{
-				for (WorldConstruction c : constructs)
-				{
-					if (c.type == ConstructionType.ROAD)
-					{
-						ret[i] = dirs[i];
-						break;
-					}
-				}
+				ret[1] = dirs[1];
+			}
+			if(con.isInConstruct(xAbs + scale, 0, zAbs))
+			{
+				ret[0] = dirs[0];
+			}
+			if(con.isInConstruct(xAbs, 0, zAbs - scale))
+			{
+				ret[2] = dirs[2];
+			}
+			if(con.isInConstruct(xAbs, 0, zAbs + scale))
+			{
+				ret[3] = dirs[3];
 			}
 		}
+		
+//		for (int i = 0; i < 4; i++)
+//		{
+//			int x1 = pixelX + dirs[i].getFrontOffsetX();
+//			int z1 = pixelZ + dirs[i].getFrontOffsetZ();
+//			int index = x1 + 2048 * z1;
+//			HashSet<WorldConstruction> constructs = DorfMap.constructionsByCoord.get(index);
+//			if (constructs != null)
+//			{
+//				for (WorldConstruction c : constructs)
+//				{
+//					if (c.type == ConstructionType.ROAD && c.isInConstruct(xAbs, 0, zAbs))
+//					{
+//						System.out.println(c);
+//						ret[i] = dirs[i];
+//						break;
+//					}
+//				}
+//			}
+//		}
 		return ret;
 	}
 }

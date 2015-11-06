@@ -601,7 +601,11 @@ public class DorfMap {
 		public final int id;
 		public final String name;
 		public final ConstructionType type;
-		public final HashSet<Integer> coords = new HashSet();
+		public final HashSet<Integer> worldCoords = new HashSet();
+		/**
+		 * Key: x,z coordinate, Value: depth, -1 for surface
+		 */
+		public final HashMap<Integer, Integer> embarkCoords = new HashMap();
 		
 		public WorldConstruction(int id_, String name_, ConstructionType type_)
 		{
@@ -615,7 +619,15 @@ public class DorfMap {
 	    	x = x/(scale * 16);
 	    	z = z/(scale * 16);
 	    	int key = x + 2048 * z;
-			return coords.contains(key);
+			return worldCoords.contains(key);
+		}
+		
+		public boolean isInConstruct(int x, int y, int z)
+		{
+	    	x = x/(scale);
+	    	z = z/(scale);
+	    	int key = x + 8192 * z;
+			return embarkCoords.containsKey(key);
 		}
 		@Override
 		public boolean equals(Object o)

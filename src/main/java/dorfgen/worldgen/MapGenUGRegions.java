@@ -2,7 +2,7 @@ package dorfgen.worldgen;
 
 import java.util.Random;
 
-import dorfgen.BlockUGGrass;
+import dorfgen.BlockRoadSurface;
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap.Region;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
@@ -327,7 +327,7 @@ public class MapGenUGRegions extends MapGenCaves {
         Block top    = (isExceptionBiome(biome) ? Blocks.grass : biome.topBlock);
         Block filler = (isExceptionBiome(biome) ? Blocks.dirt  : biome.fillerBlock);
         Block block  = data[index];
-        Block grass = BlockUGGrass.uggrass;
+        Block grass = BlockRoadSurface.uggrass;
         
         int h = 0;
         int scale = WorldGenerator.scale;

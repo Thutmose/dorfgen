@@ -98,6 +98,7 @@ public class MapGenSites extends MapGenVillage
 //		made.add(key);
 		
 		System.out.println(site);
+		new Exception().printStackTrace();
 		
 		if(site==null)
 		{
