@@ -241,7 +241,7 @@ public class FileLoader
 				{
 					site.map = sites.get(id);
 				}
-				DorfMap.sitesByCoord.put(x + 2048 * z, site);
+				DorfMap.addSiteByCoord(x + 2048 * z, site);
 				DorfMap.sitesById.put(id, site);
 			}
 

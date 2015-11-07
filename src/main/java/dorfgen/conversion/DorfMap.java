@@ -29,7 +29,7 @@ public class DorfMap {
 	public int[][] volcanismMap = new int[0][0];
 	public int[][] vegitationMap = new int[0][0];
 	public int[][] structureMap = new int[0][0];
-	public static HashMap<Integer, Site> sitesByCoord = new HashMap();
+	public static HashMap<Integer, HashSet<Site>> sitesByCoord = new HashMap();
 	public static HashMap<Integer, Site> sitesById = new HashMap();
 	public static HashMap<Integer, Region> regionsById = new HashMap();
 	public static HashMap<Integer, Region> regionsByCoord = new HashMap();
@@ -42,6 +42,17 @@ public class DorfMap {
 	public BicubicInterpolator			biomeInterpolator	= new BicubicInterpolator();
 	public CachedBicubicInterpolator	heightInterpolator	= new CachedBicubicInterpolator();
 	public CachedBicubicInterpolator	miscInterpolator	= new CachedBicubicInterpolator();
+	
+	static void addSiteByCoord(int coord, Site site)
+	{
+		HashSet sites = sitesByCoord.get(coord);
+		if(sites==null)
+		{
+			sites = new HashSet();
+			sitesByCoord.put(coord, sites);
+		}
+		sites.add(site);
+	}
 	
 	public DorfMap() {
 		populateBiomeMap();
@@ -360,7 +371,7 @@ public class DorfMap {
     	return ugRegionsByCoord.get(key);
 	}
 	
-	public Site getSiteForCoords(int x, int z)
+	public HashSet<Site> getSiteForCoords(int x, int z)
 	{
     	x = x/(scale * 16);
     	z = z/(scale * 16);

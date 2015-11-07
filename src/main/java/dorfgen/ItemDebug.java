@@ -57,22 +57,22 @@ public class ItemDebug extends Item {
 		DorfMap dorfs = WorldGenerator.instance.dorfs;
 		int n = 0;
 		Region region = dorfs.getRegionForCoords(x, z);
-		Site site = dorfs.getSiteForCoords(x, z);
+		HashSet sites = dorfs.getSiteForCoords(x, z);
 		String mess = "";
 		if (region != null) {
 			mess += region.name + " " + region.type + " ";
 		}
-		if (site != null) {
-			mess += site.name + " " + site.type + " " + site.id;
-
-			int x1 = site.x * 16 * scale + 16 * scale / 2;
-			int z1 = site.z * 16 * scale + 16 * scale / 2;
-		}
+//		if (site != null) {
+//			mess += site.name + " " + site.type + " " + site.id;
+//
+//			int x1 = site.x * 16 * scale + 16 * scale / 2;
+//			int z1 = site.z * 16 * scale + 16 * scale / 2;
+//		}
 		
 		for(Site s: WorldGenerator.instance.dorfs.sitesById.values())
 		{
-			if(s.name.contains("drums"))
-				System.out.println(s);
+//			if(s.name.contains("drums"))
+//				System.out.println(s);
 		}
 		
 		
@@ -87,13 +87,26 @@ public class ItemDebug extends Item {
 		HashSet<WorldConstruction> constructs;
 		mess += " "+(constructs = dorfs.getConstructionsForCoords(x, z));
 		
-		int rgb = WorldGenerator.instance.dorfs.structureMap[x/scale][z/scale];
+		int rgb = maker.bicubicInterpolator.interpolateBiome(dorfs.structureMap,  x, z, scale);
 		
 		Color colour = new Color(rgb);
 		System.out.println(SiteTerrain.getMatch(rgb)+" ");
+
+		int x1 = (x/scale)*scale;// + scale/2;
+		int z1 = (z/scale)*scale;// + scale/2;
 		
-		if (!mess.isEmpty())
-			player.addChatMessage(new ChatComponentText(mess));
+		//world.setBlock(x1, 110, z1, Blocks.gold_block);
+		
+		x1/=16;
+		z1/=16;
+		
+		
+		System.out.println(x1+" "+z1+" "+x/16+" "+z/16+" "+sites);
+		
+		
+		
+//		if (!mess.isEmpty())
+//			player.addChatMessage(new ChatComponentText(mess));
 
 		return itemstack;
 	}

@@ -3,6 +3,7 @@ package dorfgen.worldgen;
 import static dorfgen.WorldGenerator.scale;
 import static net.minecraftforge.common.ChestGenHooks.DUNGEON_CHEST;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -35,7 +36,7 @@ import net.minecraftforge.common.DungeonHooks;
 
 public class MapGenSites extends MapGenVillage
 {
-	HashSet<Integer> set = new HashSet();
+	HashMap<Integer, HashSet<Integer>> set = new HashMap<>();
 	HashSet<Integer> made = new HashSet();
 	public MapGenSites()
 	{
@@ -50,62 +51,66 @@ public class MapGenSites extends MapGenVillage
 	@Override
     protected boolean canSpawnStructureAtCoords(int x, int z)
     {
+		int chunkX = x, chunkZ = z;
 		x *= 16;
 		z *= 16;
 		x -= WorldGenerator.shift.posX;
 		z -= WorldGenerator.shift.posZ;
+		DorfMap dorfs = WorldGenerator.instance.dorfs;
 		
-
-		int dx = 16 * scale/2 + scale;
-		int dz = 16 * scale/2 + scale;
-		
-		if (x >= 0 && z >= 0 && (x + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap.length
-				&& (z + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap[0].length) {
-			x = x/scale;
-			z = z/scale;
-			int x1 = (x)/16;
-			int z1 = (z)/16;
-//			int x2 = (x)/16;
-//			int z2 = (z + dz/scale)/16;
-//			int x3 = (x)/16;
-//			int z3 = (z - dz/scale)/16;
-//			int x4 = (x + dx/scale)/16;
-//			int z4 = (z)/16;
-//			int x5 = (x - dx/scale)/16;
-//			int z5 = (z)/16;
-			int key= (x1)+ 2048 * (z1);
-//			int key2 = (x2)+ 2048 * (z2);
-//			int key3 = (x3)+ 2048 * (z3);
-//			int key4 = (x4)+ 2048 * (z4);
-//			int key5 = (x5)+ 2048 * (z5);
-//			
-//			boolean mid = key != key2 && key != key3 && key != key4 && key != key5;
+		if (x >= 0 && z >= 0 && (x + 16) / scale <= dorfs.biomeMap.length
+				&& (z + 16) / scale <= dorfs.biomeMap[0].length) {
+//			x = x/scale;
+//			z = z/scale;
+			int x1;// = (x)/16;
+			int z1;// = (z)/16;
 			
+			HashSet<Site> sites = dorfs.getSiteForCoords(x, z);
 			
-			
-//			if(mid && DorfMap.sitesByCoord.containsKey(key) && !set.contains(key))
-//			{
-//				set.add(key);
-//				return true;
-//			}
-			
-			//if(DorfMap.sitesByCoord.containsKey(key) && !set.contains(key))
-			if(!set.contains(key))
+			if(sites==null)
+				return false;
+			for(Site s: sites)
 			{
-				if(WorldGenerator.instance.dorfs.structureMap.length > 0)
+				HashSet<Integer> locations = set.get(s.id);
+				if(locations==null)
 				{
-					int rgb = WorldGenerator.instance.dorfs.structureMap[x][z];
-					SiteTerrain site = SiteTerrain.getMatch(rgb);
-					if(site==SiteTerrain.BUILDINGS)
+					locations = new HashSet();
+					set.put(s.id, locations);
+				}
+				x1 = ((x+8)/scale)*scale;// + scale/2;
+				z1 = ((z+8)/scale)*scale;// + scale/2;
+				int key = x1/scale + 8192 * z1/scale;
+				if(!locations.contains(key))
+				{
+					if(WorldGenerator.instance.dorfs.structureMap.length > 0)
+					{	
+						int rgb = WorldConstructionMaker.bicubicInterpolator.interpolateBiome(dorfs.structureMap,  x1, z1, scale);
+						
+						x1/=16;
+						z1/=16;
+						
+						SiteTerrain site = SiteTerrain.getMatch(rgb);
+						
+						if(site==SiteTerrain.BUILDINGS)
+						{
+							//if(x1==chunkX && z1==chunkZ)
+//							{
+								System.out.println("Placed at "+x+" "+z+" "+x1+" "+z1+" "+s);
+								locations.add(key);
+								return true;
+//							}
+//							else if(s.type != SiteType.LAIR)
+//							{
+//								//System.out.println("Not placing at "+chunkX+" "+chunkZ+" "+x1+" "+z1+" "+s);
+//							}
+						}
+						
+					}
+					else
 					{
-						set.add(key);
+						locations.add(key);
 						return true;
 					}
-				}
-				else
-				{
-					set.add(key);
-					return true;
 				}
 			}
 			return false;
@@ -113,17 +118,29 @@ public class MapGenSites extends MapGenVillage
     	return false;
     }
 	
+	private boolean shouldSiteSpawn(int x, int z, Site site)
+	{
+		return true;
+	}
+	
 	@Override
     protected StructureStart getStructureStart(int x, int z)
     {
-		Site site = WorldGenerator.instance.dorfs.getSiteForCoords(x*16, z*16);
+		HashSet<Site> sites = WorldGenerator.instance.dorfs.getSiteForCoords(x*16, z*16);
 		int key= (x/16)+ 2048 * (z/16);
-//		if(made.contains(key))
-//			return new Start(worldObj, rand, x, z, -1);
-//		made.add(key);
 		
-		System.out.println(site);
-	//	new Exception().printStackTrace();
+		System.out.println(sites);
+		
+		Site site = null;
+		
+		for(Site s: sites)
+		{
+			if(shouldSiteSpawn(x,z,s))
+			{
+				site = s;
+				break;
+			}
+		}
 		
 		if(site==null)
 		{

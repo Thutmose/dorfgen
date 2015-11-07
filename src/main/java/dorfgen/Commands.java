@@ -1,8 +1,13 @@
 package dorfgen;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
+import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Site;
 import net.minecraft.command.ICommand;
 import net.minecraft.command.ICommandSender;
@@ -52,6 +57,15 @@ public class Commands implements ICommand
 		if(args.length > 1 && args[0].equalsIgnoreCase("tp") && sender instanceof EntityPlayer)
 		{
 			String name = args[1];
+			
+			if(args[1].contains("\""))
+			{
+				for(int i = 2; i<args.length; i++)
+				{
+					name += args[i];
+				}
+			}
+			
 			EntityPlayer entity = (EntityPlayer) sender;
 			Site telesite = null;
 			try
@@ -64,7 +78,7 @@ public class Commands implements ICommand
 				ArrayList<Site> sites = new ArrayList(WorldGenerator.instance.dorfs.sitesById.values());
 				for(Site s: sites)
 				{
-					if(s.name.equalsIgnoreCase(name))
+					if(s.name.replace(" ", "").equalsIgnoreCase(name.replace("\"", "").replace(" ", "")))
 					{
 						telesite = s;
 						break;
@@ -92,9 +106,42 @@ public class Commands implements ICommand
 	}
 
 	@Override
-	public List addTabCompletionOptions(ICommandSender p_71516_1_, String[] p_71516_2_)
+	public List addTabCompletionOptions(ICommandSender sender, String[] args)
 	{
 		// TODO Auto-generated method stub
+		
+		if(args[0].equalsIgnoreCase("tp"))
+		{
+			System.out.println(Arrays.toString(args));
+			Collection<Site> sites = DorfMap.sitesById.values();
+			ArrayList<String> names = new ArrayList();
+			Collections.sort(names);
+			for(Site site: sites)
+			{
+				if(site.name.split(" ").length>1)
+				{
+					names.add("\""+site.name+"\"");
+				}
+				else
+				{
+					names.add(site.name);
+				}
+			}
+			System.out.println(names);
+			List ret = new ArrayList();
+			if(args.length == 2)
+			{
+				String text = args[1];
+				for(String name: names)
+				{
+					if(name.contains(text))
+					{
+						ret.add(name);
+					}
+				}
+			}
+			return ret;
+		}
 		return null;
 	}
 
