@@ -87,8 +87,8 @@ public class Commands implements ICommand
 			}
 			if(telesite!=null)
 			{
-				int x = telesite.x * 16 * WorldGenerator.scale + WorldGenerator.scale * 8;
-				int z = telesite.z * 16 * WorldGenerator.scale + WorldGenerator.scale * 8;
+				int x = telesite.x * WorldGenerator.scale + WorldGenerator.scale;
+				int z = telesite.z * WorldGenerator.scale + WorldGenerator.scale;
 				
 				int y = WorldGenerator.instance.dorfs.elevationMap[(x - WorldGenerator.instance.shift.posX) / WorldGenerator.scale]
 						[(z - WorldGenerator.instance.shift.posZ) / WorldGenerator.scale];

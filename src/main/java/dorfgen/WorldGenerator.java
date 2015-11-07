@@ -151,9 +151,9 @@ public class WorldGenerator {
 				{
 					if(s.name.equalsIgnoreCase(spawnSite))
 					{
-						int x = s.x * 16 * scale;
+						int x = s.x * scale;
 						int y = 0;
-						int z = s.z * 16 * scale;
+						int z = s.z * scale;
 						try
 						{
 							y = dorfs.elevationMap[(x - shift.posX) / scale][(z - shift.posZ) / scale];
@@ -163,15 +163,11 @@ public class WorldGenerator {
 							System.out.println(s+" "+dorfs.elevationMap.length);
 							e.printStackTrace();
 						}
-						evt.world.setSpawnLocation(x + 16 * scale / 2, y, z + 16 * scale / 2);
+						evt.world.setSpawnLocation(x + scale / 2, y, z + scale / 2);
 						return;
 					}
 				}
-				
 			}
-			
-			
-			
 			if (randomSpawn) {
 				ArrayList<Site> sites = new ArrayList(dorfs.sitesById.values());
 				
@@ -179,9 +175,9 @@ public class WorldGenerator {
 				
 				for (Site s : sites) {
 					if (s.type.isVillage() && s.type != SiteType.HIPPYHUTS) {
-						int x = s.x * 16 * scale;
+						int x = s.x * scale;
 						int y = 0;
-						int z = s.z * 16 * scale;
+						int z = s.z * scale;
 						try
 						{
 							y = dorfs.elevationMap[(x - shift.posX) / scale][(z - shift.posZ) / scale];
@@ -191,7 +187,7 @@ public class WorldGenerator {
 							System.out.println(s+" "+dorfs.elevationMap.length);
 							e.printStackTrace();
 						}
-						evt.world.setSpawnLocation(x + 16 * scale / 2, y, z + 16 * scale / 2);
+						evt.world.setSpawnLocation(x + scale / 2, y, z + scale / 2);
 						return;
 					}
 				}

@@ -12,8 +12,10 @@ import dorfgen.BlockRoadSurface;
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.ConstructionType;
+import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.WorldConstruction;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
+import dorfgen.conversion.SiteMapColours;
 import dorfgen.conversion.SiteTerrain;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
@@ -77,36 +79,50 @@ public class WorldConstructionMaker
 		{
 			for (int k1 = 0; k1 < 16; k1++)
 			{
-				x1 = (x + i1) / scale;
-				z1 = (z + k1) / scale;
+				x1 = (x + i1);// / scale;
+				z1 = (z + k1);// / scale;
 
-				dx = (x + i1 - scale * x1) / (double) scale;
-				dz = (z + k1 - scale * z1) / (double) scale;
-
-				h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x + i1, z + k1, scale);
+				HashSet<Site> sites = dorfs.getSiteForCoords(x1, z1);
 				
-				rgb = bicubicInterpolator.interpolateBiome(dorfs.structureMap,  x + i1, z + k1, scale);
-				
-				SiteTerrain site = SiteTerrain.getMatch(rgb);
-				if(site==null)
+				if(sites==null)
 					continue;
 				
-				int j = h - 1;
-				
-				index = j << 0 | (i1) << 12 | (k1) << 8;
+				for(Site s: sites)
+				{
+					if(s.map==null)
+						continue;
+					
+					int shiftX = x1 - s.corners[0][0]*scale;
+					int shiftZ = z1 - s.corners[0][1]*scale;
+					if(shiftX >= s.map.getWidth() || shiftZ >= s.map.getHeight())
+						continue;
+					if(shiftX < 0 || shiftZ < 0 )
+						continue;
+					rgb = s.map.getRGB(shiftX, shiftZ);
+					SiteMapColours siteCol = SiteMapColours.getMatch(rgb);
+					
+					if(siteCol==null)
+						continue;
+					
+					h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1, scale);
+					int j = h - 1;
+					
+					Block[] repBlocks = SiteMapColours.getSurfaceBlocks(siteCol);
+					
+					index = j << 0 | (i1) << 12 | (k1) << 8;
 
-				BiomeGenBase biome = biomes[i1+16*k1];
-				
-				Block surface = getSurfaceBlockForSite(site, 0);
-				Block above = getSurfaceBlockForSite(site, 1);
-				if(surface==null || blocks[index - 1] == Blocks.water || blocks[index] == Blocks.water)
-					continue;
-				blocks[index] = surface;
-				index = (j - 1) << 0 | (i1) << 12 | (k1) << 8;
-				blocks[index] = Blocks.cobblestone;
-				index = (j + 1) << 0 | (i1) << 12 | (k1) << 8;
-				blocks[index] = above;
-
+					BiomeGenBase biome = biomes[i1+16*k1];
+					
+					Block surface =  repBlocks[1];
+					Block above = repBlocks[2];
+					if(surface==null)// || blocks[index - 1] == Blocks.water || blocks[index] == Blocks.water)
+						continue;
+					blocks[index] = surface;
+					index = (j - 1) << 0 | (i1) << 12 | (k1) << 8;
+					blocks[index] = repBlocks[0];
+					index = (j + 1) << 0 | (i1) << 12 | (k1) << 8;
+					blocks[index] = above;
+				}
 			}
 		}
 	}

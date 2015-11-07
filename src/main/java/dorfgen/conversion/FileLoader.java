@@ -58,6 +58,7 @@ public class FileLoader
 	public String	legends					= "";
 	public String	legendsPlus				= "";
 	public String	constructionFineCoords	= "";
+	public String	siteInfo				= "";
 
 	public static HashMap<Integer, BufferedImage> sites = new HashMap();
 
@@ -147,6 +148,10 @@ public class FileLoader
 				{
 					constructionFineCoords = s;
 				}
+				else if(s.contains("sites.txt"))
+				{
+					siteInfo = s;
+				}
 			}
 		}
 
@@ -165,6 +170,7 @@ public class FileLoader
 		loadLegends(legends);
 		loadLegendsPlus(legendsPlus);
 		loadFineConstructLocations(constructionFineCoords);
+		loadSiteInfo(siteInfo);
 
 		WorldGenerator.instance.biomeMap = getImage(biome);
 		WorldGenerator.instance.elevationMap = getImage(elevation);
@@ -241,7 +247,6 @@ public class FileLoader
 				{
 					site.map = sites.get(id);
 				}
-				DorfMap.addSiteByCoord(x + 2048 * z, site);
 				DorfMap.sitesById.put(id, site);
 			}
 
@@ -599,6 +604,53 @@ public class FileLoader
 		catch (Exception e)
 		{
 
+		}
+	}
+	
+	public static void loadSiteInfo(String file)
+	{
+		ArrayList<String> rows = new ArrayList<String>();
+		BufferedReader br = null;
+		String line = "";
+
+		try
+		{
+			InputStream res = new FileInputStream(file);
+			br = new BufferedReader(new InputStreamReader(res));
+			int n = 0;
+			while ((line = br.readLine()) != null)
+			{
+				rows.add(line);
+			}
+
+			for (String entry : rows)
+			{
+				String[] args = entry.split(":");
+				int id = Integer.parseInt(args[0]);
+				
+				Site site = DorfMap.sitesById.get(id);
+				
+				if (site != null)
+				{
+					String[] corner1 = args[1].split("->")[0].split(",");
+					int x1 = Integer.parseInt(corner1[0]);
+					int y1 = Integer.parseInt(corner1[1]);
+					String[] corner2 = args[1].split("->")[1].split(",");
+					int x2 = Integer.parseInt(corner2[0]);
+					int y2 = Integer.parseInt(corner2[1]);
+					site.setSiteLocation(x1, y1, x2, y2);
+					n++;
+				}
+				else
+				{
+					new NullPointerException("Cannot Find Site for id:" + id).printStackTrace();
+				}
+			}
+			System.out.println("Imported locations for "+n+" Sites");
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
 		}
 	}
 

@@ -29,13 +29,25 @@ public class DorfMap {
 	public int[][] volcanismMap = new int[0][0];
 	public int[][] vegitationMap = new int[0][0];
 	public int[][] structureMap = new int[0][0];
+	/**
+	 * Coords are embark tile resolution and are x + 8192 * z
+	 */
 	public static HashMap<Integer, HashSet<Site>> sitesByCoord = new HashMap();
 	public static HashMap<Integer, Site> sitesById = new HashMap();
 	public static HashMap<Integer, Region> regionsById = new HashMap();
+	/**
+	 * Coords are world tile resolution and are x + 2048 * z
+	 */
 	public static HashMap<Integer, Region> regionsByCoord = new HashMap();
 	public static HashMap<Integer, Region> ugRegionsById = new HashMap();
+	/**
+	 * Coords are world tile resolution and are x + 2048 * z
+	 */
 	public static HashMap<Integer, Region> ugRegionsByCoord = new HashMap();
 	public static HashMap<Integer, WorldConstruction> constructionsById = new HashMap();
+	/**
+	 * Coords are world tile resolution and are x + 2048 * z
+	 */
 	public static HashMap<Integer, HashSet<WorldConstruction>> constructionsByCoord = new HashMap();
 	static int waterShift = -35;
 	
@@ -43,8 +55,9 @@ public class DorfMap {
 	public CachedBicubicInterpolator	heightInterpolator	= new CachedBicubicInterpolator();
 	public CachedBicubicInterpolator	miscInterpolator	= new CachedBicubicInterpolator();
 	
-	static void addSiteByCoord(int coord, Site site)
+	static void addSiteByCoord(int x, int z, Site site)
 	{
+		int coord = x + 8192 * z;
 		HashSet sites = sitesByCoord.get(coord);
 		if(sites==null)
 		{
@@ -373,9 +386,9 @@ public class DorfMap {
 	
 	public HashSet<Site> getSiteForCoords(int x, int z)
 	{
-    	x = x/(scale * 16);
-    	z = z/(scale * 16);
-    	int key = x + 2048 * z;
+    	x = x/(scale);
+    	z = z/(scale);
+    	int key = x + 8192 * z;
     	return sitesByCoord.get(key);
 	}
 	
@@ -470,8 +483,9 @@ public class DorfMap {
 		public final String name;
 		public final int id;
 		public final SiteType type;
-		public final int x;
-		public final int z;
+		public int x;
+		public int z;
+		public final int[][] corners = new int[2][2];
 		public final Set<Structure> structures = new HashSet<DorfMap.Structure>();
 		public BufferedImage map;
 		
@@ -487,10 +501,23 @@ public class DorfMap {
 				throw new NullPointerException();
 			}
 		}
+		public void setSiteLocation(int x1, int z1, int x2, int z2)
+		{
+			corners[0][0] = x1;
+			corners[0][1] = z1;
+			corners[1][0] = x2;
+			corners[1][1] = z2;
+			x = (x1 + x2) / 2;
+			z = (z1 + z2) / 2;
+			for(int x = x1; x<=x2; x++)
+				for(int z = z1; z<=z2; z++)
+					addSiteByCoord(x, z, this);
+		}
+		
 		@Override
 		public String toString()
 		{
-			return name+" "+type+" "+id+" "+(x*16*scale)+" "+(z*16*scale);
+			return name+" "+type+" "+id+" "+(corners[0][0]*scale)+","+(corners[0][1]*scale)+"->"+(corners[1][0]*scale)+","+(corners[1][1]*scale);
 		}
 		
 		@Override

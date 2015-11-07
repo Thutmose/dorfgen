@@ -58,6 +58,9 @@ public class MapGenSites extends MapGenVillage
 		z -= WorldGenerator.shift.posZ;
 		DorfMap dorfs = WorldGenerator.instance.dorfs;
 		
+		if(true)
+			return false;
+		
 		if (x >= 0 && z >= 0 && (x + 16) / scale <= dorfs.biomeMap.length
 				&& (z + 16) / scale <= dorfs.biomeMap[0].length) {
 //			x = x/scale;

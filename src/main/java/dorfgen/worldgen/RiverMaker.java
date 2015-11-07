@@ -20,6 +20,10 @@ public class RiverMaker {
 	}
 
 	public void makeRiversForChunk(World world, int chunkX, int chunkZ, Block[] blocks, BiomeGenBase[] biomes) {
+		
+		if(true)
+			return;
+		
 		int index;
 		int x = (chunkX * 16 - WorldGenerator.shift.posX);
 		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
@@ -43,30 +47,35 @@ public class RiverMaker {
 				river = r > 0;
 				if(!river)
 					continue;
+				//TODO make rivers that work with the new site code
 				
-				dx2 = dz2 = 0;
-				int j = 0;
-				for(j = world.getHeight()-1; j>1; j--)
-				{
-					index = j << 0 | (i1) << 12 | (k1) << 8;
-					if(blocks[index]!=null)
-					{
-						break;
-					}
-				}
-				h = Math.max(j, (int) (world.provider.getHorizon()));
-				int dh = Math.max(0, ((r - 80)/8));
-				dh = Math.min(dh, 8);
-				for (j = h - dh; j < world.getHeight()-1; j++) {
-					index = j << 0 | (i1) << 12 | (k1) << 8;
-
-					if (j == dh)
-						blocks[index] = Blocks.stone;
-					else if (j < h) {
-						blocks[index] = Blocks.water;
-					} else if(j >= h && r > 80)
-						blocks[index] = null;
-				}
+				
+//				dx2 = dz2 = 0;
+//				int j = 0;
+//				for(j = world.getHeight()-1; j>1; j--)
+//				{
+//					index = j << 0 | (i1) << 12 | (k1) << 8;
+//					if(blocks[index]!=null)
+//					{
+//						break;
+//					}
+//				}
+//				h = Math.max(j, (int) (world.provider.getHorizon()));
+//				int limit = 85;
+//				int dh = Math.max(0, ((r - 80)/8));
+//				dh = Math.min(dh, 8);
+//				
+//				for (j = h - dh; j < world.getHeight()-1; j++) {
+//					index = j << 0 | (i1) << 12 | (k1) << 8;
+//
+//					if (j == dh)
+//						blocks[index] = Blocks.stone;
+//					else 
+//					if (j < h - 4) {
+//						blocks[index] = Blocks.water;
+//					} else// if(j >= h && r > 80)
+//						blocks[index] = null;
+//				}
 			}
 		}
 	}

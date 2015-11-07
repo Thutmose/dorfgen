@@ -13,6 +13,7 @@ import java.util.HashSet;
 import dorfgen.conversion.BiomeList;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.FileLoader;
+import dorfgen.conversion.SiteMapColours;
 import dorfgen.conversion.SiteTerrain;
 import dorfgen.conversion.DorfMap.Region;
 import dorfgen.conversion.DorfMap.Site;
@@ -22,6 +23,7 @@ import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import dorfgen.worldgen.RiverMaker;
 import dorfgen.worldgen.WorldConstructionMaker;
+import net.minecraft.block.Block;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
@@ -57,7 +59,7 @@ public class ItemDebug extends Item {
 		DorfMap dorfs = WorldGenerator.instance.dorfs;
 		int n = 0;
 		Region region = dorfs.getRegionForCoords(x, z);
-		HashSet sites = dorfs.getSiteForCoords(x, z);
+		HashSet<Site> sites = dorfs.getSiteForCoords(x, z);
 		String mess = "";
 		if (region != null) {
 			mess += region.name + " " + region.type + " ";
@@ -74,39 +76,32 @@ public class ItemDebug extends Item {
 //			if(s.name.contains("drums"))
 //				System.out.println(s);
 		}
+		WorldConstructionMaker maker = new WorldConstructionMaker();
+
+		int h = maker.bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x, z, scale);
+		int r = maker.bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.riverMap, x, z, scale);
 		
-		
+		mess = h +" "+r;
 //		WorldGenerator.spawn.posX = 2629;
 //		WorldGenerator.spawn.posY = 100;
 //		WorldGenerator.spawn.posZ = 2502;
 		
-		
-		WorldConstructionMaker maker = new WorldConstructionMaker();
-//		int chunkX = x/16;
-//		int chunkZ = z/16;
-		HashSet<WorldConstruction> constructs;
-		mess += " "+(constructs = dorfs.getConstructionsForCoords(x, z));
-		
-		int rgb = maker.bicubicInterpolator.interpolateBiome(dorfs.structureMap,  x, z, scale);
-		
-		Color colour = new Color(rgb);
-		System.out.println(SiteTerrain.getMatch(rgb)+" ");
-
-		int x1 = (x/scale)*scale;// + scale/2;
-		int z1 = (z/scale)*scale;// + scale/2;
-		
-		//world.setBlock(x1, 110, z1, Blocks.gold_block);
-		
-		x1/=16;
-		z1/=16;
-		
-		
-		System.out.println(x1+" "+z1+" "+x/16+" "+z/16+" "+sites);
-		
-		
-		
-//		if (!mess.isEmpty())
-//			player.addChatMessage(new ChatComponentText(mess));
+//		HashSet<WorldConstruction> constructs;
+//		mess += " "+(constructs = dorfs.getConstructionsForCoords(x, z));
+//		
+//		int rgb = maker.bicubicInterpolator.interpolateBiome(dorfs.structureMap,  x, z, scale);
+//		
+//		Color colour = new Color(rgb);
+//		System.out.println(SiteTerrain.getMatch(rgb)+" ");
+//
+//		int x1 = (x/scale)*scale;// + scale/2;
+//		int z1 = (z/scale)*scale;// + scale/2;
+//		
+//		//world.setBlock(x1, 110, z1, Blocks.gold_block);
+//		
+//		System.out.println(x1+" "+z1+" "+sites);
+//		
+		player.addChatMessage(new ChatComponentText(mess));
 
 		return itemstack;
 	}
