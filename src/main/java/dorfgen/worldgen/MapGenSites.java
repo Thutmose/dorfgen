@@ -36,8 +36,9 @@ import net.minecraftforge.common.DungeonHooks;
 
 public class MapGenSites extends MapGenVillage
 {
-	HashMap<Integer, HashSet<Integer>> set = new HashMap<>();
+	HashSet<Integer> set = new HashSet();
 	HashSet<Integer> made = new HashSet();
+	Site siteToGen = null;
 	public MapGenSites()
 	{
 		super();
@@ -58,98 +59,54 @@ public class MapGenSites extends MapGenVillage
 		z -= WorldGenerator.shift.posZ;
 		DorfMap dorfs = WorldGenerator.instance.dorfs;
 		
-		if(true)
+		HashSet<Site> sites = dorfs.getSiteForCoords(x, z);
+		
+		if(sites==null)
 			return false;
 		
-		if (x >= 0 && z >= 0 && (x + 16) / scale <= dorfs.biomeMap.length
-				&& (z + 16) / scale <= dorfs.biomeMap[0].length) {
-//			x = x/scale;
-//			z = z/scale;
-			int x1;// = (x)/16;
-			int z1;// = (z)/16;
-			
-			HashSet<Site> sites = dorfs.getSiteForCoords(x, z);
-			
-			if(sites==null)
-				return false;
-			for(Site s: sites)
+		for(Site site: sites)
+		{
+			if(shouldSiteSpawn(x, z, site) && !set.contains(site.id))
 			{
-				HashSet<Integer> locations = set.get(s.id);
-				if(locations==null)
-				{
-					locations = new HashSet();
-					set.put(s.id, locations);
-				}
-				x1 = ((x+8)/scale)*scale;// + scale/2;
-				z1 = ((z+8)/scale)*scale;// + scale/2;
-				int key = x1/scale + 8192 * z1/scale;
-				if(!locations.contains(key))
-				{
-					if(WorldGenerator.instance.dorfs.structureMap.length > 0)
-					{	
-						int rgb = WorldConstructionMaker.bicubicInterpolator.interpolateBiome(dorfs.structureMap,  x1, z1, scale);
-						
-						x1/=16;
-						z1/=16;
-						
-						SiteTerrain site = SiteTerrain.getMatch(rgb);
-						
-						if(site==SiteTerrain.BUILDINGS)
-						{
-							//if(x1==chunkX && z1==chunkZ)
-//							{
-								System.out.println("Placed at "+x+" "+z+" "+x1+" "+z1+" "+s);
-								locations.add(key);
-								return true;
-//							}
-//							else if(s.type != SiteType.LAIR)
-//							{
-//								//System.out.println("Not placing at "+chunkX+" "+chunkZ+" "+x1+" "+z1+" "+s);
-//							}
-						}
-						
-					}
-					else
-					{
-						locations.add(key);
-						return true;
-					}
-				}
+				set.add(site.id);
+				siteToGen = site;
+				return true;
 			}
-			return false;
 		}
+		
     	return false;
     }
 	
 	private boolean shouldSiteSpawn(int x, int z, Site site)
 	{
-		return true;
+		int[][] coords = site.corners;
+		if(site.type == SiteType.LAIR)
+		{
+			int embarkX = (x/scale)*scale;
+			int embarkZ = (z/scale)*scale;
+			
+			if(embarkX/scale != site.x || embarkZ/scale != site.z)
+				return false;
+			int relX = x%scale;
+			int relZ = z%scale;
+			boolean middle = relX/16 == scale/32 && relZ/16 == scale/32;
+			
+			return middle;
+			
+		}
+		return false;
 	}
 	
 	@Override
     protected StructureStart getStructureStart(int x, int z)
     {
-		HashSet<Site> sites = WorldGenerator.instance.dorfs.getSiteForCoords(x*16, z*16);
-		int key= (x/16)+ 2048 * (z/16);
-		
-		System.out.println(sites);
-		
-		Site site = null;
-		
-		for(Site s: sites)
-		{
-			if(shouldSiteSpawn(x,z,s))
-			{
-				site = s;
-				break;
-			}
-		}
-		
+		Site site = siteToGen;
+		siteToGen = null;
 		if(site==null)
 		{
 			return super.getStructureStart(x, z);
 		}
-		
+		made.add(site.id);
 		if(site.type == SiteType.FORTRESS)
 		{
 	        MapGenStronghold.Start start;

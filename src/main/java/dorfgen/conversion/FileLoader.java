@@ -245,7 +245,16 @@ public class FileLoader
 				Site site = new Site(name, id, type, x, z);
 				if (sites.containsKey(id))
 				{
-					site.map = sites.get(id);
+					BufferedImage image = sites.get(id);
+					site.rgbmap = new int[image.getWidth()][image.getHeight()];
+					for(x = 0; x<image.getWidth(); x++)
+					{
+						for(z= 0; z<image.getHeight(); z++)
+						{
+							site.rgbmap[x][z] = image.getRGB(x, z);
+						}
+					}
+					sites.remove(id);
 				}
 				DorfMap.sitesById.put(id, site);
 			}

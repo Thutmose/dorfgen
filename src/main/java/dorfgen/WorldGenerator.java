@@ -45,6 +45,7 @@ import cpw.mods.fml.common.registry.GameRegistry;
 import dorfgen.conversion.Config;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.FileLoader;
+import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.SiteType;
 import dorfgen.worldgen.ChunkProviderFinite;
@@ -73,6 +74,7 @@ public class WorldGenerator {
 	public BufferedImage structuresMap;
 
 	public DorfMap dorfs;
+	public SiteStructureGenerator structureGen;
 
 	public static int scale;
 	public static boolean finite;
@@ -126,6 +128,7 @@ public class WorldGenerator {
 	public void postInit(FMLPostInitializationEvent e) {
 		new FileLoader();
 		dorfs = new DorfMap();
+		structureGen = new SiteStructureGenerator(dorfs);
 
 		for (BiomeGenBase b : BiomeGenBase.getBiomeGenArray()) {
 			if (b != null && !MapGenVillage.villageSpawnBiomes.contains(b)) {

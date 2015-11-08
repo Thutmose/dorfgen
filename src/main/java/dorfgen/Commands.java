@@ -13,6 +13,7 @@ import net.minecraft.command.ICommand;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.util.ChatComponentText;
 
 public class Commands implements ICommand
 {
@@ -92,7 +93,7 @@ public class Commands implements ICommand
 				
 				int y = WorldGenerator.instance.dorfs.elevationMap[(x - WorldGenerator.instance.shift.posX) / WorldGenerator.scale]
 						[(z - WorldGenerator.instance.shift.posZ) / WorldGenerator.scale];
-				
+				entity.addChatMessage(new ChatComponentText("Teleported to "+telesite));
 				entity.setPositionAndUpdate(x, y, z);
 			}
 		}
@@ -112,7 +113,6 @@ public class Commands implements ICommand
 		
 		if(args[0].equalsIgnoreCase("tp"))
 		{
-			System.out.println(Arrays.toString(args));
 			Collection<Site> sites = DorfMap.sitesById.values();
 			ArrayList<String> names = new ArrayList();
 			Collections.sort(names);
@@ -127,7 +127,6 @@ public class Commands implements ICommand
 					names.add(site.name);
 				}
 			}
-			System.out.println(names);
 			List ret = new ArrayList();
 			if(args.length == 2)
 			{

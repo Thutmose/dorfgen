@@ -485,9 +485,13 @@ public class DorfMap {
 		public final SiteType type;
 		public int x;
 		public int z;
+		/**
+		 * Corners in embark tile coordinates
+		 */
 		public final int[][] corners = new int[2][2];
+		public int[][] rgbmap;
 		public final Set<Structure> structures = new HashSet<DorfMap.Structure>();
-		public BufferedImage map;
+		//public BufferedImage map;
 		
 		public Site(String name_, int id_, SiteType type_, int x_, int z_)
 		{

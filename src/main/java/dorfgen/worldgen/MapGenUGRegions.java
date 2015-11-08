@@ -327,7 +327,7 @@ public class MapGenUGRegions extends MapGenCaves {
         Block top    = (isExceptionBiome(biome) ? Blocks.grass : biome.topBlock);
         Block filler = (isExceptionBiome(biome) ? Blocks.dirt  : biome.fillerBlock);
         Block block  = data[index];
-        Block grass = BlockRoadSurface.uggrass;
+        Block grass = Blocks.stone;
         
         int h = 0;
         int scale = WorldGenerator.scale;

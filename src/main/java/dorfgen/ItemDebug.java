@@ -7,8 +7,13 @@ import static net.minecraft.util.EnumFacing.SOUTH;
 import static net.minecraft.util.EnumFacing.WEST;
 
 import java.awt.Color;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
 
 import dorfgen.conversion.BiomeList;
 import dorfgen.conversion.DorfMap;
@@ -21,6 +26,8 @@ import dorfgen.conversion.DorfMap.SiteType;
 import dorfgen.conversion.DorfMap.WorldConstruction;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
+import dorfgen.conversion.SiteStructureGenerator.SiteStructures;
+import dorfgen.conversion.SiteStructureGenerator.StructureSpace;
 import dorfgen.worldgen.RiverMaker;
 import dorfgen.worldgen.WorldConstructionMaker;
 import net.minecraft.block.Block;
@@ -64,43 +71,92 @@ public class ItemDebug extends Item {
 		if (region != null) {
 			mess += region.name + " " + region.type + " ";
 		}
-//		if (site != null) {
-//			mess += site.name + " " + site.type + " " + site.id;
-//
-//			int x1 = site.x * 16 * scale + 16 * scale / 2;
-//			int z1 = site.z * 16 * scale + 16 * scale / 2;
-//		}
-		
-		for(Site s: WorldGenerator.instance.dorfs.sitesById.values())
-		{
-//			if(s.name.contains("drums"))
-//				System.out.println(s);
-		}
 		WorldConstructionMaker maker = new WorldConstructionMaker();
 
 		int h = maker.bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x, z, scale);
 		int r = maker.bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.riverMap, x, z, scale);
-		
-		mess = h +" "+r;
-//		WorldGenerator.spawn.posX = 2629;
-//		WorldGenerator.spawn.posY = 100;
-//		WorldGenerator.spawn.posZ = 2502;
-		
-//		HashSet<WorldConstruction> constructs;
-//		mess += " "+(constructs = dorfs.getConstructionsForCoords(x, z));
+		mess = "";
 //		
-//		int rgb = maker.bicubicInterpolator.interpolateBiome(dorfs.structureMap,  x, z, scale);
-//		
-//		Color colour = new Color(rgb);
-//		System.out.println(SiteTerrain.getMatch(rgb)+" ");
+		int embarkX = (x/scale)*scale;
+		int embarkZ = (z/scale)*scale;
+		Site site = null;
+		if(sites!=null)
+		{
+			for(Site s: sites)
+			{
+				site = s;
+			}
+		}
+		
+//		if(site!=null)
+//		{
+//			SiteStructures structures = new SiteStructures(site);
+//			System.out.println(structures.structures.size());
+//			
+//			Set<String> recomplexStructureNames = StructureRegistry.INSTANCE.allStructureIDs();
+//			
+//			ArrayList<String> names = new ArrayList(recomplexStructureNames);
+//			Collections.shuffle(names);
+//			for(StructureSpace space: structures.structures)
+//			{
+//				//if(space.min[0] == 337 && space.min[1] == 608)
+//				{
+//					int[][] bounds = space.getBounds(site, scale);
+//					int[] min = bounds[0];
+//					int[] max = bounds[1];
+//					
+//					int[] bound = new int[2];
+//					bound[0] = max[0]-min[0];
+//					bound[1] = max[1]-min[1];
+//					int[] box = new int[2];
+//					StructureInfo structureInfo = null;
+//					String structureName = null;
+//					for(String name : names)
+//					{
+//						StructureInfo info = StructureRegistry.INSTANCE.getStructure(name);
+//						int[] testbox = info.structureBoundingBox();
+//						if(testbox[0]<=bound[0] && testbox[1]<=bound[1]
+//								&& testbox[0] > box[0] && testbox[1]>box[1]
+//										&& !name.toLowerCase().contains("maze"))
+//						{
+//							structureInfo = info;
+//							structureName = name;
+//							box = testbox;
+//						}
+//					}
+//					x = min[0] + bound[0]/2;
+//					z = min[1] + bound[1]/2;
+//					if(structureInfo!=null)
+//					{
+//						System.out.println(structureName);
+//						
+//			            Random random = world.rand;
 //
-//		int x1 = (x/scale)*scale;// + scale/2;
-//		int z1 = (z/scale)*scale;// + scale/2;
-//		
-//		//world.setBlock(x1, 110, z1, Blocks.gold_block);
-//		
-//		System.out.println(x1+" "+z1+" "+sites);
-//		
+//			            AxisAlignedTransform2D transform = AxisAlignedTransform2D.transform(0, structureInfo.isMirrorable() && random.nextBoolean());
+//
+//			            int[] size = StructureInfos.structureSize(structureInfo, transform);
+//
+//			            int genX = x - size[0] / 2;
+//			            int genZ = z - size[2] / 2;
+//			            int genY;
+//			            List<NaturalGenerationInfo> naturalGenerationInfos = structureInfo.generationInfos(NaturalGenerationInfo.class);
+//			            if (naturalGenerationInfos.size() > 0)
+//			                genY = naturalGenerationInfos.get(0).ySelector.selectY(world, random, StructureInfos.structureBoundingBox(new BlockCoord(genX, 0, genZ), size));
+//			            else
+//			                genY = world.getHeightValue(x, z);
+//
+//			            BlockCoord coord = new BlockCoord(genX, genY, genZ);
+//
+////			            OperationRegistry.queueOperation(new OperationGenerateStructure((GenericStructureInfo) structureInfo, transform, coord, true, structureName), player);
+//			            StructureGenerator.instantly(structureInfo, world, random, coord, transform, 0, false, structureName, false);
+//			           // StructureGenerator.
+//			            
+//					//	StructureGenerator.randomInstantly(world, world.rand, toMake, null, x, z, false, structureName);
+//					}
+//					//break;
+//				}
+//			}
+//		}
 		player.addChatMessage(new ChatComponentText(mess));
 
 		return itemstack;

@@ -16,6 +16,9 @@ import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.WorldConstruction;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.SiteMapColours;
+import dorfgen.conversion.SiteStructureGenerator;
+import dorfgen.conversion.SiteStructureGenerator.SiteStructures;
+import dorfgen.conversion.SiteStructureGenerator.StructureSpace;
 import dorfgen.conversion.SiteTerrain;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
@@ -69,6 +72,7 @@ public class WorldConstructionMaker
 	{
 		if(dorfs.structureMap.length==0)
 			return;
+		SiteStructureGenerator structureGen = WorldGenerator.instance.structureGen;
 		int index;
 		int x = (chunkX * 16 - WorldGenerator.shift.posX);
 		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
@@ -89,16 +93,16 @@ public class WorldConstructionMaker
 				
 				for(Site s: sites)
 				{
-					if(s.map==null)
+					if(s.rgbmap==null)
 						continue;
 					
-					int shiftX = x1 - s.corners[0][0]*scale;
-					int shiftZ = z1 - s.corners[0][1]*scale;
-					if(shiftX >= s.map.getWidth() || shiftZ >= s.map.getHeight())
+					int shiftX = (x1 - s.corners[0][0]*scale)*51/scale;
+					int shiftZ = (z1 - s.corners[0][1]*scale)*51/scale;
+					if(shiftX >= s.rgbmap.length || shiftZ >= s.rgbmap[0].length)
 						continue;
 					if(shiftX < 0 || shiftZ < 0 )
 						continue;
-					rgb = s.map.getRGB(shiftX, shiftZ);
+					rgb = s.rgbmap[shiftX][shiftZ];
 					SiteMapColours siteCol = SiteMapColours.getMatch(rgb);
 					
 					if(siteCol==null)
@@ -106,6 +110,13 @@ public class WorldConstructionMaker
 					
 					h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1, scale);
 					int j = h - 1;
+					SiteStructures structs = structureGen.getStructuresForSite(s);
+					StructureSpace struct = structs.getStructure(x1, z1, scale);
+					if(struct != null)
+					{
+						j = struct.getFloor(s, scale) - 1;
+						h = j+1;
+					}
 					
 					Block[] repBlocks = SiteMapColours.getSurfaceBlocks(siteCol);
 					
@@ -115,6 +126,10 @@ public class WorldConstructionMaker
 					
 					Block surface =  repBlocks[1];
 					Block above = repBlocks[2];
+					
+					if(surface==null && siteCol.toString().contains("ROOF"))
+						surface = Blocks.brick_block;
+					
 					if(surface==null)// || blocks[index - 1] == Blocks.water || blocks[index] == Blocks.water)
 						continue;
 					blocks[index] = surface;
@@ -122,6 +137,32 @@ public class WorldConstructionMaker
 					blocks[index] = repBlocks[0];
 					index = (j + 1) << 0 | (i1) << 12 | (k1) << 8;
 					blocks[index] = above;
+					boolean wall = siteCol.toString().contains("WALL");
+					boolean roof = siteCol.toString().contains("ROOF");
+					boolean tower = siteCol.toString().contains("TOWER");
+					if(wall||roof)
+					{
+						int j1 = j + 1;
+						int num = tower?10:5;
+						while(j1<h+1)
+						{
+							j1 = j1 + 1;
+							index = (j1) << 0 | (i1) << 12 | (k1) << 8;
+							blocks[index] = null;
+							index = (h + num) << 0 | (i1) << 12 | (k1) << 8;
+							blocks[index] = surface;
+						}
+						j1 = j + 1;
+						if(wall)
+						{
+							while(j1 < h + num)
+							{
+								j1 = j1 + 1;
+								index = (j1) << 0 | (i1) << 12 | (k1) << 8;
+								blocks[index] = surface;
+							}
+						}
+					}
 				}
 			}
 		}
@@ -129,6 +170,8 @@ public class WorldConstructionMaker
 
 	public void buildRoads(World world, int chunkX, int chunkZ, Block[] blocks, BiomeGenBase[] biomes)
 	{
+		if(true)
+			return;
 		int index;
 		int x = (chunkX * 16 - WorldGenerator.shift.posX);
 		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
