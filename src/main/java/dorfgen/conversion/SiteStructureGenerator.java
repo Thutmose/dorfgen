@@ -35,11 +35,88 @@ public class SiteStructureGenerator
 	{
 		public final Site site;
 		public final HashSet<StructureSpace> structures = new HashSet();
+		public final HashSet<RoadExit> roads = new HashSet();
 		
 		public SiteStructures(Site site_)
 		{
 			site = site_;
-			
+			initStructures();
+			initRoads();
+		}
+		
+		private void initRoads()
+		{
+			if(site.rgbmap != null)
+			{
+				int h = site.rgbmap.length;
+				int w = site.rgbmap[0].length;
+				
+				boolean found1 = false;
+				boolean found2 = false;
+				//first 2 Edges
+				for(int i = 0; i<h; i++)
+				{
+					int side1 = site.rgbmap[i][0];
+					int side2 = site.rgbmap[i][w-1];
+
+					SiteMapColours colour1 = SiteMapColours.getMatch(side1);
+					SiteMapColours colour2 = SiteMapColours.getMatch(side2);
+
+					if(!found1 && colour1 == SiteMapColours.ROAD)
+					{
+						found1 = true;
+						roads.add(new RoadExit(i + 3, 0));
+					}
+					else if(found1 && colour1 != SiteMapColours.ROAD)
+					{
+						found1 = false;
+					}
+					if(!found2 && colour2 == SiteMapColours.ROAD)
+					{
+						found2 = true;
+						roads.add(new RoadExit(i + 3, w - 1));
+					}
+					else if(found2 && colour2 != SiteMapColours.ROAD)
+					{
+						found2 = false;
+					}
+				}
+				found1 = false;
+				found2 = false;
+				//second 2 Edges
+				for(int i = 0; i<w; i++)
+				{
+					int side1 = site.rgbmap[0][i];
+					int side2 = site.rgbmap[h - 1][i];
+
+					SiteMapColours colour1 = SiteMapColours.getMatch(side1);
+					SiteMapColours colour2 = SiteMapColours.getMatch(side2);
+
+					if(!found1 && colour1 == SiteMapColours.ROAD)
+					{
+						found1 = true;
+						roads.add(new RoadExit(0, i + 3));
+					}
+					else if(found1 && colour1 != SiteMapColours.ROAD)
+					{
+						found1 = false;
+					}
+					if(!found2 && colour2 == SiteMapColours.ROAD)
+					{
+						found2 = true;
+						roads.add(new RoadExit(h - 1, i + 3));
+					}
+					else if(found2 && colour2 != SiteMapColours.ROAD)
+					{
+						found2 = false;
+					}
+				}
+				
+			}
+		}
+		
+		private void initStructures()
+		{
 			if(site.rgbmap != null)
 			{
 				HashSet<Integer> found = new HashSet();
@@ -213,6 +290,29 @@ public class SiteStructureGenerator
 			floor /= 4;
 			
 			return floor;
+		}
+	}
+	
+	public static class RoadExit
+	{
+		final int midPixelX;
+		final int midPixelY;
+		int[] location;
+		public RoadExit(int x, int y)
+		{
+			midPixelX = x;
+			midPixelY = y;
+		}
+		
+		public int[] getEdgeMid(Site site, int scale)
+		{
+			if(location==null)
+			{
+				location = new int[2];
+				location[0] = midPixelX * (scale/51) + site.corners[0][0] * scale;
+				location[1] = midPixelY * (scale/51) + site.corners[0][1] * scale;
+			}
+			return location;
 		}
 	}
 	

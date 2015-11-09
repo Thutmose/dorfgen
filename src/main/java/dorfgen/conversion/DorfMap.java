@@ -393,10 +393,22 @@ public class DorfMap {
 	
 	public HashSet<Site> getSiteForCoords(int x, int z)
 	{
-    	x = x/(scale);
-    	z = z/(scale);
-    	int key = x + 8192 * z;
-    	return sitesByCoord.get(key);
+    	int kx = x/(scale);
+    	int kz = z/(scale);
+    	int key = kx + 8192 * kz;
+    	
+    	HashSet<Site> ret = sitesByCoord.get(key);
+    	
+    	if(ret!=null)
+    	{
+    		for(Site s: ret)
+    		{
+    			if(s.isInSite(x, z))
+    				return ret;
+    		}
+    	}
+    	
+    	return null;
 	}
 	
 	public HashSet<WorldConstruction> getConstructionsForCoords(int x, int z)
@@ -547,11 +559,21 @@ public class DorfMap {
 			return super.equals(o);
 		}
 		
-		public int[] globalToLocal(int xin, int zin)
+		public boolean isInSite(int x, int z)
 		{
-			int[] ret = new int[2];
-			
-			return ret;
+			if(x < corners[0][0] * scale || z < corners[0][1] * scale)
+				return false;
+			if(rgbmap != null)
+			{
+				//Equals as it starts at 0
+				if(x >= (corners[0][0] * scale + rgbmap.length * scale / 51) || z >= (corners[0][1] * scale + rgbmap[0].length * scale / 51))
+					return false;
+			}
+			else
+			{
+				
+			}
+			return true;
 		}
 	}
 	
