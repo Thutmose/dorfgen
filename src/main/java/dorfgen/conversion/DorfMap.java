@@ -105,7 +105,7 @@ public class DorfMap {
 	{
 		double a = preHeight;
 		
-		return (int) (Math.min(Math.max(((210./(1+Math.exp(-(a-128.)/20.)))+35.+a)/2.,10),245));
+		return (int) (Math.min(Math.max(((215./(1+Math.exp(-(a-128.)/20.)))+45.+a)/2.,10),245));
 	}
 	
 	public void populateElevationMap()
