@@ -101,6 +101,13 @@ public class DorfMap {
         WorldGenerator.instance.biomeMap = null;
 	}
 	
+	private int elevationSigmoid(int preHeight)
+	{
+		double a = preHeight;
+		
+		return (int) (Math.min(Math.max(((210./(1+Math.exp(-(a-128.)/20.)))+35.+a)/2.,10),245));
+	}
+	
 	public void populateElevationMap()
 	{
 		BufferedImage img = WorldGenerator.instance.elevationMap;
@@ -121,7 +128,7 @@ public class DorfMap {
             		h = b + waterShift;
             	}
             	h = Math.max(0, h);
-            	elevationMap[x][y] = h;
+            	elevationMap[x][y] = elevationSigmoid(h);
             	if(biomeMap.length>0)
             	if(h < 145 && biomeMap[x][y] == BiomeGenBase.extremeHillsPlus.biomeID)
             	{

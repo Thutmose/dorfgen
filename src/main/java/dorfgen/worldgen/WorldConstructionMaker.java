@@ -167,15 +167,119 @@ public class WorldConstructionMaker
 			}
 		}
 	}
+	
+	static EnumFacing[] DIRS = { EAST, WEST, NORTH, SOUTH };
+	private static double[] DIR_TO_RELX = { ((double)scale), 0., ((double)scale)/2., ((double)scale)/2. };
+	private static double[] DIR_TO_RELZ = { ((double)scale)/2., ((double)scale)/2., 0, ((double)scale) };
 
+	private int dirToIndex(EnumFacing dir)
+	{
+		if(dir == EAST) return 0;
+		if(dir == WEST) return 1;
+		if(dir == NORTH) return 2;
+		if(dir == SOUTH) return 3;
+		return 0;
+	}
+	
+	private void safeSetToRoad(int x, int z, int chunkX, int chunkZ, Block[] blocks)
+	{
+		int h, index;
+		
+		int x1 = x - chunkX;
+		int z1 = z - chunkZ;
+		
+		h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x, z, scale);
+		
+		index = (h - 1) << 0 | (x1) << 12 | (z1) << 8;
+		
+		Block surface =  BlockRoadSurface.uggrass;
+		
+		if(index >= 0 && x1 < 16 && z1 < 16 && x1 >= 0 && z1 >= 0)
+		{
+			blocks[index] = surface;
+			blocks[index - 1] = Blocks.cobblestone;
+			blocks[index - 2] = Blocks.cobblestone;
+		}
+	}
+	
+	private void genSingleRoad(EnumFacing begin, EnumFacing end, int x, int z, int chunkX, int chunkZ, Block[] blocks)
+	{
+		int nearestEmbarkX = x - (x % scale);
+		int nearestEmbarkZ = z - (z % scale);
+		double interX, interZ;
+		int nearestX, nearestZ;
+		double startX = DIR_TO_RELX[dirToIndex(begin)];
+		double startZ = DIR_TO_RELZ[dirToIndex(begin)];
+		double endX = DIR_TO_RELX[dirToIndex(end)];
+		double endZ = DIR_TO_RELZ[dirToIndex(end)];
+		
+		double c = ((double) scale)/2.;
+		
+		for(double i = -0.2; i <= 1.2; i += 0.02)
+		{
+//			interX = startX * (1.0 - i) + endX * i;
+//			interZ = startZ * (1.0 - i) + endZ * i;
+			
+			interX = (1.-i)*(1.-i)*startX + 2.*(1.-i)*i*c + i*i*endX;
+			interZ = (1.-i)*(1.-i)*startZ + 2.*(1.-i)*i*c + i*i*endZ;
+			
+			nearestX = (int) interX;
+			nearestZ = (int) interZ;
+			
+			safeSetToRoad(nearestX + nearestEmbarkX, nearestZ + nearestEmbarkZ, chunkX, chunkZ, blocks);
+			
+			safeSetToRoad(nearestX + nearestEmbarkX + 1, nearestZ + nearestEmbarkZ, chunkX, chunkZ, blocks);
+			safeSetToRoad(nearestX + nearestEmbarkX, nearestZ + nearestEmbarkZ + 1, chunkX, chunkZ, blocks);
+			safeSetToRoad(nearestX + nearestEmbarkX - 1, nearestZ + nearestEmbarkZ, chunkX, chunkZ, blocks);
+			safeSetToRoad(nearestX + nearestEmbarkX, nearestZ + nearestEmbarkZ - 1, chunkX, chunkZ, blocks);
+			
+			safeSetToRoad(nearestX + nearestEmbarkX + 1, nearestZ + nearestEmbarkZ + 1, chunkX, chunkZ, blocks);
+			safeSetToRoad(nearestX + nearestEmbarkX + 1, nearestZ + nearestEmbarkZ - 1, chunkX, chunkZ, blocks);
+			safeSetToRoad(nearestX + nearestEmbarkX - 1, nearestZ + nearestEmbarkZ + 1, chunkX, chunkZ, blocks);
+			safeSetToRoad(nearestX + nearestEmbarkX - 1, nearestZ + nearestEmbarkZ - 1, chunkX, chunkZ, blocks);
+		}
+	}
+	
+	private void genRoads(int x, int z, int chunkX, int chunkZ, Block[] blocks)
+	{
+		int nearestEmbarkX = x - (x % scale);
+		int nearestEmbarkZ = z - (z % scale);
+		
+		boolean dirs[] = getRoadDirection(nearestEmbarkX, nearestEmbarkZ);
+		
+		for(int i = 0; i < 3; i++)
+		{
+			for(int j = i+1; j < 4; j++)
+			{
+				if(dirs[i] && dirs[j]) genSingleRoad(DIRS[i], DIRS[j], x, z, chunkX, chunkZ, blocks);
+			}
+		}
+	}
+	
 	public void buildRoads(World world, int chunkX, int chunkZ, Block[] blocks, BiomeGenBase[] biomes)
 	{
-		if(true)
-			return;
-		int index;
 		int x = (chunkX * 16 - WorldGenerator.shift.posX);
 		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
-		int x1, z1, h, w, r, b1, id;
+		
+		genRoads(x - (x % scale), z - (z % scale), x, z, blocks);
+		
+		if((x+16) - ((x+16) % scale) > x - (x % scale))
+		{
+			if((z+16) - ((z+16) % scale) > z - (z % scale))
+			{
+				genRoads((x+16) - ((x+16) % scale), (z+16) - ((z+16) % scale), x, z, blocks);
+			}
+			else
+			{
+				genRoads((x+16) - ((x+16) % scale), z - (z % scale), x, z, blocks);
+			}
+		}
+		else if((z+16) - ((z+16) % scale) > z - (z % scale))
+		{
+			genRoads(x - (x % scale), (z+16) - ((z+16) % scale), x, z, blocks);
+		}
+		
+/*		int x1, z1, h, w, r, b1, id;
 		double dx, dz, dx2, dz2;
 		int n = 0;
 		for (int i1 = 0; i1 < 16; i1++)
@@ -212,10 +316,10 @@ public class WorldConstructionMaker
 				blocks[index - 1] = Blocks.cobblestone;
 
 			}
-		}
+		} */
 	}
 
-	public boolean shouldRoadPlace(int xAbs, int zAbs, EnumFacing[] dirs, int width)
+/*	public boolean shouldRoadPlace(int xAbs, int zAbs, EnumFacing[] dirs, int width)
 	{
 		int xRel = xAbs % (scale);
 		int zRel = zAbs % (scale);
@@ -334,16 +438,14 @@ public class WorldConstructionMaker
 			return false;
 		}
 		return false;
-	}
+	} */
 
-	static EnumFacing[] dirs = { EAST, WEST, NORTH, SOUTH };
-
-	public static EnumFacing[] getRoadDirection(int xAbs, int zAbs)
+	public static boolean[] getRoadDirection(int xAbs, int zAbs)
 	{
 		int pixelX = xAbs / (scale * 16);
 		int pixelZ = zAbs / (scale * 16);
 		
-		EnumFacing[] ret = new EnumFacing[4];
+		boolean[] ret = new boolean[4];
 		int b;
 		
 		HashSet<WorldConstruction> constructs = WorldGenerator.instance.dorfs.getConstructionsForCoords(xAbs, zAbs);
@@ -358,19 +460,19 @@ public class WorldConstructionMaker
 			
 			if(con.isInConstruct(xAbs - scale, 0, zAbs))
 			{
-				ret[1] = dirs[1];
+				ret[1] = true;
 			}
 			if(con.isInConstruct(xAbs + scale, 0, zAbs))
 			{
-				ret[0] = dirs[0];
+				ret[0] = true;
 			}
 			if(con.isInConstruct(xAbs, 0, zAbs - scale))
 			{
-				ret[2] = dirs[2];
+				ret[2] = true;
 			}
 			if(con.isInConstruct(xAbs, 0, zAbs + scale))
 			{
-				ret[3] = dirs[3];
+				ret[3] = true;
 			}
 		}
 		return ret;
