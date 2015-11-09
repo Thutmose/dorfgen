@@ -2,6 +2,7 @@ package dorfgen.worldgen;
 
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 
@@ -40,6 +41,7 @@ import static net.minecraftforge.event.terraingen.PopulateChunkEvent.Populate.Ev
 import net.minecraftforge.common.*;
 import cpw.mods.fml.common.eventhandler.Event.*;
 import dorfgen.WorldGenerator;
+import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import net.minecraftforge.event.terraingen.*;
@@ -255,6 +257,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
             this.mineshaftGenerator.generateStructuresInChunk(this.worldObj, this.rand, x, z);
             flag = this.villageGenerator.generateStructuresInChunk(this.worldObj, this.rand, x, z);//TODO
 //            this.scatteredFeatureGenerator.generateStructuresInChunk(this.worldObj, this.rand, p_73153_2_, p_73153_3_);
+            WorldGenerator.instance.structureGen.generate(x, z, worldObj);
         }
 
         int k1;

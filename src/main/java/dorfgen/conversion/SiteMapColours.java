@@ -50,12 +50,12 @@ public enum SiteMapColours
 	TOWNBUILDINGWHITEWALL(255,255,255),
 	DARKGREYBUILDINGWALL(50,50,50),
 	GREYBUILDINGWALL(128,128,128),
-	YELLOWWALL(255,255,0),
-	BROWNWALL(60,40,20),
+	YELLOWBUILDINGWALL(255,255,0),
+	BROWNBUILDINGWALL(60,40,20),
 	
 	//Town/Keep Walls
-	WALL(70,70,70),
-	WALLMID(40,40,40),
+	TOWNWALL(70,70,70),
+	TOWNWALLMID(40,40,40),
 	TOWERWALL(55,55,55),
 	TOWERROOF(110,110,110),
 	;
@@ -131,19 +131,16 @@ public enum SiteMapColours
 		{
 			ret[0] = Blocks.cobblestone;
 			ret[1] = Blocks.stained_hardened_clay;
-			ret[2] = Blocks.stained_hardened_clay;
 		}
 		if(point==DARKGREYBUILDINGWALL || point == GREYBUILDINGWALL)
 		{
 			ret[0] = Blocks.cobblestone;
 			ret[1] = Blocks.stained_hardened_clay;
-			ret[2] = Blocks.stained_hardened_clay;
 		}
 		if(point==SiteMapColours.TOWNBUILDINGWHITEWALL)
 		{
 			ret[0] = Blocks.cobblestone;
 			ret[1] = Blocks.stained_hardened_clay;
-			ret[2] = Blocks.stained_hardened_clay;
 		}
 		if(point==DARKBROWNROOF || point==GREENROOF || point == BROWNROOF)
 		{
@@ -151,7 +148,7 @@ public enum SiteMapColours
 			ret[1] = Blocks.stained_hardened_clay;
 			ret[2] = Blocks.stained_hardened_clay;
 		}
-		if(point==WALL || point==WALLMID || point == TOWERWALL || point == SiteMapColours.TOWERROOF)
+		if(point==TOWNWALL || point==TOWNWALLMID || point == TOWERWALL || point == SiteMapColours.TOWERROOF)
 		{
 			ret[0] = Blocks.stonebrick;
 			ret[1] = Blocks.stonebrick;

@@ -15,6 +15,7 @@ import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.SiteTerrain;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.SiteType;
+import dorfgen.conversion.SiteStructureGenerator.SiteStructures;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntityChest;
@@ -66,6 +67,7 @@ public class MapGenSites extends MapGenVillage
 		
 		for(Site site: sites)
 		{
+			
 			if(shouldSiteSpawn(x, z, site) && !set.contains(site.id))
 			{
 				set.add(site.id);
