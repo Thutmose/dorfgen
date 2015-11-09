@@ -181,14 +181,12 @@ public class WorldConstructionMaker
 		return 0;
 	}
 	
-	private void safeSetToRoad(int x, int z, int chunkX, int chunkZ, Block[] blocks)
+	private void safeSetToRoad(int x, int z, int h, int chunkX, int chunkZ, Block[] blocks)
 	{
-		int h, index;
+		int index;
 		
 		int x1 = x - chunkX;
 		int z1 = z - chunkZ;
-		
-		h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x, z, scale);
 		
 		index = (h - 1) << 0 | (x1) << 12 | (z1) << 8;
 		
@@ -196,11 +194,16 @@ public class WorldConstructionMaker
 		
 		if(index >= 0 && x1 < 16 && z1 < 16 && x1 >= 0 && z1 >= 0)
 		{
+			if(index + 3 < 255) blocks[index + 3] = null;
+			if(index + 2 < 255) blocks[index + 2] = null;
+			if(index + 1 < 255) blocks[index + 1] = null;
 			blocks[index] = surface;
 			blocks[index - 1] = Blocks.cobblestone;
 			blocks[index - 2] = Blocks.cobblestone;
 		}
 	}
+	
+	private static final int ROADWIDTH = 3; 
 	
 	private void genSingleRoad(EnumFacing begin, EnumFacing end, int x, int z, int chunkX, int chunkZ, Block[] blocks)
 	{
@@ -208,6 +211,7 @@ public class WorldConstructionMaker
 		int nearestEmbarkZ = z - (z % scale);
 		double interX, interZ;
 		int nearestX, nearestZ;
+		int h, htest;
 		double startX = DIR_TO_RELX[dirToIndex(begin)];
 		double startZ = DIR_TO_RELZ[dirToIndex(begin)];
 		double endX = DIR_TO_RELX[dirToIndex(end)];
@@ -223,18 +227,69 @@ public class WorldConstructionMaker
 			nearestX = (int) interX;
 			nearestZ = (int) interZ;
 			
-			safeSetToRoad(nearestX + nearestEmbarkX, nearestZ + nearestEmbarkZ, chunkX, chunkZ, blocks);
-			
-			safeSetToRoad(nearestX + nearestEmbarkX + 1, nearestZ + nearestEmbarkZ, chunkX, chunkZ, blocks);
-			safeSetToRoad(nearestX + nearestEmbarkX, nearestZ + nearestEmbarkZ + 1, chunkX, chunkZ, blocks);
-			safeSetToRoad(nearestX + nearestEmbarkX - 1, nearestZ + nearestEmbarkZ, chunkX, chunkZ, blocks);
-			safeSetToRoad(nearestX + nearestEmbarkX, nearestZ + nearestEmbarkZ - 1, chunkX, chunkZ, blocks);
-			
-			safeSetToRoad(nearestX + nearestEmbarkX + 1, nearestZ + nearestEmbarkZ + 1, chunkX, chunkZ, blocks);
-			safeSetToRoad(nearestX + nearestEmbarkX + 1, nearestZ + nearestEmbarkZ - 1, chunkX, chunkZ, blocks);
-			safeSetToRoad(nearestX + nearestEmbarkX - 1, nearestZ + nearestEmbarkZ + 1, chunkX, chunkZ, blocks);
-			safeSetToRoad(nearestX + nearestEmbarkX - 1, nearestZ + nearestEmbarkZ - 1, chunkX, chunkZ, blocks);
+			for(int w = -ROADWIDTH; w < ROADWIDTH; w++)
+			{
+				for(int w2 = -ROADWIDTH; w2 < ROADWIDTH; w2++)
+				{
+					h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, nearestX + nearestEmbarkX, nearestZ + nearestEmbarkZ, scale);
+					safeSetToRoad(nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, h, chunkX, chunkZ, blocks);
+				}
+			}
 		}
+	}
+	
+	private void genSingleRoadToPos(EnumFacing begin, int x, int z, int chunkX, int chunkZ, int toRoadX, int toRoadZ, Block[] blocks)
+	{
+		int nearestEmbarkX = x - (x % scale);
+		int nearestEmbarkZ = z - (z % scale);
+		double interX, interZ;
+		int nearestX, nearestZ;
+		int h, htest;
+		
+		double c = ((double) scale)/2.;
+		
+		double startX = DIR_TO_RELX[dirToIndex(begin)];
+		double startZ = DIR_TO_RELZ[dirToIndex(begin)];
+		double endX = toRoadX - nearestEmbarkX;
+		double endZ = toRoadZ - nearestEmbarkZ;
+		
+		for(double i = -0.2; i <= 1.2; i += 0.01)
+		{
+			interX = (1.-i)*(1.-i)*startX + 2.*(1.-i)*i*c + i*i*endX;
+			interZ = (1.-i)*(1.-i)*startZ + 2.*(1.-i)*i*c + i*i*endZ;
+			
+			nearestX = (int) interX;
+			nearestZ = (int) interZ;
+			
+			for(int w = -ROADWIDTH; w < ROADWIDTH; w++)
+			{
+				for(int w2 = -ROADWIDTH; w2 < ROADWIDTH; w2++)
+				{
+					h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, nearestX + nearestEmbarkX, nearestZ + nearestEmbarkZ, scale);
+					safeSetToRoad(nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, h, chunkX, chunkZ, blocks);
+				}
+			}
+		}
+	}
+	
+	private boolean isInSite(int x, int z)
+	{
+		return false;
+	}
+	
+	private boolean isNearSiteRoadEnd(int x, int z)
+	{
+		return false;
+	}
+	
+	private int getSiteRoadEndX(int x, int z)
+	{
+		return 0;
+	}
+	
+	private int getSiteRoadEndZ(int x, int z)
+	{
+		return 0;
 	}
 	
 	private void genRoads(int x, int z, int chunkX, int chunkZ, Block[] blocks)
@@ -248,7 +303,14 @@ public class WorldConstructionMaker
 		{
 			for(int j = i+1; j < 4; j++)
 			{
-				if(dirs[i] && dirs[j]) genSingleRoad(DIRS[i], DIRS[j], x, z, chunkX, chunkZ, blocks);
+				if(dirs[i] && dirs[j])
+				{
+					genSingleRoad(DIRS[i], DIRS[j], x, z, chunkX, chunkZ, blocks);
+					if(isNearSiteRoadEnd(x, z))
+					{
+						genSingleRoadToPos(DIRS[i], x, z, chunkX, chunkZ, getSiteRoadEndX(x, z), getSiteRoadEndZ(x, z), blocks);
+					}
+				}
 			}
 		}
 	}
@@ -257,6 +319,8 @@ public class WorldConstructionMaker
 	{
 		int x = (chunkX * 16 - WorldGenerator.shift.posX);
 		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
+		
+		if(isInSite(x, z)) return;
 		
 		genRoads(x - (x % scale), z - (z % scale), x, z, blocks);
 		
@@ -273,6 +337,13 @@ public class WorldConstructionMaker
 		}
 		else if((z+16) - ((z+16) % scale) > z - (z % scale))
 		{
+			genRoads(x - (x % scale), (z+16) - ((z+16) % scale), x, z, blocks);
+		}
+		
+		if(isNearSiteRoadEnd(x, z))
+		{
+			genRoads((x+16) - ((x+16) % scale), (z+16) - ((z+16) % scale), x, z, blocks);
+			genRoads((x+16) - ((x+16) % scale), z - (z % scale), x, z, blocks);
 			genRoads(x - (x % scale), (z+16) - ((z+16) % scale), x, z, blocks);
 		}
 	}
