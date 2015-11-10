@@ -117,6 +117,33 @@ public class WorldConstructionMaker
 					{
 						j = struct.getFloor(s, scale) - 1;
 						h = j+1;
+						continue;//TODO move stuff into SiteStructureGenerator
+					}
+					//Make Town walls only 1 thick
+					if(siteCol == SiteMapColours.TOWNWALL)
+					{
+						if(scale > 51)
+						{
+							int shiftX2 = (x1 + 1 - s.corners[0][0]*scale)*51/scale;
+							int shiftZ2 = (z1 + 1 - s.corners[0][1]*scale)*51/scale;
+							int shiftX3 = (x1 - 1 - s.corners[0][0]*scale)*51/scale;
+							int shiftZ3 = (z1 - 1 - s.corners[0][1]*scale)*51/scale;
+
+							int rgbxp = s.rgbmap[shiftX2][shiftZ];
+							int rgbzm = s.rgbmap[shiftX][shiftZ3];
+							int rgbxm = s.rgbmap[shiftX3][shiftZ];
+							int rgbzp = s.rgbmap[shiftX][shiftZ2];
+
+							SiteMapColours col1 = SiteMapColours.getMatch(rgbxp);
+							SiteMapColours col2 = SiteMapColours.getMatch(rgbzm);
+							SiteMapColours col3 = SiteMapColours.getMatch(rgbxm);
+							SiteMapColours col4 = SiteMapColours.getMatch(rgbzp);
+							
+							if(col1==SiteMapColours.TOWNWALLMID || col2==SiteMapColours.TOWNWALLMID || col3==SiteMapColours.TOWNWALLMID || col4==SiteMapColours.TOWNWALLMID)
+							{
+								siteCol = SiteMapColours.TOWNWALLMID;
+							}
+						}
 					}
 					
 					Block[] repBlocks = SiteMapColours.getSurfaceBlocks(siteCol);
@@ -127,6 +154,21 @@ public class WorldConstructionMaker
 					
 					Block surface =  repBlocks[1];
 					Block above = repBlocks[2];
+
+					boolean wall = siteCol== SiteMapColours.TOWNWALL;
+					boolean roof = siteCol.toString().contains("ROOF");
+					if(struct!=null)
+					{
+						int[][] bounds = struct.getBounds(s, scale);
+						wall = struct.inWall(s, x1, z1, scale);
+						roof = !wall;
+						if(surface==null)
+							surface = Blocks.planks;
+					}
+					else if(wall)
+					{
+						
+					}
 					
 					if(surface==null && siteCol.toString().contains("ROOF"))
 						surface = Blocks.brick_block;
@@ -138,13 +180,11 @@ public class WorldConstructionMaker
 					blocks[index] = repBlocks[0];
 					index = (j + 1) << 0 | (i1) << 12 | (k1) << 8;
 					blocks[index] = above;
-					boolean wall = siteCol.toString().contains("WALL");
-					boolean roof = siteCol.toString().contains("ROOF");
 					boolean tower = siteCol.toString().contains("TOWER");
 					if(wall||roof)
 					{
-						int j1 = j + 1;
-						int num = tower?10:5;
+						int j1 = j;
+						int num = tower?10:3;
 						while(j1<h+1)
 						{
 							j1 = j1 + 1;
@@ -153,7 +193,7 @@ public class WorldConstructionMaker
 							index = (h + num) << 0 | (i1) << 12 | (k1) << 8;
 							blocks[index] = surface;
 						}
-						j1 = j + 1;
+						j1 = j;
 						if(wall)
 						{
 							while(j1 < h + num)

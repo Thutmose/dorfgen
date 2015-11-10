@@ -91,13 +91,38 @@ public class ItemDebug extends Item {
 			}
 		}
 		
-		if(site!=null)
+    	int kx = x/(scale);
+    	int kz = z/(scale);
+    	int key = kx + 8192 * kz;
+    	
+    	HashSet<Site> ret = dorfs.sitesByCoord.get(key);
+    	
+		if(site!=null && site.rgbmap != null)
 		{
 			SiteStructures stuff = WorldGenerator.instance.structureGen.getStructuresForSite(site);
 			for(RoadExit exit: stuff.roads)
 			{
 				System.out.println(Arrays.toString(exit.getEdgeMid(site, scale)));
 			}
+			StructureSpace struct = stuff.getStructure(x, z, scale);
+			if(struct!=null)
+			{
+				int[] mid = struct.getMid(site, scale);
+				
+				
+				
+				System.out.println(struct.shouldBeDoor(site, x, z, scale)+" "+Arrays.toString(mid));
+			}
+			int shiftX = (x - site.corners[0][0]*scale)*51/scale;
+			int shiftZ = (z - site.corners[0][1]*scale)*51/scale;
+			
+			int rgb = site.rgbmap[shiftX][shiftZ];
+			
+			
+			
+			SiteMapColours col = SiteMapColours.getMatch(rgb);
+			System.out.println(col);
+			
 		}
 		player.addChatMessage(new ChatComponentText(mess));
 

@@ -1,10 +1,20 @@
 package dorfgen.conversion;
 
+import static dorfgen.WorldGenerator.scale;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap.Site;
+import dorfgen.conversion.Interpolator.BicubicInterpolator;
+import dorfgen.worldgen.WorldConstructionMaker;
+import net.minecraft.block.Block;
+import net.minecraft.entity.passive.EntityVillager;
+import net.minecraft.init.Blocks;
+import net.minecraft.item.ItemDoor;
+import net.minecraft.world.World;
 
 public class SiteStructureGenerator
 {
@@ -26,9 +36,90 @@ public class SiteStructureGenerator
 		return structureMap.get(site.id);
 	}
 	
-	public void generate(Site s)
+	/**
+	 * Takes Chunk Coordinates
+	 * @param s
+	 * @param x
+	 * @param z
+	 * @param world
+	 */
+	public void generate(int chunkX, int chunkZ, World world)
 	{
 		
+		int scale = WorldGenerator.scale;
+		BicubicInterpolator	bicubicInterpolator = WorldConstructionMaker.bicubicInterpolator;
+		int x = chunkX, z = chunkZ, x1, x2, z1, z2;
+		x *= 16;
+		z *= 16;
+		x -= WorldGenerator.shift.posX;
+		z -= WorldGenerator.shift.posZ;
+		int h;
+		for(int i = 0; i<16; i++)
+		{
+			for(int j = 0; j<16; j++)
+			{
+				x1 = x + i;
+				z1 = z + j;
+				
+				x2 = x1 + WorldGenerator.shift.posX;
+				z2 = z1 + WorldGenerator.shift.posZ;
+				
+				HashSet<Site> sites = WorldGenerator.instance.dorfs.getSiteForCoords(x2, z2);
+				Site site = null;
+				if(sites==null)
+					continue;
+				for(Site s: sites)
+				{
+					site = s;
+					SiteStructures structures = getStructuresForSite(site);
+					if(structures==null)
+						continue;
+					StructureSpace struct = structures.getStructure(x1, z1, scale);
+					if(struct!=null)
+					{
+						Block material = Blocks.planks;
+						int height = 3;
+						boolean villager = x1 == struct.getMid(site, scale)[0] && z1 == struct.getMid(site, scale)[1];
+						if(struct.roofType == SiteMapColours.TOWERROOF)
+						{
+							material = Blocks.stonebrick;
+							height = 10;
+							villager = false;
+						}
+						
+						h = struct.getFloor(site, scale);
+
+						if(struct.inWall(site, x1, z1, scale))
+						{
+							for(int l = 0; l<height; l++)
+							{
+								world.setBlock(x1, h+l, z2, material);
+							}
+						}
+						else
+						{
+							for(int l = -1; l<height; l++)
+							{
+								world.setBlock(x1, h+l, z2, Blocks.air);
+							}
+						}
+						world.setBlock(x1, h - 1, z2, material);
+						world.setBlock(x1, h + height, z2, material);
+						if(struct.shouldBeDoor(site, x1, z1, scale))
+						{
+							int meta = 0;//TODO determine direction of door  see 833 of StructureComponent
+							ItemDoor.placeDoorBlock(world, x2, h, z2, meta, Blocks.wooden_door);
+						}
+						if(villager)
+						{
+	                        EntityVillager entityvillager = new EntityVillager(world, 0);
+	                        entityvillager.setLocationAndAngles((double)x2 + 0.5D, (double)h, (double)z2 + 0.5D, 0.0F, 0.0F);
+	                        world.spawnEntityInWorld(entityvillager);
+						}
+					}
+				}
+			}
+		}
 	}
 	
 	public static class SiteStructures
@@ -36,15 +127,16 @@ public class SiteStructureGenerator
 		public final Site site;
 		public final HashSet<StructureSpace> structures = new HashSet();
 		public final HashSet<RoadExit> roads = new HashSet();
+		public final HashSet<RiverExit> rivers = new HashSet();
 		
 		public SiteStructures(Site site_)
 		{
 			site = site_;
 			initStructures();
-			initRoads();
+			initRoadsAndRivers();
 		}
 		
-		private void initRoads()
+		private void initRoadsAndRivers()
 		{
 			if(site.rgbmap != null)
 			{
@@ -53,6 +145,9 @@ public class SiteStructureGenerator
 				
 				boolean found1 = false;
 				boolean found2 = false;
+				int i1 = -1, i2 = -1;
+				int n1 = 0, n2 = 0;
+				
 				//first 2 Edges
 				for(int i = 0; i<h; i++)
 				{
@@ -62,6 +157,7 @@ public class SiteStructureGenerator
 					SiteMapColours colour1 = SiteMapColours.getMatch(side1);
 					SiteMapColours colour2 = SiteMapColours.getMatch(side2);
 
+					//Roads
 					if(!found1 && colour1 == SiteMapColours.ROAD)
 					{
 						found1 = true;
@@ -80,9 +176,40 @@ public class SiteStructureGenerator
 					{
 						found2 = false;
 					}
+					//Rivers
+					if(i1==-1 && colour1 == SiteMapColours.RIVER)
+					{
+						i1 = i;
+						n1 = 0;
+					}
+					else if(i1!=-1 && colour1 != SiteMapColours.RIVER)
+					{
+						i1 = -1;
+						rivers.add(new RiverExit(i1, 0, n1));
+					}
+					else if(i1 != -1)
+					{
+						n1++;
+					}
+					if(i2==-1 && colour2 == SiteMapColours.RIVER)
+					{
+						i2 = i;
+						n2 = 0;
+					}
+					else if(i2 != -1 && colour2 != SiteMapColours.RIVER)
+					{
+						i2 = -1;
+						rivers.add(new RiverExit(i2, w-1, n2));
+					}
+					else if(i2 != -1)
+					{
+						n2++;
+					}
 				}
 				found1 = false;
 				found2 = false;
+				i1  = i2 = -1;
+				n1 = n2 = 0;
 				//second 2 Edges
 				for(int i = 0; i<w; i++)
 				{
@@ -91,7 +218,7 @@ public class SiteStructureGenerator
 
 					SiteMapColours colour1 = SiteMapColours.getMatch(side1);
 					SiteMapColours colour2 = SiteMapColours.getMatch(side2);
-
+					//Roads
 					if(!found1 && colour1 == SiteMapColours.ROAD)
 					{
 						found1 = true;
@@ -109,6 +236,35 @@ public class SiteStructureGenerator
 					else if(found2 && colour2 != SiteMapColours.ROAD)
 					{
 						found2 = false;
+					}
+					//Rivers
+					if(i1==-1 && colour1 == SiteMapColours.RIVER)
+					{
+						i1 = i;
+						n1 = 0;
+					}
+					else if(i1!=-1 && colour1 != SiteMapColours.RIVER)
+					{
+						i1 = -1;
+						rivers.add(new RiverExit(0, i1, n1));
+					}
+					else if(i1 != -1)
+					{
+						n1++;
+					}
+					if(i2==-1 && colour2 == SiteMapColours.RIVER)
+					{
+						i2 = i;
+						n2 = 0;
+					}
+					else if(i2 != -1 && colour2 != SiteMapColours.RIVER)
+					{
+						i2 = -1;
+						rivers.add(new RiverExit(h-1, i2, n2));
+					}
+					else if(i2 != -1)
+					{
+						n2++;
 					}
 				}
 				
@@ -131,9 +287,9 @@ public class SiteStructureGenerator
 					newStruct = false;
 					SiteMapColours roof = null;
 					loopToFindNew:
-					for(int x = 0; x<site.rgbmap.length; x++)
+					for(int x = 1; x<site.rgbmap.length-1; x++)
 					{
-						for(int y = 0; y<site.rgbmap[0].length; y++)
+						for(int y = 1; y<site.rgbmap[0].length-1; y++)
 						{
 							int rgb = site.rgbmap[x][y];
 							int index = x + 2048*y;
@@ -191,6 +347,22 @@ public class SiteStructureGenerator
 			}
 		}
 		
+		//TODO see if I need to implement this and get it working.
+		private boolean isBuildingFirstCorner(int[][] image, int x, int y)
+		{
+			int rgb1 = image[x][y];
+			int rgbpx = image[x+1][y];
+			int rgbpy = image[x][y+1];
+			int rgbpd = image[x+1][y+1];
+			
+			if(rgbpd == rgb1)
+				return false;
+			
+			
+			
+			return true;
+		}
+		
 		/**
 		 * Takes site map pixel Coordinates.
 		 * @param x
@@ -240,6 +412,12 @@ public class SiteStructureGenerator
 				return false;
 			return colour.toString().contains("ROOF");
 		}
+		boolean isHouseWall(SiteMapColours colour)
+		{
+			if(colour==null)
+				return false;
+			return colour.toString().contains("BUILDINGWALL");
+		}
 	}
 
 	public static class StructureSpace
@@ -255,6 +433,7 @@ public class SiteStructureGenerator
 		public final int[] max;
 		
 		private int[][] bounds;
+		private int[] mid;
 		
 		public StructureSpace(int[] minCoords, int[] maxCoords, SiteMapColours roof)
 		{
@@ -275,6 +454,40 @@ public class SiteStructureGenerator
 			}
 			return bounds;
 		}
+		/**
+		 * Takes Block Coordinates
+		 * @param site
+		 * @param x
+		 * @param z
+		 * @param scale
+		 * @return
+		 */
+		public boolean shouldBeDoor(Site site, int x, int z, int scale)
+		{
+			getBounds(site, scale);
+
+			int midx = (bounds[0][0] + bounds[1][0])/2;
+			int midy = (bounds[0][1] + bounds[1][1])/2;
+			
+			//middle of a wall
+			if((x == midx && (z==bounds[0][1] || z == bounds[1][1])) || (z == midy && (x==bounds[0][0] || x == bounds[1][0])))
+			{
+			//	SiteStructures structs = WorldGenerator.instance.structureGen.getStructuresForSite(site);
+//				System.out.println("door");
+				return true;
+			}
+			return false;
+		}
+		
+		public boolean inWall(Site site, int x, int z, int scale)
+		{
+			getBounds(site, scale);
+			if(((z==bounds[0][1] || z == bounds[1][1])) || ((x==bounds[0][0] || x == bounds[1][0])))
+			{
+				return true;
+			}
+			return false;
+		}
 		
 		public int getFloor(Site site, int scale)
 		{
@@ -291,8 +504,16 @@ public class SiteStructureGenerator
 			
 			return floor;
 		}
+		
+		public int[] getMid(Site site, int scale)
+		{
+			if(mid!=null)
+				return mid;
+			getBounds(site, scale);
+			return mid = new int[] { bounds[0][0] + (bounds[1][0] - bounds[0][0]) / 2 , bounds[0][1] + (bounds[1][1] - bounds[0][1]) / 2};
+		}
 	}
-	
+
 	public static class RoadExit
 	{
 		final int midPixelX;
@@ -311,6 +532,32 @@ public class SiteStructureGenerator
 				location = new int[2];
 				location[0] = midPixelX * (scale/51) + site.corners[0][0] * scale;
 				location[1] = midPixelY * (scale/51) + site.corners[0][1] * scale;
+			}
+			return location;
+		}
+	}
+	
+	public static class RiverExit
+	{
+		final int midPixelX;
+		final int midPixelY;
+		final int width;
+		int[] location;
+		public RiverExit(int x, int y, int w)
+		{
+			midPixelX = x;
+			midPixelY = y;
+			width = w;
+		}
+		
+		public int[] getEdgeMid(Site site, int scale)
+		{
+			if(location==null)
+			{
+				location = new int[3];
+				location[0] = midPixelX * (scale/51) + site.corners[0][0] * scale;
+				location[1] = midPixelY * (scale/51) + site.corners[0][1] * scale;
+				location[2] = width * (scale/51);
 			}
 			return location;
 		}
