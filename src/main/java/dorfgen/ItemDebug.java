@@ -7,6 +7,7 @@ import static net.minecraft.util.EnumFacing.SOUTH;
 import static net.minecraft.util.EnumFacing.WEST;
 
 import java.awt.Color;
+import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -15,10 +16,13 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+import javax.vecmath.Vector3d;
+
 import dorfgen.conversion.BiomeList;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.FileLoader;
 import dorfgen.conversion.SiteMapColours;
+import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.conversion.SiteTerrain;
 import dorfgen.conversion.DorfMap.Region;
 import dorfgen.conversion.DorfMap.Site;
@@ -26,6 +30,7 @@ import dorfgen.conversion.DorfMap.SiteType;
 import dorfgen.conversion.DorfMap.WorldConstruction;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
+import dorfgen.conversion.SiteStructureGenerator.RiverExit;
 import dorfgen.conversion.SiteStructureGenerator.RoadExit;
 import dorfgen.conversion.SiteStructureGenerator.SiteStructures;
 import dorfgen.conversion.SiteStructureGenerator.StructureSpace;
@@ -78,8 +83,8 @@ public class ItemDebug extends Item {
 		int r = maker.bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.riverMap, x, z, scale);
 		mess = "";
 //		
-		int embarkX = (x/scale)*scale;
-		int embarkZ = (z/scale)*scale;
+		int embarkX = (x/scale);
+		int embarkZ = (z/scale);
 		Site site = null;
 		if(sites!=null)
 		{
@@ -96,36 +101,42 @@ public class ItemDebug extends Item {
     	int key = kx + 8192 * kz;
     	
     	HashSet<Site> ret = dorfs.sitesByCoord.get(key);
-    	
+    	boolean hasRivers = false;
 		if(site!=null && site.rgbmap != null)
 		{
 			SiteStructures stuff = WorldGenerator.instance.structureGen.getStructuresForSite(site);
+			System.out.println("Roads");
 			for(RoadExit exit: stuff.roads)
 			{
 				System.out.println(Arrays.toString(exit.getEdgeMid(site, scale)));
 			}
-			StructureSpace struct = stuff.getStructure(x, z, scale);
-			if(struct!=null)
+			
+			int[] nearest = null;
+			int[] temp;
+			int dist = Integer.MAX_VALUE;
+			System.out.println("Rivers");
+			for(RiverExit exit: stuff.rivers)
 			{
-				int[] mid = struct.getMid(site, scale);
-				
-				
-				
-				System.out.println(struct.shouldBeDoor(site, x, z, scale)+" "+Arrays.toString(mid));
+				temp = exit.getEdgeMid(site, scale);
+				System.out.println(Arrays.toString(temp));
+				int tempDist = (temp[0] - x)*(temp[0] - x) + (temp[1] - z)*(temp[1] - z);
+				if(tempDist < dist)
+				{
+					nearest = temp;
+					dist = tempDist;
+				}
+				hasRivers = true;
 			}
-			int shiftX = (x - site.corners[0][0]*scale)*51/scale;
-			int shiftZ = (z - site.corners[0][1]*scale)*51/scale;
-			
-			int rgb = site.rgbmap[shiftX][shiftZ];
-			
-			
-			
-			SiteMapColours col = SiteMapColours.getMatch(rgb);
-			System.out.println(col);
+			if(nearest!=null)
+				System.out.println(Arrays.toString(nearest));
 			
 		}
+		
+		mess += " In a River: "+RiverMaker.isInRiver(x, z)+" "+x+" "+z;
+		
 		player.addChatMessage(new ChatComponentText(mess));
 
 		return itemstack;
 	}
+	
 }

@@ -6,6 +6,7 @@ import static net.minecraft.util.EnumFacing.NORTH;
 import static net.minecraft.util.EnumFacing.SOUTH;
 import static net.minecraft.util.EnumFacing.WEST;
 
+import java.security.SignatureException;
 import java.util.HashSet;
 
 import dorfgen.BlockRoadSurface;
@@ -344,7 +345,19 @@ public class WorldConstructionMaker
 		
 		int key = kx+8192*kz;
 		
-		return dorfs.sitesByCoord.containsKey(key);
+		HashSet<Site> sites = dorfs.sitesByCoord.get(key);
+		
+		if(sites!=null)
+		{
+			for(Site site: sites)
+			{
+				SiteStructures structs = WorldGenerator.instance.structureGen.getStructuresForSite(site);
+				if(structs!=null && !structs.roads.isEmpty())
+					return true;
+			}
+		}
+		
+		return false;
 	}
 	
 	private boolean isAdjacentToSite(int x, int z)

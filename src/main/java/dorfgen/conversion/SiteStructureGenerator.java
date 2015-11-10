@@ -19,6 +19,7 @@ import net.minecraft.world.World;
 public class SiteStructureGenerator
 {
 	static DorfMap dorfs;
+	public static int SITETOBLOCK = 51;
 	HashMap<Integer, SiteStructures> structureMap = new HashMap();
 	
 	public SiteStructureGenerator(DorfMap dorfs_)
@@ -184,8 +185,8 @@ public class SiteStructureGenerator
 					}
 					else if(i1!=-1 && colour1 != SiteMapColours.RIVER)
 					{
+						rivers.add(new RiverExit(i1, 0, n1++, false));
 						i1 = -1;
-						rivers.add(new RiverExit(i1, 0, n1));
 					}
 					else if(i1 != -1)
 					{
@@ -198,8 +199,8 @@ public class SiteStructureGenerator
 					}
 					else if(i2 != -1 && colour2 != SiteMapColours.RIVER)
 					{
+						rivers.add(new RiverExit(i2, w-1, n2++, false));
 						i2 = -1;
-						rivers.add(new RiverExit(i2, w-1, n2));
 					}
 					else if(i2 != -1)
 					{
@@ -245,8 +246,8 @@ public class SiteStructureGenerator
 					}
 					else if(i1!=-1 && colour1 != SiteMapColours.RIVER)
 					{
+						rivers.add(new RiverExit(0, i1, n1++, true));
 						i1 = -1;
-						rivers.add(new RiverExit(0, i1, n1));
 					}
 					else if(i1 != -1)
 					{
@@ -259,8 +260,8 @@ public class SiteStructureGenerator
 					}
 					else if(i2 != -1 && colour2 != SiteMapColours.RIVER)
 					{
+						rivers.add(new RiverExit(h-1, i2, n2++, true));
 						i2 = -1;
-						rivers.add(new RiverExit(h-1, i2, n2));
 					}
 					else if(i2 != -1)
 					{
@@ -447,10 +448,10 @@ public class SiteStructureGenerator
 			if(bounds==null)
 			{
 				bounds = new int[2][2];
-				bounds[0][0] = min[0] * (scale/51) + site.corners[0][0] * scale;
-				bounds[0][1] = min[1] * (scale/51) + site.corners[0][1] * scale;
-				bounds[1][0] = max[0] * (scale/51) + site.corners[0][0] * scale;
-				bounds[1][1] = max[1] * (scale/51) + site.corners[0][1] * scale;
+				bounds[0][0] = min[0] * (scale/SITETOBLOCK) + site.corners[0][0] * scale;
+				bounds[0][1] = min[1] * (scale/SITETOBLOCK) + site.corners[0][1] * scale;
+				bounds[1][0] = max[0] * (scale/SITETOBLOCK) + site.corners[0][0] * scale;
+				bounds[1][1] = max[1] * (scale/SITETOBLOCK) + site.corners[0][1] * scale;
 			}
 			return bounds;
 		}
@@ -530,8 +531,8 @@ public class SiteStructureGenerator
 			if(location==null)
 			{
 				location = new int[2];
-				location[0] = midPixelX * (scale/51) + site.corners[0][0] * scale;
-				location[1] = midPixelY * (scale/51) + site.corners[0][1] * scale;
+				location[0] = midPixelX * (scale/SITETOBLOCK) + site.corners[0][0] * scale;
+				location[1] = midPixelY * (scale/SITETOBLOCK) + site.corners[0][1] * scale;
 			}
 			return location;
 		}
@@ -542,12 +543,14 @@ public class SiteStructureGenerator
 		final int midPixelX;
 		final int midPixelY;
 		final int width;
+		final boolean xEdge;
 		int[] location;
-		public RiverExit(int x, int y, int w)
+		public RiverExit(int x, int y, int w, boolean onX)
 		{
 			midPixelX = x;
 			midPixelY = y;
 			width = w;
+			xEdge = onX;
 		}
 		
 		public int[] getEdgeMid(Site site, int scale)
@@ -555,9 +558,17 @@ public class SiteStructureGenerator
 			if(location==null)
 			{
 				location = new int[3];
-				location[0] = midPixelX * (scale/51) + site.corners[0][0] * scale;
-				location[1] = midPixelY * (scale/51) + site.corners[0][1] * scale;
-				location[2] = width * (scale/51);
+				location[0] = (midPixelX * (scale/SITETOBLOCK)) + site.corners[0][0] * scale;
+				location[1] = (midPixelY * (scale/SITETOBLOCK)) + site.corners[0][1] * scale;
+				location[2] = width * (scale/SITETOBLOCK);
+				if(!xEdge)
+				{
+					location[0] += location[2]/2;
+				}
+				else
+				{
+					location[1] += location[2]/2;
+				}
 			}
 			return location;
 		}
