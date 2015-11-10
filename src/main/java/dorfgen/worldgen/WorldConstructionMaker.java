@@ -169,7 +169,8 @@ public class WorldConstructionMaker
 		}
 	}
 	
-	static EnumFacing[] DIRS = { EAST, WEST, NORTH, SOUTH };
+	private static final EnumFacing[] DIRS = { EAST, WEST, NORTH, SOUTH };
+	private static final EnumFacing[] OPPOSITE_DIRS = { WEST, EAST, SOUTH, NORTH };
 	private static double[] DIR_TO_RELX = { ((double)scale), 0., ((double)scale)/2., ((double)scale)/2. };
 	private static double[] DIR_TO_RELZ = { ((double)scale)/2., ((double)scale)/2., 0, ((double)scale) };
 
@@ -231,11 +232,11 @@ public class WorldConstructionMaker
 			nearestX = (int) interX;
 			nearestZ = (int) interZ;
 			
-			for(int w = -ROADWIDTH; w < ROADWIDTH; w++)
+			for(int w = -ROADWIDTH; w <= ROADWIDTH; w++)
 			{
-				for(int w2 = -ROADWIDTH; w2 < ROADWIDTH; w2++)
+				for(int w2 = -ROADWIDTH; w2 <= ROADWIDTH; w2++)
 				{
-					h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, nearestX + nearestEmbarkX, nearestZ + nearestEmbarkZ, scale);
+					h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, scale);
 					safeSetToRoad(nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, h, chunkX, chunkZ, blocks);
 				}
 			}
@@ -252,12 +253,29 @@ public class WorldConstructionMaker
 		
 		double c = ((double) scale)/2.;
 		
-		double startX = c;
-		double startZ = c;
+		double startX = c, startZ = c, distSqr;
+		double minDistSqr = Integer.MAX_VALUE;
+		
 		double endX = toRoadX - nearestEmbarkX;
 		double endZ = toRoadZ - nearestEmbarkZ;
 		
-		for(double i = -0.1; i <= 1.0; i += 0.01)
+		boolean[] dirs = getRoadDirection(nearestEmbarkX, nearestEmbarkZ);
+		
+		for(EnumFacing dir : DIRS)
+		{
+			if(!dirs[dirToIndex(dir)]) continue;
+			distSqr = (DIR_TO_RELX[dirToIndex(dir)] - ((double) endX))*(DIR_TO_RELX[dirToIndex(dir)] - ((double) endX)) +
+					(DIR_TO_RELZ[dirToIndex(dir)] - ((double) endZ))*(DIR_TO_RELZ[dirToIndex(dir)] - ((double) endZ));
+			if(distSqr < minDistSqr)
+			{
+				minDistSqr = distSqr;
+				startX = DIR_TO_RELX[dirToIndex(dir)];
+				startZ = DIR_TO_RELZ[dirToIndex(dir)];
+			}
+						
+		}
+		
+		for(double i = -0.1; i <= 1.1; i += 0.01)
 		{
 //			interX = (1.-i)*(1.-i)*startX + 2.*(1.-i)*i*c + i*i*endX;
 //			interZ = (1.-i)*(1.-i)*startZ + 2.*(1.-i)*i*c + i*i*endZ;
@@ -268,11 +286,11 @@ public class WorldConstructionMaker
 			nearestX = (int) interX;
 			nearestZ = (int) interZ;
 			
-			for(int w = -ROADWIDTH; w < ROADWIDTH; w++)
+			for(int w = -ROADWIDTH; w <= ROADWIDTH; w++)
 			{
-				for(int w2 = -ROADWIDTH; w2 < ROADWIDTH; w2++)
+				for(int w2 = -ROADWIDTH; w2 <= ROADWIDTH; w2++)
 				{
-					h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, nearestX + nearestEmbarkX, nearestZ + nearestEmbarkZ, scale);
+					h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, scale);
 					safeSetToRoad(nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, h, chunkX, chunkZ, blocks, Blocks.gold_block);
 				}
 			}
@@ -289,20 +307,35 @@ public class WorldConstructionMaker
 		return dorfs.sitesByCoord.containsKey(key);
 	}
 	
-	private boolean isOnSiteBorder(int x, int z)
+	private boolean isAdjacentToSite(int x, int z)
 	{
 		int kx = x/scale;
 		int kz = z/scale;
 		
-		int inSiteCount = 0;
+		int siteCount = 0;
 		
-		if(dorfs.sitesByCoord.containsKey(kx + 8192*kz)) inSiteCount++;
-		if(dorfs.sitesByCoord.containsKey((kx + 1) + 8192*kz)) inSiteCount++;
-		if(dorfs.sitesByCoord.containsKey((kx - 1) + 8192*kz)) inSiteCount++;
-		if(dorfs.sitesByCoord.containsKey(kx + 8192*(kz + 1))) inSiteCount++;
-		if(dorfs.sitesByCoord.containsKey(kx + 8192*(kz - 1))) inSiteCount++;
+		if(dorfs.sitesByCoord.containsKey(kx+8192*kz)) siteCount++;
+		if(dorfs.sitesByCoord.containsKey((kx+1)+8192*kz)) siteCount++;
+		if(dorfs.sitesByCoord.containsKey((kx-1)+8192*kz)) siteCount++;
+		if(dorfs.sitesByCoord.containsKey(kx+8192*(kz+1))) siteCount++;
+		if(dorfs.sitesByCoord.containsKey(kx+8192*(kz-1))) siteCount++;
 		
-		return (inSiteCount > 0 && inSiteCount < 5);
+		return (siteCount > 0 && siteCount < 5);
+	}
+	
+	private EnumFacing getDirectionToSite(int x, int z)
+	{
+		EnumFacing dir;
+		
+		int kx = x/scale;
+		int kz = z/scale;
+		
+		if(dorfs.sitesByCoord.containsKey((kx+1)+8192*kz)) return EAST;
+		if(dorfs.sitesByCoord.containsKey((kx-1)+8192*kz)) return WEST;
+		if(dorfs.sitesByCoord.containsKey(kx+8192*(kz+1))) return SOUTH;
+		if(dorfs.sitesByCoord.containsKey(kx+8192*(kz-1))) return NORTH;
+		
+		return EAST;
 	}
 	
 	private int[] getClosestRoadEnd(int x, int z, Site site)
@@ -310,7 +343,7 @@ public class WorldConstructionMaker
 		int[] edge = null;
 		int[] result = null;
 		
-		int minDistanceSqr = 10000;
+		int minDistanceSqr = Integer.MAX_VALUE;
 		
 		SiteStructures structures = WorldGenerator.instance.structureGen.getStructuresForSite(site);
 		for(RoadExit exit : structures.roads)
@@ -331,21 +364,25 @@ public class WorldConstructionMaker
 		return a - (a % scale);
 	}
 	
+	static private final int ROAD_SEARCH_AREA = 3;
+	
 	private boolean isNearSiteRoadEnd(int x, int z)
 	{
-		HashSet<Site> sites;
+		HashSet<Site> sites = new HashSet<Site>(), subSites;
 		
 		int kx = x/scale;
 		int kz = z/scale;
 		
-		sites = dorfs.sitesByCoord.get(kx + 8192*kz);
+		for(int xsearch = -ROAD_SEARCH_AREA; xsearch <= ROAD_SEARCH_AREA; xsearch++)
+		{
+			for(int zsearch = -ROAD_SEARCH_AREA; zsearch <= ROAD_SEARCH_AREA; zsearch++)
+			{
+				subSites = dorfs.sitesByCoord.get((kx + xsearch) + 8192*(kz + zsearch));
+				if(subSites != null) sites.addAll(subSites);
+			}
+		}
 		
-		sites = dorfs.sitesByCoord.get((kx + 1) + 8192*kz);
-		sites = dorfs.sitesByCoord.get((kx - 1) + 8192*kz);
-		sites = dorfs.sitesByCoord.get(kx + 8192*(kz + 1));
-		sites = dorfs.sitesByCoord.get(kx + 8192*(kz - 1));
-		
-		if(sites == null) return false;
+		if(sites.size() == 0) return false;
 		
 		for(Site site : sites)
 		{
@@ -366,19 +403,21 @@ public class WorldConstructionMaker
 	
 	private int[] getSiteRoadEnd(int x, int z)
 	{
-		HashSet<Site> sites;
+		HashSet<Site> sites = new HashSet<Site>(), subSites;
 		
 		int kx = x/scale;
 		int kz = z/scale;
 		
-		sites = dorfs.sitesByCoord.get(kx + 8192*kz);
+		for(int xsearch = -ROAD_SEARCH_AREA; xsearch <= ROAD_SEARCH_AREA; xsearch++)
+		{
+			for(int zsearch = -ROAD_SEARCH_AREA; zsearch <= ROAD_SEARCH_AREA; zsearch++)
+			{
+				subSites = dorfs.sitesByCoord.get((kx + xsearch) + 8192*(kz + zsearch));
+				if(subSites != null) sites.addAll(subSites);
+			}
+		}
 		
-		sites = dorfs.sitesByCoord.get((kx + 1) + 8192*kz);
-		sites = dorfs.sitesByCoord.get((kx - 1) + 8192*kz);
-		sites = dorfs.sitesByCoord.get(kx + 8192*(kz + 1));
-		sites = dorfs.sitesByCoord.get(kx + 8192*(kz - 1));
-		
-		if(sites == null) return null;
+		if(sites.size() == 0) return null;
 		
 		for(Site site : sites)
 		{
@@ -411,16 +450,50 @@ public class WorldConstructionMaker
 				if(dirs[i] && dirs[j])
 				{
 					genSingleRoad(DIRS[i], DIRS[j], x, z, chunkX, chunkZ, blocks);
-					if(isNearSiteRoadEnd(x, z))
-					{
-						int[] roadEnd = getSiteRoadEnd(x, z);
-						
-						// might be too many different roads, maybe select just one
-						System.out.println("Generating site attachment road at x: " + roadEnd[0] + " z: " + roadEnd[1]);
-						genSingleRoadToPos(x, z, chunkX, chunkZ, roadEnd[0], roadEnd[1], blocks);
-					}
 				}
 			}
+		}
+	}
+	
+	boolean hasRoad(int x, int z)
+	{
+		return WorldGenerator.instance.dorfs.getConstructionsForCoords(x, z) != null;
+	}
+	
+	private void genRoadEndConnector(int roadEndX, int roadEndZ, int chunkX, int chunkZ, Block[] blocks)
+	{
+		int minDistSqr = Integer.MAX_VALUE, dist;
+		int x1, z1;
+		int embarkX = 0, embarkZ = 0;
+		
+		for(int xsearch = -ROAD_SEARCH_AREA; xsearch <= ROAD_SEARCH_AREA; xsearch++)
+		{
+			for(int zsearch = -ROAD_SEARCH_AREA; zsearch <= ROAD_SEARCH_AREA; zsearch++)
+			{
+				x1 = roundToEmbark(roadEndX + (xsearch * scale));
+				z1 = roundToEmbark(roadEndZ + (zsearch * scale));
+				
+				if(isInSite(x1 + scale/2, z1 + scale/2)) continue;
+				if(!hasRoad(x1, z1)) continue;
+				
+				dist = (x1 - roadEndX)*(x1 - roadEndX) + (z1 - roadEndZ)*(z1 - roadEndZ);
+				
+				if(dist < minDistSqr)
+				{
+					minDistSqr = dist;
+					embarkX = x1;
+					embarkZ = z1;
+				}
+			}
+		}
+		
+		if(minDistSqr != Integer.MAX_VALUE)
+		{
+			genSingleRoadToPos(embarkX, embarkZ, chunkX, chunkZ, roadEndX, roadEndZ, blocks);
+		}
+		else
+		{
+			System.out.println("Search failed to generate attachment road at x: " + roadEndX + " z: " + roadEndZ);
 		}
 	}
 	
@@ -429,7 +502,13 @@ public class WorldConstructionMaker
 		int x = (chunkX * 16 - WorldGenerator.shift.posX);
 		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
 		
-		if(isInSite(x, z) && !isOnSiteBorder(x, z)) return;
+		if(isNearSiteRoadEnd(x, z))
+		{
+			int[] roadEnd = getSiteRoadEnd(x, z);
+			genRoadEndConnector(roadEnd[0], roadEnd[1], x, z, blocks);
+		}
+		
+		if(isInSite(x, z)) return;
 		
 		genRoads(x - (x % scale), z - (z % scale), x, z, blocks);
 		
@@ -446,13 +525,6 @@ public class WorldConstructionMaker
 		}
 		else if((z+16) - ((z+16) % scale) > z - (z % scale))
 		{
-			genRoads(x - (x % scale), (z+16) - ((z+16) % scale), x, z, blocks);
-		}
-		
-		if(isNearSiteRoadEnd(x, z))
-		{
-			genRoads((x+16) - ((x+16) % scale), (z+16) - ((z+16) % scale), x, z, blocks);
-			genRoads((x+16) - ((x+16) % scale), z - (z % scale), x, z, blocks);
 			genRoads(x - (x % scale), (z+16) - ((z+16) % scale), x, z, blocks);
 		}
 	}
