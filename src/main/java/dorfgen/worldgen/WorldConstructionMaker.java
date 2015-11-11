@@ -302,7 +302,7 @@ public class WorldConstructionMaker
 				startX = DIR_TO_RELX[dirToIndex(dir)];
 				startZ = DIR_TO_RELZ[dirToIndex(dir)];
 			}
-						
+
 		}
 		
 		for(double i = -0.05; i <= 1.05; i += 0.01)
@@ -368,8 +368,6 @@ public class WorldConstructionMaker
 	
 	private EnumFacing getDirectionToSite(int x, int z)
 	{
-		EnumFacing dir;
-		
 		int kx = x/scale;
 		int kz = z/scale;
 		
@@ -500,7 +498,128 @@ public class WorldConstructionMaker
 	
 	boolean hasRoad(int x, int z)
 	{
-		return WorldGenerator.instance.dorfs.getConstructionsForCoords(x, z) != null;
+		HashSet<WorldConstruction> cons = WorldGenerator.instance.dorfs.getConstructionsForCoords(x, z);
+		
+		if(cons == null || cons.isEmpty()) return false;
+		
+		for(WorldConstruction con : cons)
+		{
+			if(con.type == DorfMap.ConstructionType.ROAD)
+			{
+				if(con.isInConstruct(x, 0, z))
+				{
+					return true;
+				}
+			}
+		}
+		
+		return false;
+	}
+	
+	public void debugPrint(int x, int z)
+	{
+		int embarkX = roundToEmbark(x);
+		int embarkZ = roundToEmbark(z);
+		
+		if(isInSite(x, z))
+		{
+			System.out.println("Embark location x: " + embarkX + " z: " + embarkZ + " is in a site");
+		}
+		
+		if(hasRoad(x, z))
+		{
+			System.out.println("Embark location x: " + embarkX + " z: " + embarkZ + " has a road");
+		}
+		
+		if(WorldGenerator.instance.dorfs.getConstructionsForCoords(x, z) != null)
+		{
+			for(WorldConstruction constr : WorldGenerator.instance.dorfs.getConstructionsForCoords(x, z))
+			{
+				if(constr.isInConstruct(x, 0, z))
+				{
+					System.out.println("Location x: " + x + " z: " + z + " is in a construction");
+					System.out.println("    Construction is " + constr.toString());
+				}
+			}
+		}
+		
+		if(WorldGenerator.instance.dorfs.getConstructionsForCoords(embarkX, embarkZ) != null)
+		{
+			for(WorldConstruction constr : WorldGenerator.instance.dorfs.getConstructionsForCoords(embarkX, embarkZ))
+			{
+				if(constr.isInConstruct(embarkX, 0, embarkZ))
+				{
+					System.out.println("Location x: " + embarkX + " z: " + embarkZ + " is in a construction");
+					System.out.println("    Construction is " + constr.toString());
+				}
+			}
+		}
+		
+		if(isNearSiteRoadEnd(x, z))
+		{
+			System.out.println("Embark location x: " + embarkX + " z: " + embarkZ + " is near a site road end");
+			int[] roadEnd = getSiteRoadEnd(x, z);
+			System.out.println("Site road end is at x: " + roadEnd[0] + " z: " + roadEnd[1]);
+			
+			int minDistSqr = Integer.MAX_VALUE, dist;
+			int x1, z1;
+			int embarkX1 = 0, embarkZ1 = 0;
+			int roadEndX = roadEnd[0];
+			int roadEndZ = roadEnd[1];
+			
+			for(int xsearch = -ROAD_SEARCH_AREA; xsearch <= ROAD_SEARCH_AREA; xsearch++)
+			{
+				for(int zsearch = -ROAD_SEARCH_AREA; zsearch <= ROAD_SEARCH_AREA; zsearch++)
+				{
+					x1 = roundToEmbark(roadEndX + (xsearch * scale));
+					z1 = roundToEmbark(roadEndZ + (zsearch * scale));
+					
+					if(isInSite(x1, z1)) continue;
+					if(!hasRoad(x1, z1)) continue;
+					
+					dist = (x1 - roadEndX)*(x1 - roadEndX) + (z1 - roadEndZ)*(z1 - roadEndZ);
+					
+					if(dist < minDistSqr)
+					{
+						minDistSqr = dist;
+						embarkX1 = x1;
+						embarkZ1 = z1;
+					}
+				}
+			}
+			if(minDistSqr != Integer.MAX_VALUE)
+			{
+				System.out.println("Nearest embark to road end found at x: " + embarkX1 + " z: " + embarkZ1);
+				
+				EnumFacing closestdir = EAST;
+				double distSqr2;
+				double minDistSqr2 = Integer.MAX_VALUE;
+				
+				double endX = roadEndX - embarkX;
+				double endZ = roadEndZ - embarkZ;
+				
+				boolean[] dirs = getRoadDirection(embarkX, embarkZ);
+				
+				for(EnumFacing dir : DIRS)
+				{
+					if(!dirs[dirToIndex(dir)]) continue;
+					distSqr2 = (DIR_TO_RELX[dirToIndex(dir)] - ((double) endX))*(DIR_TO_RELX[dirToIndex(dir)] - ((double) endX)) +
+							(DIR_TO_RELZ[dirToIndex(dir)] - ((double) endZ))*(DIR_TO_RELZ[dirToIndex(dir)] - ((double) endZ));
+					if(distSqr2 < minDistSqr2)
+					{
+						minDistSqr2 = distSqr2;
+						closestdir = dir;
+					}
+				}
+				
+				if(closestdir == EAST) System.out.println("Closest dir is east");
+				if(closestdir == WEST) System.out.println("Closest dir is west");
+				if(closestdir == NORTH) System.out.println("Closest dir is north");
+				if(closestdir == SOUTH) System.out.println("Closest dir is south");
+				
+				System.out.println("    with distance " + minDistSqr2);
+			}
+		}
 	}
 	
 	private void genRoadEndConnector(int roadEndX, int roadEndZ, int chunkX, int chunkZ, Block[] blocks)
@@ -516,7 +635,7 @@ public class WorldConstructionMaker
 				x1 = roundToEmbark(roadEndX + (xsearch * scale));
 				z1 = roundToEmbark(roadEndZ + (zsearch * scale));
 				
-				if(isInSite(x1 + scale/2, z1 + scale/2)) continue;
+				if(isInSite(x1, z1)) continue;
 				if(!hasRoad(x1, z1)) continue;
 				
 				dist = (x1 - roadEndX)*(x1 - roadEndX) + (z1 - roadEndZ)*(z1 - roadEndZ);
