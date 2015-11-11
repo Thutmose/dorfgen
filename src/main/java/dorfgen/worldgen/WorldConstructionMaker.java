@@ -316,7 +316,7 @@ public class WorldConstructionMaker
 						
 		}
 		
-		for(double i = -0.1; i <= 1.1; i += 0.01)
+		for(double i = -0.05; i <= 1.05; i += 0.01)
 		{
 //			interX = (1.-i)*(1.-i)*startX + 2.*(1.-i)*i*c + i*i*endX;
 //			interZ = (1.-i)*(1.-i)*startZ + 2.*(1.-i)*i*c + i*i*endZ;
@@ -331,8 +331,9 @@ public class WorldConstructionMaker
 			{
 				for(int w2 = -ROADWIDTH; w2 <= ROADWIDTH; w2++)
 				{
+					if((w < 1-ROADWIDTH || w > ROADWIDTH-1) && (w2 < 1-ROADWIDTH || w2 > ROADWIDTH-1)) continue; // take the corners off
 					h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, scale);
-					safeSetToRoad(nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, h, chunkX, chunkZ, blocks, Blocks.gold_block);
+					safeSetToRoad(nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, h, chunkX, chunkZ, blocks);
 				}
 			}
 		}
