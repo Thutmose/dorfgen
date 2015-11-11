@@ -68,6 +68,22 @@ public class ItemDebug extends Item {
 
 		if (world.isRemote)
 			return itemstack;
+		
+		WorldConstructionMaker maker = new WorldConstructionMaker();
+		maker.debugPrint(x, z);
+		
+		return itemstack;
+	}
+	
+/*	@Override
+	public ItemStack onItemRightClick(ItemStack itemstack, World world, EntityPlayer player) {
+
+		int x = MathHelper.floor_double(player.posX);
+		int y = (int) player.posY;
+		int z = MathHelper.floor_double(player.posZ);
+
+		if (world.isRemote)
+			return itemstack;
 
 		DorfMap dorfs = WorldGenerator.instance.dorfs;
 		int n = 0;
@@ -158,6 +174,6 @@ public class ItemDebug extends Item {
 		player.addChatMessage(new ChatComponentText(mess));
 
 		return itemstack;
-	}
+	} */
 	
 }
