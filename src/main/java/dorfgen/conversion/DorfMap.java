@@ -566,7 +566,7 @@ public class DorfMap {
 			if(rgbmap != null)
 			{
 				//Equals as it starts at 0
-				if(x >= (corners[0][0] * scale + rgbmap.length * scale / 51 + scale/2) || z >= (corners[0][1] * scale + rgbmap[0].length * scale / 51 + scale/2))
+				if(x >= (corners[0][0] * scale + rgbmap.length * scale / SiteStructureGenerator.SITETOBLOCK + scale/2) || z >= (corners[0][1] * scale + rgbmap[0].length * scale / SiteStructureGenerator.SITETOBLOCK + scale/2))
 					return false;
 			}
 			else

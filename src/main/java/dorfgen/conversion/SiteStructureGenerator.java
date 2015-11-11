@@ -2,7 +2,9 @@ package dorfgen.conversion;
 
 import static dorfgen.WorldGenerator.scale;
 
+import java.awt.Color;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -69,14 +71,101 @@ public class SiteStructureGenerator
 				Site site = null;
 				if(sites==null)
 					continue;
+				//Loop Over sites and do the structures
 				for(Site s: sites)
 				{
 					site = s;
 					SiteStructures structures = getStructuresForSite(site);
 					if(structures==null)
 						continue;
+
+					//Generate walls first, so towers can make doors into them
+					WallSegment wall = structures.getWall(x1, z1, scale);
+					if(wall!=null)
+					{
+						h = dorfs.biomeInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
+						
+						boolean surrounded = true;
+						boolean nearStruct = false;
+						if(!nearStruct)
+						{
+							nearStruct = structures.isStructure(x1 - 1, z1, scale);
+							if(nearStruct)
+							{
+								boolean t1 = !wall.isInWall(site, x1, z1-1, scale);
+								boolean t2 = !wall.isInWall(site, x1, z1+1, scale);
+								surrounded = !(t1||t2);
+							}
+						}
+						if(!nearStruct)
+						{
+							nearStruct = structures.isStructure(x1 + 1, z1, scale);
+							if(nearStruct)
+							{
+								boolean t1 = !wall.isInWall(site, x1, z1-1, scale);
+								boolean t2 = !wall.isInWall(site, x1, z1+1, scale);
+								surrounded = !(t1||t2);
+							}
+						}
+						if(!nearStruct)
+						{
+							nearStruct = structures.isStructure(x1, z1 - 1, scale);
+							if(nearStruct)
+							{
+								boolean t1 = !wall.isInWall(site, x1-1, z1, scale);
+								boolean t2 = !wall.isInWall(site, x1+1, z1, scale);
+								surrounded = !(t1||t2);
+							}
+						}
+						if(!nearStruct)
+						{
+							nearStruct = structures.isStructure(x1, z1 + 1, scale);
+							if(nearStruct)
+							{
+								boolean t1 = !wall.isInWall(site, x1-1, z1, scale);
+								boolean t2 = !wall.isInWall(site, x1+1, z1, scale);
+								surrounded = !(t1||t2);
+							}
+						}
+						if(!nearStruct)
+						{
+							if(surrounded)
+								surrounded = wall.isInWall(site, x1 - 1, z1 - 1, scale);
+							if(surrounded)
+								surrounded = wall.isInWall(site, x1 + 1, z1 - 1, scale);
+							if(surrounded)
+								surrounded = wall.isInWall(site, x1 - 1, z1 + 1, scale);
+							if(surrounded)
+								surrounded = wall.isInWall(site, x1 + 1, z1 + 1, scale);
+						}
+
+						world.setBlock(x2, h-1, z2, Blocks.stonebrick);
+						for(int k = h; k<h+6; k++)
+						{
+							if(k < h + 3 || k >= h + 4)
+							{
+								if(!surrounded)
+								{
+									if(k==h+5)
+									{
+										if((x1 + z1) % 3 > 0)
+											world.setBlock(x2, k, z2, Blocks.stonebrick);
+									}
+									else
+									{
+										world.setBlock(x2, k, z2, Blocks.stonebrick);
+									}
+								}
+							}
+							else
+							{
+								world.setBlock(x2, k, z2, Blocks.stonebrick);
+							}
+						}
+					}
+					
 					StructureSpace struct = structures.getStructure(x1, z1, scale);
-					if(struct!=null)
+					if(struct!=null)//Generate Building
 					{
 						Block material = Blocks.planks;
 						int height = 3;
@@ -94,18 +183,18 @@ public class SiteStructureGenerator
 						{
 							for(int l = 0; l<height; l++)
 							{
-								world.setBlock(x1, h+l, z2, material);
+								world.setBlock(x2, h+l, z2, material);
 							}
 						}
 						else
 						{
 							for(int l = -1; l<height; l++)
 							{
-								world.setBlock(x1, h+l, z2, Blocks.air);
+								world.setBlock(x2, h+l, z2, Blocks.air);
 							}
 						}
-						world.setBlock(x1, h - 1, z2, material);
-						world.setBlock(x1, h + height, z2, material);
+						world.setBlock(x2, h - 1, z2, material);
+						world.setBlock(x2, h + height, z2, material);
 						if(struct.shouldBeDoor(site, x1, z1, scale))
 						{
 							int meta = 0;//TODO determine direction of door  see 833 of StructureComponent
@@ -127,6 +216,7 @@ public class SiteStructureGenerator
 	{
 		public final Site site;
 		public final HashSet<StructureSpace> structures = new HashSet();
+		public final HashSet<WallSegment> walls = new HashSet();
 		public final HashSet<RoadExit> roads = new HashSet();
 		public final HashSet<RiverExit> rivers = new HashSet();
 		
@@ -305,6 +395,10 @@ public class SiteStructureGenerator
 								found.add(index);
 								break loopToFindNew;
 							}
+							else if(WallSegment.WALLBITS.contains(rgb) && !isInWall(x, y))
+							{
+								walls.add(new WallSegment(site, x, y));
+							}
 						}
 					}
 					if(newStruct)//TODO make it look for borders around, to allow the bright green roofs to work as well.
@@ -340,7 +434,16 @@ public class SiteStructureGenerator
 						corner1[1]--;
 						corner2[0]++;
 						corner2[1]++;
-						StructureSpace structure = new StructureSpace(corner1, corner2, roof);
+						
+						StructureSpace structure;
+						if(roof == SiteMapColours.TOWERROOF)
+						{
+							structure = new WallTowerSpace(corner1, corner2);
+						}
+						else
+						{
+							structure = new StructureSpace(corner1, corner2, roof);
+						}
 						structures.add(structure);
 					}
 					
@@ -381,6 +484,22 @@ public class SiteStructureGenerator
 		}
 		
 		/**
+		 * Takes site map pixel Coordinates
+		 * @param x
+		 * @param y
+		 * @return
+		 */
+		boolean isInWall(int x, int y)
+		{
+			for(WallSegment wall: walls)
+			{
+				if(wall.isInSegment(x, y))
+					return true;
+			}
+			return false;
+		}
+		
+		/**
 		 * Takes block coordinates
 		 * @param x
 		 * @param y
@@ -403,6 +522,16 @@ public class SiteStructureGenerator
 				int[][] bounds = struct.getBounds(site, scale);
 				if(x >= bounds[0][0] && x <= bounds[1][0] && y >= bounds[0][1] && y <= bounds[1][1])
 					return struct;
+			}
+			return null;
+		}
+		
+		public WallSegment getWall(int x, int y, int scale)
+		{
+			for(WallSegment wall: walls)
+			{
+				if(wall.isInWall(site, x, y, scale))
+					return wall;
 			}
 			return null;
 		}
@@ -445,14 +574,15 @@ public class SiteStructureGenerator
 		
 		public int[][] getBounds(Site site, int scale)
 		{
-			if(bounds==null)
+//			if(bounds==null)
 			{
+				int width = (scale/SITETOBLOCK);
 				int offset = scale/2;
 				bounds = new int[2][2];
-				bounds[0][0] = min[0] * (scale/SITETOBLOCK) + site.corners[0][0] * scale + offset;
-				bounds[0][1] = min[1] * (scale/SITETOBLOCK) + site.corners[0][1] * scale + offset;
-				bounds[1][0] = max[0] * (scale/SITETOBLOCK) + site.corners[0][0] * scale + offset;
-				bounds[1][1] = max[1] * (scale/SITETOBLOCK) + site.corners[0][1] * scale + offset;
+				bounds[0][0] = min[0] * width + site.corners[0][0] * scale + offset;// - width/2;
+				bounds[0][1] = min[1] * width + site.corners[0][1] * scale + offset;// - width/2;
+				bounds[1][0] = max[0] * width + site.corners[0][0] * scale + offset + width;// + width/2 fixes one side
+				bounds[1][1] = max[1] * width + site.corners[0][1] * scale + offset + width;
 			}
 			return bounds;
 		}
@@ -514,6 +644,291 @@ public class SiteStructureGenerator
 			getBounds(site, scale);
 			return mid = new int[] { bounds[0][0] + (bounds[1][0] - bounds[0][0]) / 2 , bounds[0][1] + (bounds[1][1] - bounds[0][1]) / 2};
 		}
+	}
+	
+	public static class WallTowerSpace extends StructureSpace
+	{
+		static int WALLCOLOUR = SiteMapColours.TOWNWALL.colour.getRGB();
+		/**
+		 * The two other towers connected to this one by wall segments
+		 */
+		public WallTowerSpace[] connected = new WallTowerSpace[2];
+		/**
+		 * The pixel coordinates of the centre of a face of this tower, 
+		 * which are closest to the center of the faces of the connected towers
+		 */
+		int[][] wallConnects = new int[2][2];
+		
+		public WallTowerSpace(int[] minCoords, int[] maxCoords)
+		{
+			super(minCoords, maxCoords, SiteMapColours.TOWERROOF);
+		}
+		
+		public int countConnects()
+		{
+			return connected[0]==null?0:connected[1]==null?1:2;
+		}
+		
+		/**
+		 * Adds this tower as a connected tower
+		 * @param tower
+		 * @param site
+		 * @return whether the tower can be added
+		 */
+		public boolean addConnected(WallTowerSpace tower, Site site)
+		{
+			if(connected[0]==null)
+			{
+				connected[0] = tower;
+				initWallConnects(tower, site, 0);
+				return true;
+			}
+			if(connected[1]==null)
+			{
+				connected[1] = tower;
+				initWallConnects(tower, site, 1);
+				return true;
+			}
+			return false;
+		}
+		
+		/**
+		 * Returns if this Tower actually has any wall pixels near it.
+		 * If this is false, it should not be added to other walls.
+		 * @return
+		 */
+		public boolean hasWallConnect(Site site)
+		{
+			int[][] thisConnects = getWallAttachments(site);
+			
+			return thisConnects[0][0]!=-1;
+		}
+		
+		private void initWallConnects(WallTowerSpace tower, Site site, int index)
+		{
+			int[][] towerConnects = tower.getWallAttachments(site);
+			int[][] thisConnects = getWallAttachments(site);
+			int[] closest = null;
+			int distSq = Integer.MAX_VALUE;
+			
+			for(int[] i: thisConnects)
+			{
+				for(int[] i1: towerConnects)
+				{
+					int dx = i[0]-i1[0];
+					int dy = i[1]-i1[1];
+					int temp = dx*dx + dy*dy;
+					if(temp < distSq)
+					{
+						distSq = temp;
+						closest = i;
+					}
+				}
+			}
+			if(closest!=null && closest[0]!=-1)
+			{
+				wallConnects[index] = closest;
+			}
+		}
+		
+		int[][] getWallAttachments(Site site)
+		{
+			int[][] thisConnects = {{-1,-1},{-1,-1}};
+			int minx = min[0], miny = min[1], maxx = max[0], maxy = max[1];
+			int midx = minx + (maxx - minx)/2;
+			int midy = miny + (maxy - miny)/2;
+			
+			//Check both y edges for wall pixels
+			for(int x = minx; x<=maxx; x++)
+			{
+				int rgbmin = site.rgbmap[x][miny - 1];
+				int rgbmax = site.rgbmap[x][maxy + 1];
+				if(thisConnects[0][0]==-1 && rgbmin == WALLCOLOUR)
+				{
+					thisConnects[0][0] = midx;
+					thisConnects[0][1] = miny;
+				}
+				if(thisConnects[0][0]==-1 && rgbmax == WALLCOLOUR)
+				{
+					thisConnects[0][0] = midx;
+					thisConnects[0][1] = maxy;
+				}
+			}
+			for(int x = minx; x<=maxx; x++)
+			{
+				int rgbmin = site.rgbmap[x][miny - 1];
+				int rgbmax = site.rgbmap[x][maxy + 1];
+				if(thisConnects[1][0]==-1 && rgbmin == WALLCOLOUR)
+				{
+					thisConnects[1][0] = midx;
+					thisConnects[1][1] = miny;
+				}
+				if(thisConnects[1][0]==-1 && rgbmax == WALLCOLOUR)
+				{
+					thisConnects[1][0] = midx;
+					thisConnects[1][1] = maxy;
+				}
+			}
+			
+			if(thisConnects[0][0]==-1 || thisConnects[1][0]==-1)
+			{
+				//If there is a missing entry, check both x edges for wall pixels
+				for(int y = miny; y<=maxy; y++)
+				{
+					int rgbmin = site.rgbmap[minx - 1][y];
+					int rgbmax = site.rgbmap[maxx + 1][y];
+					if(thisConnects[0][0]==-1 && rgbmin == WALLCOLOUR)
+					{
+						thisConnects[0][0] = minx;
+						thisConnects[0][1] = midy;
+					}
+					if(thisConnects[0][0]==-1 && rgbmax == WALLCOLOUR)
+					{
+						thisConnects[0][0] = minx;
+						thisConnects[0][1] = midy;
+					}
+				}
+				for(int y = miny; y<=maxy; y++)
+				{
+					int rgbmin = site.rgbmap[minx - 1][y];
+					int rgbmax = site.rgbmap[maxx + 1][y];
+					if(thisConnects[1][0]==-1 && rgbmin == WALLCOLOUR)
+					{
+						thisConnects[1][0] = minx;
+						thisConnects[1][1] = midy;
+					}
+					if(thisConnects[1][0]==-1 && rgbmax == WALLCOLOUR)
+					{
+						thisConnects[1][0] = minx;
+						thisConnects[1][1] = midy;
+					}
+				}
+			}
+			return thisConnects;
+		}
+	}
+	
+	public static class WallSegment
+	{
+		public static final HashSet<Integer> WALLBITS = new HashSet();
+		static {
+			WALLBITS.add(SiteMapColours.TOWNWALL.colour.getRGB());
+			WALLBITS.add(SiteMapColours.TOWNWALLMID.colour.getRGB());
+		}
+		public final HashSet<Integer> pixels = new HashSet();
+		
+		public WallSegment(Site site, int x, int y)
+		{
+			initWallSegment(site, x, y);
+		}
+		
+		/**
+		 * Checks in site map pixel coordinates.
+		 * @param x
+		 * @param y
+		 * @return
+		 */
+		public boolean isInSegment(int x, int y)
+		{
+			return pixels.contains(x + 2048*y);
+		}
+		
+		/**
+		 * Takes Block Coordinates
+		 * @param site
+		 * @param x
+		 * @param y
+		 * @param scale
+		 * @return
+		 */
+		public boolean isInWall(Site site, int x, int y, int scale)
+		{
+			int offset = scale/2;
+			int width = (scale/SITETOBLOCK);
+			int pixelX = (x - site.corners[0][0] * scale - scale/2 - width/2)/width;
+			int pixelY = (y - site.corners[0][1] * scale - scale/2 - width/2)/width;
+			
+			return pixels.contains(pixelX + 2048*pixelY);
+		}
+		
+		public void initWallSegment(Site site, int x, int y)
+		{
+			BitSet blocked = new BitSet();
+			BitSet checked = new BitSet();
+			HashSet valid = new HashSet();
+			int[][] map = site.rgbmap;
+			checkAround(map, x, y, blocked, checked, valid);
+			pixels.addAll(valid);
+			
+		}
+		
+		private boolean checkAround(int[][] map, int x, int y, BitSet blocked, BitSet checked, HashSet valid)
+		{
+			int[] index = new int[4];
+			boolean cont = false;
+			int[][] dirs = getDirs(map, x, y);
+			index[0] = x-1 + (y)*2048;
+			index[1] = x+1 + (y)*2048;
+			index[2] = x + (y-1)*2048;
+			index[3] = x + (y+1)*2048;
+			for(int i = 0; i<4; i++)
+			{
+				if(checked.get(index[i]))
+					continue;
+				if(dirs[i]!=null)
+				{
+					valid.add(index[i]);
+					cont = true;
+				}
+				else
+				{
+					blocked.set(index[i]);
+				}
+				if(valid.contains(index[i]))
+				{
+					checked.set(index[i]);
+					checkAround(map, index[i]&2047, index[i]/2048, blocked, checked, valid);
+				}
+			}
+			return cont;
+		}
+		
+		private boolean isValid(int[][] map, int x, int y)
+		{
+			int rgb = map[x][y];
+			return WALLBITS.contains(rgb);
+		}
+		
+		/**
+		 * 0 = -x, 1 = x, 2 = -y, 3 = y
+		 * @param map
+		 * @param x
+		 * @param y
+		 * @return
+		 */
+		private int[][] getDirs(int[][] map, int x, int y)
+		{
+			int[][] ret = new int[4][];
+			int rgb = map[x - 1][y];
+			if(WALLBITS.contains(rgb))
+				ret[0] = new int[]{x-1,y};
+			rgb = map[x + 1][y];
+			if(WALLBITS.contains(rgb))
+				ret[1] = new int[]{x+1,y};
+			rgb = map[x][y - 1];
+			if(WALLBITS.contains(rgb))
+				ret[2] = new int[]{x,y-1};
+			rgb = map[x][y + 1];
+			if(WALLBITS.contains(rgb))
+				ret[3] = new int[]{x,y+1};
+			return ret;
+		}
+	}
+	
+	public static class TownWall
+	{
+		final HashSet<WallTowerSpace> towers = new HashSet();
+		
 	}
 
 	public static class RoadExit

@@ -34,6 +34,8 @@ import dorfgen.conversion.SiteStructureGenerator.RiverExit;
 import dorfgen.conversion.SiteStructureGenerator.RoadExit;
 import dorfgen.conversion.SiteStructureGenerator.SiteStructures;
 import dorfgen.conversion.SiteStructureGenerator.StructureSpace;
+import dorfgen.conversion.SiteStructureGenerator.WallSegment;
+import dorfgen.conversion.SiteStructureGenerator.WallTowerSpace;
 import dorfgen.worldgen.RiverMaker;
 import dorfgen.worldgen.WorldConstructionMaker;
 import net.minecraft.block.Block;
@@ -60,22 +62,6 @@ public class ItemDebug extends Item {
 	}
 
 	@Override
-	public ItemStack onItemRightClick(ItemStack itemstack, World world, EntityPlayer player) {
-
-		int x = MathHelper.floor_double(player.posX);
-		int y = (int) player.posY;
-		int z = MathHelper.floor_double(player.posZ);
-
-		if (world.isRemote)
-			return itemstack;
-		
-		WorldConstructionMaker maker = new WorldConstructionMaker();
-		maker.debugPrint(x, z);
-		
-		return itemstack;
-	}
-	
-/*	@Override
 	public ItemStack onItemRightClick(ItemStack itemstack, World world, EntityPlayer player) {
 
 		int x = MathHelper.floor_double(player.posX);
@@ -120,60 +106,78 @@ public class ItemDebug extends Item {
     	boolean hasRivers = false;
 		if(site!=null && site.rgbmap != null)
 		{
-			SiteStructures stuff = WorldGenerator.instance.structureGen.getStructuresForSite(site);
-			System.out.println("Roads");
-			for(RoadExit exit: stuff.roads)
-			{
-				System.out.println(Arrays.toString(exit.getEdgeMid(site, scale)));
-			}
+			SiteStructures structures = WorldGenerator.instance.structureGen.getStructuresForSite(site);
 			
-			int[] nearest = null;
-			int[] temp;
-			int dist = Integer.MAX_VALUE;
-			System.out.println("Rivers");
-			for(RiverExit exit: stuff.rivers)
+			StructureSpace space = structures.getStructure(x, z, scale);
+			WallSegment wall = structures.getWall(x, z, scale);
+			System.out.println(space+" "+wall);
+			if(wall!=null)
 			{
-				temp = exit.getEdgeMid(site, scale);
-				System.out.println(Arrays.toString(temp));
-				int tempDist = (temp[0] - x)*(temp[0] - x) + (temp[1] - z)*(temp[1] - z);
-				if(tempDist < dist)
+				boolean surrounded = true;
+				boolean nearStruct = false;
+				if(!nearStruct)
 				{
-					nearest = temp;
-					dist = tempDist;
+					nearStruct = structures.isStructure(x - 1, z, scale);
+					if(nearStruct)
+					{
+						boolean t1 = !wall.isInWall(site, x, z-1, scale);
+						boolean t2 = !wall.isInWall(site, x, z+1, scale);
+						surrounded = !(t1||t2);
+					}
 				}
-				hasRivers = true;
+				if(!nearStruct)
+				{
+					nearStruct = structures.isStructure(x + 1, z, scale);
+					if(nearStruct)
+					{
+						boolean t1 = !wall.isInWall(site, x, z-1, scale);
+						boolean t2 = !wall.isInWall(site, x, z+1, scale);
+						surrounded = !(t1||t2);
+					}
+				}
+				if(!nearStruct)
+				{
+					nearStruct = structures.isStructure(x, z - 1, scale);
+					if(nearStruct)
+					{
+						boolean t1 = !wall.isInWall(site, x-1, z, scale);
+						boolean t2 = !wall.isInWall(site, x+1, z, scale);
+						surrounded = !(t1||t2);
+					}
+				}
+				if(!nearStruct)
+				{
+					nearStruct = structures.isStructure(x, z + 1, scale);
+					if(nearStruct)
+					{
+						boolean t1 = !wall.isInWall(site, x-1, z, scale);
+						boolean t2 = !wall.isInWall(site, x+1, z, scale);
+						surrounded = !(t1||t2);
+					}
+				}
+				if(!nearStruct)
+				{
+					if(surrounded)
+						surrounded = wall.isInWall(site, x - 1, z - 1, scale);
+					if(surrounded)
+						surrounded = wall.isInWall(site, x + 1, z - 1, scale);
+					if(surrounded)
+						surrounded = wall.isInWall(site, x - 1, z + 1, scale);
+					if(surrounded)
+						surrounded = wall.isInWall(site, x + 1, z + 1, scale);
+				}
 			}
-			if(nearest!=null)
-				System.out.println(Arrays.toString(nearest));
+			
 			
 		}
 		
-		for(int i = x-250; i<=x+250; i++)
-			for(int j = z-250; j<=z+250; j++)
-			{
-				if(world.getBlock(i, 120, j) == Blocks.gold_block)
-					world.setBlockToAir(i, 120, j);
-			}
-
-		for(int i = kx * scale; i<=kx * scale + scale; i++)
-		{
-			world.setBlock(i, 120, kz * scale, Blocks.gold_block);
-			world.setBlock(i, 120, kz * scale + scale, Blocks.gold_block);
-		}
-		for(int i = kz * scale; i<=kz * scale + scale; i++)
-		{
-			world.setBlock(kx * scale, 120, i, Blocks.gold_block);
-			world.setBlock(kx * scale + scale, 120, i, Blocks.gold_block);
-		}
 		int biome = dorfs.biomeMap[kx][kz];
-		
-		
 		
 		mess += " In a River: "+RiverMaker.isInRiver(x, z)+" "+x+" "+z+" "+BiomeGenBase.getBiome(biome)+" "+dorfs.riverMap[kx][kz];
 		
-		player.addChatMessage(new ChatComponentText(mess));
+		//player.addChatMessage(new ChatComponentText(mess));
 
 		return itemstack;
-	} */
+	}
 	
 }
