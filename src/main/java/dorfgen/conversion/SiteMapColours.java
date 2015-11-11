@@ -127,38 +127,38 @@ public enum SiteMapColours
 			ret[0] = Blocks.water;
 			ret[1] = Blocks.dirt;
 		}
-		if(point==SiteMapColours.LIGHTBROWNBUILDINGWALL)
-		{
-			ret[0] = Blocks.cobblestone;
-			ret[1] = Blocks.stained_hardened_clay;
-		}
-		if(point==DARKGREYBUILDINGWALL || point == GREYBUILDINGWALL)
-		{
-			ret[0] = Blocks.cobblestone;
-			ret[1] = Blocks.stained_hardened_clay;
-		}
-		if(point==SiteMapColours.TOWNBUILDINGWHITEWALL)
-		{
-			ret[0] = Blocks.cobblestone;
-			ret[1] = Blocks.stained_hardened_clay;
-		}
-		if(point==DARKBROWNROOF || point==GREENROOF || point == BROWNROOF)
-		{
-			ret[0] = Blocks.cobblestone;
-			ret[1] = Blocks.stained_hardened_clay;
-			ret[2] = Blocks.stained_hardened_clay;
-		}
-		if(point==TOWNWALL || point==TOWNWALLMID || point == TOWERWALL || point == SiteMapColours.TOWERROOF)
-		{
-			ret[0] = Blocks.stonebrick;
-			ret[1] = Blocks.stonebrick;
-			ret[2] = Blocks.stonebrick;
-		}
 		if(point==RIVER)
 		{
 			ret[0] = Blocks.water;
 			ret[1] = Blocks.water;
 		}
+//		if(point==SiteMapColours.LIGHTBROWNBUILDINGWALL)
+//		{
+//			ret[0] = Blocks.cobblestone;
+//			ret[1] = Blocks.stained_hardened_clay;
+//		}
+//		if(point==DARKGREYBUILDINGWALL || point == GREYBUILDINGWALL)
+//		{
+//			ret[0] = Blocks.cobblestone;
+//			ret[1] = Blocks.stained_hardened_clay;
+//		}
+//		if(point==SiteMapColours.TOWNBUILDINGWHITEWALL)
+//		{
+//			ret[0] = Blocks.cobblestone;
+//			ret[1] = Blocks.stained_hardened_clay;
+//		}
+//		if(point==DARKBROWNROOF || point==GREENROOF || point == BROWNROOF)
+//		{
+//			ret[0] = Blocks.cobblestone;
+//			ret[1] = Blocks.stained_hardened_clay;
+//			ret[2] = Blocks.stained_hardened_clay;
+//		}
+//		if(point==TOWNWALL || point==TOWNWALLMID || point == TOWERWALL || point == SiteMapColours.TOWERROOF)
+//		{
+//			ret[0] = Blocks.stonebrick;
+//			ret[1] = Blocks.stonebrick;
+//			ret[2] = Blocks.stonebrick;
+//		}
 		
 		return ret;
 	}

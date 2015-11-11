@@ -447,11 +447,12 @@ public class SiteStructureGenerator
 		{
 			if(bounds==null)
 			{
+				int offset = scale/2;
 				bounds = new int[2][2];
-				bounds[0][0] = min[0] * (scale/SITETOBLOCK) + site.corners[0][0] * scale;
-				bounds[0][1] = min[1] * (scale/SITETOBLOCK) + site.corners[0][1] * scale;
-				bounds[1][0] = max[0] * (scale/SITETOBLOCK) + site.corners[0][0] * scale;
-				bounds[1][1] = max[1] * (scale/SITETOBLOCK) + site.corners[0][1] * scale;
+				bounds[0][0] = min[0] * (scale/SITETOBLOCK) + site.corners[0][0] * scale + offset;
+				bounds[0][1] = min[1] * (scale/SITETOBLOCK) + site.corners[0][1] * scale + offset;
+				bounds[1][0] = max[0] * (scale/SITETOBLOCK) + site.corners[0][0] * scale + offset;
+				bounds[1][1] = max[1] * (scale/SITETOBLOCK) + site.corners[0][1] * scale + offset;
 			}
 			return bounds;
 		}
@@ -531,8 +532,9 @@ public class SiteStructureGenerator
 			if(location==null)
 			{
 				location = new int[2];
-				location[0] = midPixelX * (scale/SITETOBLOCK) + site.corners[0][0] * scale;
-				location[1] = midPixelY * (scale/SITETOBLOCK) + site.corners[0][1] * scale;
+				int offset = scale/2;
+				location[0] = midPixelX * (scale/SITETOBLOCK) + site.corners[0][0] * scale + offset;
+				location[1] = midPixelY * (scale/SITETOBLOCK) + site.corners[0][1] * scale + offset;
 			}
 			return location;
 		}
@@ -558,8 +560,9 @@ public class SiteStructureGenerator
 			if(location==null)
 			{
 				location = new int[3];
-				location[0] = (midPixelX * (scale/SITETOBLOCK)) + site.corners[0][0] * scale;
-				location[1] = (midPixelY * (scale/SITETOBLOCK)) + site.corners[0][1] * scale;
+				int offset = scale/2;
+				location[0] = (midPixelX * (scale/SITETOBLOCK)) + site.corners[0][0] * scale + offset;
+				location[1] = (midPixelY * (scale/SITETOBLOCK)) + site.corners[0][1] * scale + offset;
 				location[2] = width * (scale/SITETOBLOCK);
 				if(!xEdge)
 				{
