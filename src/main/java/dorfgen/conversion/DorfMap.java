@@ -561,12 +561,12 @@ public class DorfMap {
 		
 		public boolean isInSite(int x, int z)
 		{
-			if(x < corners[0][0] * scale || z < corners[0][1] * scale)
+			if(x < corners[0][0] * scale + scale/2 || z < corners[0][1] * scale + scale/2)
 				return false;
 			if(rgbmap != null)
 			{
 				//Equals as it starts at 0
-				if(x >= (corners[0][0] * scale + rgbmap.length * scale / 51) || z >= (corners[0][1] * scale + rgbmap[0].length * scale / 51))
+				if(x >= (corners[0][0] * scale + rgbmap.length * scale / 51 + scale/2) || z >= (corners[0][1] * scale + rgbmap[0].length * scale / 51 + scale/2))
 					return false;
 			}
 			else

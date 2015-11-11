@@ -132,7 +132,28 @@ public class ItemDebug extends Item {
 			
 		}
 		
-		mess += " In a River: "+RiverMaker.isInRiver(x, z)+" "+x+" "+z;
+		for(int i = x-250; i<=x+250; i++)
+			for(int j = z-250; j<=z+250; j++)
+			{
+				if(world.getBlock(i, 120, j) == Blocks.gold_block)
+					world.setBlockToAir(i, 120, j);
+			}
+
+		for(int i = kx * scale; i<=kx * scale + scale; i++)
+		{
+			world.setBlock(i, 120, kz * scale, Blocks.gold_block);
+			world.setBlock(i, 120, kz * scale + scale, Blocks.gold_block);
+		}
+		for(int i = kz * scale; i<=kz * scale + scale; i++)
+		{
+			world.setBlock(kx * scale, 120, i, Blocks.gold_block);
+			world.setBlock(kx * scale + scale, 120, i, Blocks.gold_block);
+		}
+		int biome = dorfs.biomeMap[kx][kz];
+		
+		
+		
+		mess += " In a River: "+RiverMaker.isInRiver(x, z)+" "+x+" "+z+" "+BiomeGenBase.getBiome(biome)+" "+dorfs.riverMap[kx][kz];
 		
 		player.addChatMessage(new ChatComponentText(mess));
 

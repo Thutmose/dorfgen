@@ -80,6 +80,7 @@ public class WorldConstructionMaker
 		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
 		int x1, z1, h, rgb, r, b1, id;
 		double dx, dz, dx2, dz2;
+		int offset = scale/2;
 		int n = 0;
 		for (int i1 = 0; i1 < 16; i1++)
 		{
@@ -95,11 +96,11 @@ public class WorldConstructionMaker
 				
 				for(Site s: sites)
 				{
-					if(s.rgbmap==null)
+					if(s.rgbmap==null || !s.isInSite(x1, z1))
 						continue;
 					
-					int shiftX = (x1 - s.corners[0][0]*scale)*51/scale;
-					int shiftZ = (z1 - s.corners[0][1]*scale)*51/scale;
+					int shiftX = (x1 - s.corners[0][0]*scale - offset)*SiteStructureGenerator.SITETOBLOCK/scale;
+					int shiftZ = (z1 - s.corners[0][1]*scale - offset)*SiteStructureGenerator.SITETOBLOCK/scale;
 					if(shiftX >= s.rgbmap.length || shiftZ >= s.rgbmap[0].length)
 						continue;
 					if(shiftX < 0 || shiftZ < 0 )
@@ -121,14 +122,14 @@ public class WorldConstructionMaker
 						continue;//TODO move stuff into SiteStructureGenerator
 					}
 					//Make Town walls only 1 thick
-					if(siteCol == SiteMapColours.TOWNWALL)
+					if(siteCol == SiteMapColours.TOWNWALL && false)
 					{
 						if(scale > 51)
 						{
-							int shiftX2 = (x1 + 1 - s.corners[0][0]*scale)*51/scale;
-							int shiftZ2 = (z1 + 1 - s.corners[0][1]*scale)*51/scale;
-							int shiftX3 = (x1 - 1 - s.corners[0][0]*scale)*51/scale;
-							int shiftZ3 = (z1 - 1 - s.corners[0][1]*scale)*51/scale;
+							int shiftX2 = (x1 + 1 - s.corners[0][0]*scale)*SiteStructureGenerator.SITETOBLOCK/scale;
+							int shiftZ2 = (z1 + 1 - s.corners[0][1]*scale)*SiteStructureGenerator.SITETOBLOCK/scale;
+							int shiftX3 = (x1 - 1 - s.corners[0][0]*scale)*SiteStructureGenerator.SITETOBLOCK/scale;
+							int shiftZ3 = (z1 - 1 - s.corners[0][1]*scale)*SiteStructureGenerator.SITETOBLOCK/scale;
 
 							int rgbxp = s.rgbmap[shiftX2][shiftZ];
 							int rgbzm = s.rgbmap[shiftX][shiftZ3];
@@ -158,18 +159,6 @@ public class WorldConstructionMaker
 
 					boolean wall = siteCol== SiteMapColours.TOWNWALL;
 					boolean roof = siteCol.toString().contains("ROOF");
-					if(struct!=null)
-					{
-						int[][] bounds = struct.getBounds(s, scale);
-						wall = struct.inWall(s, x1, z1, scale);
-						roof = !wall;
-						if(surface==null)
-							surface = Blocks.planks;
-					}
-					else if(wall)
-					{
-						
-					}
 					
 					if(surface==null && siteCol.toString().contains("ROOF"))
 						surface = Blocks.brick_block;
