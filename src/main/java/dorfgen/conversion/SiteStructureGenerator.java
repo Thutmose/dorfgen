@@ -15,6 +15,8 @@ import dorfgen.worldgen.WorldConstructionMaker;
 import net.minecraft.block.Block;
 import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.init.Blocks;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemDoor;
 import net.minecraft.world.World;
 
@@ -37,6 +39,103 @@ public class SiteStructureGenerator
 	public SiteStructures getStructuresForSite(Site site)
 	{
 		return structureMap.get(site.id);
+	}
+	
+	private void turnOnLever(World world, int x2, int y, int z2)
+	{
+		int h = y + 2;
+		int i1 = world.getBlockMetadata(x2,  h - 2, z2);
+		int j1 = i1 & 7;
+		int k1 = 8 - (i1 & 8);
+		world.setBlockMetadataWithNotify(x2, h - 2, z2, j1 + k1, 3);
+        world.notifyBlocksOfNeighborChange(x2, h - 2, z2, world.getBlock(x2, h - 2, z2));
+
+        if (j1 == 1)
+        {
+            world.notifyBlocksOfNeighborChange(x2 - 1, h - 2, z2, world.getBlock(x2, h - 2, z2));
+        }
+        else if (j1 == 2)
+        {
+            world.notifyBlocksOfNeighborChange(x2 + 1, h - 2, z2, world.getBlock(x2, h - 2, z2));
+        }
+        else if (j1 == 3)
+        {
+            world.notifyBlocksOfNeighborChange(x2, h - 2, z2 - 1, world.getBlock(x2, h - 2, z2));
+        }
+        else if (j1 == 4)
+        {
+            world.notifyBlocksOfNeighborChange(x2, h - 2, z2 + 1, world.getBlock(x2, h - 2, z2));
+        }
+        else if (j1 != 5 && j1 != 6)
+        {
+            if (j1 == 0 || j1 == 7)
+            {
+                world.notifyBlocksOfNeighborChange(x2, h - 2 + 1, z2, world.getBlock(x2, h - 2, z2));
+            }
+        }
+        else
+        {
+            world.notifyBlocksOfNeighborChange(x2, h - 2 - 1, z2, world.getBlock(x2, h - 2, z2));
+        }
+	}
+	
+	private boolean isBlockSurroundedByWall(Site site, SiteStructures structures, WallSegment wall, int x1, int z1)
+	{
+		boolean surrounded = true;
+		boolean nearStruct = false;
+		if(!nearStruct)
+		{
+			nearStruct = structures.isStructure(x1 - 1, z1, scale);
+			if(nearStruct)
+			{
+				boolean t1 = !wall.isInWall(site, x1, z1-1, scale);
+				boolean t2 = !wall.isInWall(site, x1, z1+1, scale);
+				surrounded = !(t1||t2);
+			}
+		}
+		if(!nearStruct)
+		{
+			nearStruct = structures.isStructure(x1 + 1, z1, scale);
+			if(nearStruct)
+			{
+				boolean t1 = !wall.isInWall(site, x1, z1-1, scale);
+				boolean t2 = !wall.isInWall(site, x1, z1+1, scale);
+				surrounded = !(t1||t2);
+			}
+		}
+		if(!nearStruct)
+		{
+			nearStruct = structures.isStructure(x1, z1 - 1, scale);
+			if(nearStruct)
+			{
+				boolean t1 = !wall.isInWall(site, x1-1, z1, scale);
+				boolean t2 = !wall.isInWall(site, x1+1, z1, scale);
+				surrounded = !(t1||t2);
+			}
+		}
+		if(!nearStruct)
+		{
+			nearStruct = structures.isStructure(x1, z1 + 1, scale);
+			if(nearStruct)
+			{
+				boolean t1 = !wall.isInWall(site, x1-1, z1, scale);
+				boolean t2 = !wall.isInWall(site, x1+1, z1, scale);
+				surrounded = !(t1||t2);
+			}
+		}
+		if(!nearStruct)
+		{
+			if(surrounded)
+				surrounded = wall.isInWall(site, x1 - 1, z1 - 1, scale);
+			if(surrounded)
+				surrounded = wall.isInWall(site, x1 + 1, z1 - 1, scale);
+			if(surrounded)
+				surrounded = wall.isInWall(site, x1 - 1, z1 + 1, scale);
+			if(surrounded)
+				surrounded = wall.isInWall(site, x1 + 1, z1 + 1, scale);
+		}
+		
+		return surrounded;
 	}
 	
 	/**
@@ -78,67 +177,15 @@ public class SiteStructureGenerator
 					SiteStructures structures = getStructuresForSite(site);
 					if(structures==null)
 						continue;
-
+					
 					//Generate walls first, so towers can make doors into them
 					WallSegment wall = structures.getWall(x1, z1, scale);
 					if(wall!=null)
 					{
 						h = dorfs.biomeInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
-						
-						boolean surrounded = true;
-						boolean nearStruct = false;
-						if(!nearStruct)
-						{
-							nearStruct = structures.isStructure(x1 - 1, z1, scale);
-							if(nearStruct)
-							{
-								boolean t1 = !wall.isInWall(site, x1, z1-1, scale);
-								boolean t2 = !wall.isInWall(site, x1, z1+1, scale);
-								surrounded = !(t1||t2);
-							}
-						}
-						if(!nearStruct)
-						{
-							nearStruct = structures.isStructure(x1 + 1, z1, scale);
-							if(nearStruct)
-							{
-								boolean t1 = !wall.isInWall(site, x1, z1-1, scale);
-								boolean t2 = !wall.isInWall(site, x1, z1+1, scale);
-								surrounded = !(t1||t2);
-							}
-						}
-						if(!nearStruct)
-						{
-							nearStruct = structures.isStructure(x1, z1 - 1, scale);
-							if(nearStruct)
-							{
-								boolean t1 = !wall.isInWall(site, x1-1, z1, scale);
-								boolean t2 = !wall.isInWall(site, x1+1, z1, scale);
-								surrounded = !(t1||t2);
-							}
-						}
-						if(!nearStruct)
-						{
-							nearStruct = structures.isStructure(x1, z1 + 1, scale);
-							if(nearStruct)
-							{
-								boolean t1 = !wall.isInWall(site, x1-1, z1, scale);
-								boolean t2 = !wall.isInWall(site, x1+1, z1, scale);
-								surrounded = !(t1||t2);
-							}
-						}
-						if(!nearStruct)
-						{
-							if(surrounded)
-								surrounded = wall.isInWall(site, x1 - 1, z1 - 1, scale);
-							if(surrounded)
-								surrounded = wall.isInWall(site, x1 + 1, z1 - 1, scale);
-							if(surrounded)
-								surrounded = wall.isInWall(site, x1 - 1, z1 + 1, scale);
-							if(surrounded)
-								surrounded = wall.isInWall(site, x1 + 1, z1 + 1, scale);
-						}
 
+						boolean surrounded = isBlockSurroundedByWall(site, structures, wall, x1, z1);
+						
 						world.setBlock(x2, h-1, z2, Blocks.stonebrick);
 						for(int k = h; k<h+6; k++)
 						{
@@ -193,18 +240,142 @@ public class SiteStructureGenerator
 								world.setBlock(x2, h+l, z2, Blocks.air);
 							}
 						}
+						
 						world.setBlock(x2, h - 1, z2, material);
-						world.setBlock(x2, h + height, z2, material);
+						world.setBlock(x2, h + height + 1, z2, material);
+						
 						if(struct.shouldBeDoor(site, x1, z1, scale))
 						{
 							int meta = 0;//TODO determine direction of door  see 833 of StructureComponent
 							ItemDoor.placeDoorBlock(world, x2, h, z2, meta, Blocks.wooden_door);
 						}
+						
+						if(struct.shouldBeTorch(site, x1, z1, scale))
+						{
+							if(struct.roofType != SiteMapColours.TOWERROOF)
+							{
+								world.setBlock(x2, h + height, z2, Blocks.torch);
+							}
+							else
+							{
+								world.setBlock(x2, h - 1, z2, Blocks.lit_redstone_lamp);
+								world.setBlock(x2, h - 3, z2, material);
+								world.setBlock(x2,  h - 2, z2, Blocks.lever);
+								turnOnLever(world, x2, h - 2, z2);
+								world.setBlock(x2, h + height, z2, material);
+							}
+						}
+						else
+						{
+							world.setBlock(x2, h + height, z2, material);
+						}
+						
 						if(villager)
 						{
 	                        EntityVillager entityvillager = new EntityVillager(world, 0);
 	                        entityvillager.setLocationAndAngles((double)x2 + 0.5D, (double)h, (double)z2 + 0.5D, 0.0F, 0.0F);
 	                        world.spawnEntityInWorld(entityvillager);
+						}
+					}
+				}
+			}
+		}
+		
+		// second pass
+		for(int i = 0; i<16; i++)
+		{
+			for(int j = 0; j<16; j++)
+			{
+				x1 = x + i;
+				z1 = z + j;
+				
+				x2 = x1 + WorldGenerator.shift.posX;
+				z2 = z1 + WorldGenerator.shift.posZ;
+				
+				HashSet<Site> sites = WorldGenerator.instance.dorfs.getSiteForCoords(x2, z2);
+				Site site = null;
+				if(sites==null)
+					continue;
+				//Loop Over sites and do the structures
+				for(Site s: sites)
+				{
+					site = s;
+					SiteStructures structures = getStructuresForSite(site);
+					if(structures==null)
+						continue;
+					
+					//Generate walls first, so towers can make doors into them
+					WallSegment wall = structures.getWall(x1, z1, scale);
+					if(wall!=null)
+					{
+						h = dorfs.biomeInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
+
+						boolean surrounded = isBlockSurroundedByWall(site, structures, wall, x1, z1);
+						
+						for(int k = h; k<h+6; k++)
+						{
+							if(!(k < h + 3 || k >= h + 4))
+							{
+								if(surrounded)
+								{
+									boolean pos = false, neg = false;
+									
+									// if this block is surrounded by wall, but the block next to it is not,
+									// then we must be on the edge of the inside of the corridor:
+									// this is where we want to place torches
+									
+								    if(!(pos = isBlockSurroundedByWall(site, structures, wall, x1 + 1, z1)) ||
+								    		(neg = !isBlockSurroundedByWall(site, structures, wall, x1 - 1, z1)))
+									{
+								    	// place torches every n blocks
+								    	if(z1 % 3 == 0)
+								    	{
+								    		// this is a second pass, so the buildings connected to the corridors
+								    		// have already been generated. We want avoid erasing the walls, but we
+								    		// don't want to not place torches on those walls, either. By checking pos
+								    		// and neg, we can move one block toward the center of the corridor, and
+								    		// place a torch there
+											if(world.getBlock(x2, h + 1, z2) != Blocks.stonebrick)
+											{
+												world.setBlock(x2, h + 1, z2, Blocks.torch);
+												world.getBlock(x2, h + 1, z2).onBlockAdded(world, x2, h + 1, z2);
+											}
+											else if(pos && world.getBlock(x2 - 1, h + 1, z2) != Blocks.stonebrick)
+											{
+												world.setBlock(x2 - 1, h + 1, z2, Blocks.torch);
+												world.getBlock(x2 - 1, h + 1, z2).onBlockAdded(world, x2 - 1, h + 1, z2);
+											}
+											else if(neg && world.getBlock(x2 + 1, h + 1, z2) != Blocks.stonebrick)
+											{
+												world.setBlock(x2 + 1, h + 1, z2, Blocks.torch);
+												world.getBlock(x2 + 1, h + 1, z2).onBlockAdded(world, x2 + 1, h + 1, z2);
+											}
+								    	}
+									}
+								    else if(!(pos = isBlockSurroundedByWall(site, structures, wall, x1, z1 + 1)) ||
+												!(neg = isBlockSurroundedByWall(site, structures, wall, x1, z1 - 1)))
+									{
+								    	if(x1 % 3 == 0)
+								    	{
+											if(world.getBlock(x2, h + 1, z2) != Blocks.stonebrick)
+											{
+												world.setBlock(x2, h + 1, z2, Blocks.torch);
+												world.getBlock(x2, h + 1, z2).onBlockAdded(world, x2, h + 1, z2);
+											}
+											else if(pos && world.getBlock(x2, h + 1, z2 - 1) != Blocks.stonebrick)
+											{
+												world.setBlock(x2, h + 1, z2 - 1, Blocks.torch);
+												world.getBlock(x2, h + 1, z2 - 1).onBlockAdded(world, x2, h + 1, z2 - 1);
+											}
+											else if(neg && world.getBlock(x2 + 1, h + 1, z2) != Blocks.stonebrick)
+											{
+												world.setBlock(x2 + 1, h + 1, z2, Blocks.torch);
+												world.getBlock(x2 + 1, h + 1, z2).onBlockAdded(world, x2 + 1, h + 1, z2);
+											}
+								    	}
+									}
+								}
+							}
 						}
 					}
 				}
@@ -599,15 +770,27 @@ public class SiteStructureGenerator
 			getBounds(site, scale);
 
 			int midx = (bounds[0][0] + bounds[1][0])/2;
-			int midy = (bounds[0][1] + bounds[1][1])/2;
+			int midz = (bounds[0][1] + bounds[1][1])/2;
 			
 			//middle of a wall
-			if((x == midx && (z==bounds[0][1] || z == bounds[1][1])) || (z == midy && (x==bounds[0][0] || x == bounds[1][0])))
+			if((x == midx && (z==bounds[0][1] || z == bounds[1][1])) || (z == midz && (x==bounds[0][0] || x == bounds[1][0])))
 			{
 			//	SiteStructures structs = WorldGenerator.instance.structureGen.getStructuresForSite(site);
 //				System.out.println("door");
 				return true;
 			}
+			return false;
+		}
+		
+		public boolean shouldBeTorch(Site site, int x, int z, int scale)
+		{
+			getBounds(site, scale);
+			
+			if(z > bounds[0][1] && z < bounds[1][1] && x > bounds[0][0] && x < bounds[1][0])
+			{
+				return (z % 4 == 0) && (x % 4 == 0);
+			}
+			
 			return false;
 		}
 		
