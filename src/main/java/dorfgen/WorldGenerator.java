@@ -10,8 +10,10 @@ import com.ibm.icu.text.DisplayContext.Type;
 
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.init.Blocks;
-import net.minecraft.util.ChunkCoordinates;
+import net.minecraft.item.Item;
+import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldProvider;
@@ -31,17 +33,18 @@ import net.minecraftforge.event.terraingen.PopulateChunkEvent;
 import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.event.world.WorldEvent.Load;
-import cpw.mods.fml.common.FMLCommonHandler;
-import cpw.mods.fml.common.Loader;
-import cpw.mods.fml.common.Mod;
-import cpw.mods.fml.common.ModMetadata;
-import cpw.mods.fml.common.Mod.EventHandler;
-import cpw.mods.fml.common.event.FMLInitializationEvent;
-import cpw.mods.fml.common.event.FMLPostInitializationEvent;
-import cpw.mods.fml.common.event.FMLPreInitializationEvent;
-import cpw.mods.fml.common.event.FMLServerStartingEvent;
-import cpw.mods.fml.common.eventhandler.SubscribeEvent;
-import cpw.mods.fml.common.registry.GameRegistry;
+import net.minecraftforge.fml.common.FMLCommonHandler;
+import net.minecraftforge.fml.common.Loader;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.ModMetadata;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.registry.GameRegistry;
+import net.minecraftforge.fml.relauncher.Side;
 import dorfgen.conversion.Config;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.FileLoader;
@@ -78,8 +81,8 @@ public class WorldGenerator {
 
 	public static int scale;
 	public static boolean finite;
-	public static ChunkCoordinates spawn;
-	public static ChunkCoordinates shift;
+	public static BlockPos spawn;
+	public static BlockPos shift;
 	public static String spawnSite = "";
 	public static boolean randomSpawn;
 
@@ -102,14 +105,14 @@ public class WorldGenerator {
 		File file = e.getSuggestedConfigurationFile();
 		String seperator = System.getProperty("file.separator");
 
-		GameRegistry.registerItem(new ItemDebug().setTextureName("diamond"), "debugItem");
-		GameRegistry.registerBlock(new BlockRoadSurface().setBlockName("roadgravel"), "roadgravel");
+		GameRegistry.registerItem(new ItemDebug(), "debugItem");//TODO texture
+		GameRegistry.registerBlock(new BlockRoadSurface(), "roadgravel");
 
 		String folder = file.getAbsolutePath();
 		String name = file.getName();
 		FileLoader.biomes = folder.replace(name, MODID + seperator + "biomes.csv");
 		//
-		MapGenStructureIO.func_143031_a(Start.class, "dorfsitestart");
+		MapGenStructureIO.registerStructureComponent(Start.class, "dorfsitestart");
 		MapGenStructureIO.registerStructure(Start.class, "dorfsitestart");
 		//
 	}
@@ -135,6 +138,12 @@ public class WorldGenerator {
 				BiomeManager.addVillageBiome(b, true);
 			}
 		}
+		
+		if(FMLCommonHandler.instance().getEffectiveSide() == Side.CLIENT)
+		{
+			Minecraft.getMinecraft().getRenderItem().getItemModelMesher().register
+			(Item.getItemFromBlock(BlockRoadSurface.uggrass), 0, new ModelResourceLocation("dorfgen:roadgravel", "inventory"));
+		}
 	}
 	
     @EventHandler
@@ -145,7 +154,7 @@ public class WorldGenerator {
 
 	@SubscribeEvent
 	public void genEvent(Load evt) {
-		if (evt.world.provider.worldChunkMgr instanceof WorldChunkManagerFinite) {
+		if (evt.world.provider.getWorldChunkManager() instanceof WorldChunkManagerFinite) {
 
 			if(!spawnSite.isEmpty())
 			{
@@ -159,14 +168,14 @@ public class WorldGenerator {
 						int z = s.z * scale;
 						try
 						{
-							y = dorfs.elevationMap[(x - shift.posX) / scale][(z - shift.posZ) / scale];
+							y = dorfs.elevationMap[(x - shift.getX()) / scale][(z - shift.getZ()) / scale];
 						}
 						catch (Exception e)
 						{
 							System.out.println(s+" "+dorfs.elevationMap.length);
 							e.printStackTrace();
 						}
-						evt.world.setSpawnLocation(x + scale / 2, y, z + scale / 2);
+						evt.world.setSpawnPoint(new BlockPos(x + scale / 2, y, z + scale / 2));
 						return;
 					}
 				}
@@ -183,19 +192,19 @@ public class WorldGenerator {
 						int z = s.z * scale;
 						try
 						{
-							y = dorfs.elevationMap[(x - shift.posX) / scale][(z - shift.posZ) / scale];
+							y = dorfs.elevationMap[(x - shift.getX()) / scale][(z - shift.getZ()) / scale];
 						}
 						catch (Exception e)
 						{
 							System.out.println(s+" "+dorfs.elevationMap.length);
 							e.printStackTrace();
 						}
-						evt.world.setSpawnLocation(x + scale / 2, y, z + scale / 2);
+						evt.world.setSpawnPoint(new BlockPos(x + scale / 2, y, z + scale / 2));
 						return;
 					}
 				}
 			} else {
-				evt.world.setSpawnLocation(spawn.posX, spawn.posY, spawn.posZ);
+				evt.world.setSpawnPoint(spawn);
 			}
 		}
 	}
@@ -205,24 +214,24 @@ public class WorldGenerator {
 		World world = evt.world;
 		int cX = evt.chunkX * 16;
 		int cZ = evt.chunkZ * 16;
-		for (int i = 0; i < 16; i++) {
-			for (int k = 0; k < 16; k++) {
-				BiomeGenBase biome = world.getBiomeGenForCoords(cX + i, cZ + k);
-				if (biome != BiomeGenBase.river) // || true)
-					continue;
-
-				for (int j = 255; j > 0; j--) {
-					Block b = world.getBlock(cX + i, j, cZ + k);
-					if (b != Blocks.air && b != null) {
-						if (b == Blocks.water) {
-							b.onNeighborBlockChange(world, cX + i, j, cZ + k, b);
-						}
-						break;
-					}
-
-				}
-			}
-		}
+//		for (int i = 0; i < 16; i++) {
+//			for (int k = 0; k < 16; k++) {
+//				BiomeGenBase biome = world.getBiomeGenForCoords(new BlockPos(cX + i, 0, cZ + k));
+//				if (biome != BiomeGenBase.river) // || true)
+//					continue;
+//
+//				for (int j = 255; j > 0; j--) {
+//					Block b = world.getBlock(cX + i, j, cZ + k);
+//					if (b != Blocks.air && b != null) {
+//						if (b == Blocks.water) {
+//							b.onNeighborBlockChange(world, cX + i, j, cZ + k, b);
+//						}
+//						break;
+//					}
+//
+//				}
+//			}
+//		}
 	}
 
 }

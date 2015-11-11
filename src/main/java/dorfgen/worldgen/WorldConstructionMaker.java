@@ -27,6 +27,7 @@ import net.minecraft.init.Blocks;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.chunk.ChunkPrimer;
 import net.minecraftforge.common.BiomeDictionary;
 import net.minecraftforge.common.BiomeDictionary.Type;
 
@@ -44,8 +45,8 @@ public class WorldConstructionMaker
 	{
 		int x = chunkX * 16;
 		int z = chunkZ * 16;
-		x -= WorldGenerator.shift.posX;
-		z -= WorldGenerator.shift.posZ;
+		x -= WorldGenerator.shift.getX();
+		z -= WorldGenerator.shift.getZ();
 
 		int dx = 16 * scale / 2 + scale;
 		int dz = 16 * scale / 2 + scale;
@@ -70,14 +71,14 @@ public class WorldConstructionMaker
 		return false;
 	}
 	
-	public void buildSites(World world, int chunkX, int chunkZ, Block[] blocks, BiomeGenBase[] biomes)
+	public void buildSites(World world, int chunkX, int chunkZ, ChunkPrimer blocks, BiomeGenBase[] biomes)
 	{
 		if(dorfs.structureMap.length==0)
 			return;
 		SiteStructureGenerator structureGen = WorldGenerator.instance.structureGen;
 		int index;
-		int x = (chunkX * 16 - WorldGenerator.shift.posX);
-		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
+		int x = (chunkX * 16 - WorldGenerator.shift.getX());
+		int z = (chunkZ * 16 - WorldGenerator.shift.getZ());
 		int x1, z1, h, rgb, r, b1, id;
 		double dx, dz, dx2, dz2;
 		int offset = scale/2;
@@ -165,11 +166,17 @@ public class WorldConstructionMaker
 					
 					if(surface==null)// || blocks[index - 1] == Blocks.water || blocks[index] == Blocks.water)
 						continue;
-					blocks[index] = surface;
+					blocks.setBlockState(index, surface.getDefaultState());
+					
+//					blocks[index] = surface;
 					index = (j - 1) << 0 | (i1) << 12 | (k1) << 8;
-					blocks[index] = repBlocks[0];
+					if(repBlocks[0]!=null)
+					blocks.setBlockState(index, repBlocks[0].getDefaultState());
+//					blocks[index] = repBlocks[0];
 					index = (j + 1) << 0 | (i1) << 12 | (k1) << 8;
-					blocks[index] = above;
+					if(above!=null)
+						blocks.setBlockState(index, above.getDefaultState());
+//					blocks[index] = above;
 					boolean tower = siteCol.toString().contains("TOWER");
 					if(wall||roof)
 					{
@@ -179,9 +186,9 @@ public class WorldConstructionMaker
 						{
 							j1 = j1 + 1;
 							index = (j1) << 0 | (i1) << 12 | (k1) << 8;
-							blocks[index] = null;
+							blocks.setBlockState(index, Blocks.air.getDefaultState());
 							index = (h + num) << 0 | (i1) << 12 | (k1) << 8;
-							blocks[index] = surface;
+							blocks.setBlockState(index, surface.getDefaultState());
 						}
 						j1 = j;
 						if(wall)
@@ -190,7 +197,7 @@ public class WorldConstructionMaker
 							{
 								j1 = j1 + 1;
 								index = (j1) << 0 | (i1) << 12 | (k1) << 8;
-								blocks[index] = surface;
+								blocks.setBlockState(index, surface.getDefaultState());
 							}
 						}
 					}
@@ -213,7 +220,7 @@ public class WorldConstructionMaker
 		return 0;
 	}
 	
-	private void safeSetToRoad(int x, int z, int h, int chunkX, int chunkZ, Block[] blocks, Block block)
+	private void safeSetToRoad(int x, int z, int h, int chunkX, int chunkZ, ChunkPrimer blocks, Block block)
 	{
 		int index;
 		
@@ -224,23 +231,23 @@ public class WorldConstructionMaker
 		
 		if(index >= 0 && x1 < 16 && z1 < 16 && x1 >= 0 && z1 >= 0)
 		{
-			if(index + 3 < 255) blocks[index + 3] = null;
-			if(index + 2 < 255) blocks[index + 2] = null;
-			if(index + 1 < 255) blocks[index + 1] = null;
-			blocks[index] = block;
-			blocks[index - 1] = Blocks.cobblestone;
-			blocks[index - 2] = Blocks.cobblestone;
+			if(index + 3 < 255) blocks.setBlockState(index + 3, Blocks.air.getDefaultState());
+			if(index + 2 < 255) blocks.setBlockState(index + 2, Blocks.air.getDefaultState());
+			if(index + 1 < 255) blocks.setBlockState(index + 1, Blocks.air.getDefaultState());
+			blocks.setBlockState(index, block.getDefaultState());
+			blocks.setBlockState(index - 1, Blocks.cobblestone.getDefaultState());
+			blocks.setBlockState(index - 2, Blocks.cobblestone.getDefaultState());
 		}
 	}
 	
-	private void safeSetToRoad(int x, int z, int h, int chunkX, int chunkZ, Block[] blocks)
+	private void safeSetToRoad(int x, int z, int h, int chunkX, int chunkZ, ChunkPrimer blocks)
 	{
 		safeSetToRoad(x, z, h, chunkX, chunkZ, blocks, BlockRoadSurface.uggrass);
 	}
 	
 	private static final int ROADWIDTH = 3; 
 	
-	private void genSingleRoad(EnumFacing begin, EnumFacing end, int x, int z, int chunkX, int chunkZ, Block[] blocks)
+	private void genSingleRoad(EnumFacing begin, EnumFacing end, int x, int z, int chunkX, int chunkZ, ChunkPrimer blocks)
 	{
 		int nearestEmbarkX = x - (x % scale);
 		int nearestEmbarkZ = z - (z % scale);
@@ -273,7 +280,7 @@ public class WorldConstructionMaker
 		}
 	}
 	
-	private void genSingleRoadToPos(int x, int z, int chunkX, int chunkZ, int toRoadX, int toRoadZ, Block[] blocks)
+	private void genSingleRoadToPos(int x, int z, int chunkX, int chunkZ, int toRoadX, int toRoadZ, ChunkPrimer blocks)
 	{
 		int nearestEmbarkX = x - (x % scale);
 		int nearestEmbarkZ = z - (z % scale);
@@ -477,7 +484,7 @@ public class WorldConstructionMaker
 		return null;
 	}
 	
-	private void genRoads(int x, int z, int chunkX, int chunkZ, Block[] blocks)
+	private void genRoads(int x, int z, int chunkX, int chunkZ, ChunkPrimer blocks)
 	{
 		int nearestEmbarkX = x - (x % scale);
 		int nearestEmbarkZ = z - (z % scale);
@@ -622,7 +629,7 @@ public class WorldConstructionMaker
 		}
 	}
 	
-	private void genRoadEndConnector(int roadEndX, int roadEndZ, int chunkX, int chunkZ, Block[] blocks)
+	private void genRoadEndConnector(int roadEndX, int roadEndZ, int chunkX, int chunkZ, ChunkPrimer blocks)
 	{
 		int minDistSqr = Integer.MAX_VALUE, dist;
 		int x1, z1;
@@ -659,10 +666,10 @@ public class WorldConstructionMaker
 		}
 	}
 	
-	public void buildRoads(World world, int chunkX, int chunkZ, Block[] blocks, BiomeGenBase[] biomes)
+	public void buildRoads(World world, int chunkX, int chunkZ, ChunkPrimer blocks, BiomeGenBase[] biomes)
 	{
-		int x = (chunkX * 16 - WorldGenerator.shift.posX);
-		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
+		int x = (chunkX * 16 - WorldGenerator.shift.getX());
+		int z = (chunkZ * 16 - WorldGenerator.shift.getZ());
 		
 		if(isNearSiteRoadEnd(x, z))
 		{

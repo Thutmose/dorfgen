@@ -13,6 +13,7 @@ import net.minecraft.command.ICommand;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.util.BlockPos;
 import net.minecraft.util.ChatComponentText;
 
 public class Commands implements ICommand
@@ -34,7 +35,7 @@ public class Commands implements ICommand
 	}
 
 	@Override
-	public String getCommandName()
+	public String getName()
 	{
 		return "dorfgen";
 	}
@@ -47,13 +48,13 @@ public class Commands implements ICommand
 	}
 
 	@Override
-	public List getCommandAliases()
+	public List getAliases()
 	{
 		return aliases;
 	}
 
 	@Override
-	public void processCommand(ICommandSender sender, String[] args)
+	public void execute(ICommandSender sender, String[] args)
 	{
 		if(args.length > 1 && args[0].equalsIgnoreCase("tp") && sender instanceof EntityPlayer)
 		{
@@ -91,8 +92,8 @@ public class Commands implements ICommand
 				int x = telesite.x * WorldGenerator.scale + WorldGenerator.scale;
 				int z = telesite.z * WorldGenerator.scale + WorldGenerator.scale;
 				
-				int y = WorldGenerator.instance.dorfs.elevationMap[(x - WorldGenerator.instance.shift.posX) / WorldGenerator.scale]
-						[(z - WorldGenerator.instance.shift.posZ) / WorldGenerator.scale];
+				int y = WorldGenerator.instance.dorfs.elevationMap[(x - WorldGenerator.instance.shift.getX()) / WorldGenerator.scale]
+						[(z - WorldGenerator.instance.shift.getZ()) / WorldGenerator.scale];
 				entity.addChatMessage(new ChatComponentText("Teleported to "+telesite));
 				entity.setPositionAndUpdate(x, y, z);
 			}
@@ -100,14 +101,7 @@ public class Commands implements ICommand
 	}
 
 	@Override
-	public boolean canCommandSenderUseCommand(ICommandSender sender)
-	{
-		// TODO Auto-generated method stub
-		return true;
-	}
-
-	@Override
-	public List addTabCompletionOptions(ICommandSender sender, String[] args)
+	public List addTabCompletionOptions(ICommandSender sender, String[] args, BlockPos pos)
 	{
 		// TODO Auto-generated method stub
 		
@@ -149,6 +143,12 @@ public class Commands implements ICommand
 	{
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	@Override
+	public boolean canCommandSenderUse(ICommandSender sender) {
+		// TODO Auto-generated method stub
+		return true;
 	}
 
 }

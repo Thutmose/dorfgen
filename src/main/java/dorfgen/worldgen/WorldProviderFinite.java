@@ -13,4 +13,9 @@ public class WorldProviderFinite extends WorldProvider{
 		return "Dorven Realm";
 	}
 
+	@Override
+	public String getInternalNameSuffix() {
+		return "dorfs";
+	}
+
 }

@@ -12,6 +12,7 @@ import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import net.minecraft.block.Block;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.crash.CrashReportCategory;
+import net.minecraft.util.BlockPos;
 import net.minecraft.util.ReportedException;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -37,21 +38,23 @@ public class WorldChunkManagerFinite extends WorldChunkManager
 		super(world);
 	}
 
+	@Override
 	/** Returns the BiomeGenBase related to the x, z position on the world. */
-	public BiomeGenBase getBiomeGenAt(int x, int z)
+	public BiomeGenBase getBiomeGenerator(BlockPos pos)
 	{
 		try
 		{
-			return super.getBiomeGenAt(x, z);
+			return super.getBiomeGenerator(pos);
 		}
 		catch (Exception e)
 		{
-			System.out.println(x+" "+z);
+			System.out.println(pos);
 			e.printStackTrace();
 		}
 		return BiomeGenBase.ocean;
 	}
-
+	
+	@Override
 	/** Returns an array of biomes for the location input. */
 	public BiomeGenBase[] getBiomesForGeneration(BiomeGenBase[] biomes, int x, int z, int width, int length)
 	{
@@ -64,21 +67,22 @@ public class WorldChunkManagerFinite extends WorldChunkManager
 
 		return biomes;
 	}
-
+	
+	@Override
 	/** Returns biomes to use for the blocks and loads the other data like
 	 * temperature and humidity onto the WorldChunkManager Args: oldBiomeList,
 	 * x, z, width, depth */
 	public BiomeGenBase[] loadBlockGeneratorData(BiomeGenBase[] biomes, int x, int z, int width, int depth)
 	{
 		biomes = super.getBiomesForGeneration(biomes, x, z, width, depth);
-		x -= WorldGenerator.shift.posX;
-		z -= WorldGenerator.shift.posZ;
+		x -= WorldGenerator.shift.getX();
+		z -= WorldGenerator.shift.getZ();
 
 		if (x >= 0 && z >= 0 && (x + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap.length
 				&& (z + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap[0].length) {
 
-		x += WorldGenerator.shift.posX;
-		z += WorldGenerator.shift.posZ;
+		x += WorldGenerator.shift.getX();
+		z += WorldGenerator.shift.getZ();
 			
 		return biomes = makeBiomes(biomes, scale, x, z); }
 		return biomes;
@@ -98,7 +102,7 @@ public class WorldChunkManagerFinite extends WorldChunkManager
 			for (int k1 = 0; k1 < 16; k1++)
 			{
 				index = (i1) + (k1) * 16;
-				biomes[index] = BiomeGenBase.getBiome(getBiomeFromMaps(x + i1 - WorldGenerator.shift.posX, z + k1 - WorldGenerator.shift.posZ));
+				biomes[index] = BiomeGenBase.getBiome(getBiomeFromMaps(x + i1 - WorldGenerator.shift.getX(), z + k1 - WorldGenerator.shift.getZ()));
 			}
 		}
 		return biomes;
@@ -149,7 +153,7 @@ public class WorldChunkManagerFinite extends WorldChunkManager
 		return b1;
 	}
 	
-	
+	@Override
 	/** checks given Chunk's Biomes against List of allowed ones */
 	public boolean areBiomesViable(int p1_, int p2_, int p3_, List biomes)
 	{

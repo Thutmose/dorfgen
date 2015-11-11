@@ -23,6 +23,7 @@ import net.minecraft.init.Blocks;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.chunk.ChunkPrimer;
 
 public class RiverMaker {
 	public static BicubicInterpolator bicubicInterpolator = new BicubicInterpolator();
@@ -33,14 +34,14 @@ public class RiverMaker {
 		// TODO Auto-generated constructor stub
 	}
 
-	public void makeRiversForChunk(World world, int chunkX, int chunkZ, Block[] blocks, BiomeGenBase[] biomes) {
+	public void makeRiversForChunk(World world, int chunkX, int chunkZ, ChunkPrimer primer, BiomeGenBase[] biomes) {
 		
 //		if(true)
 //			return;
 //		
 		int index;
-		int x = (chunkX * 16 - WorldGenerator.shift.posX);
-		int z = (chunkZ * 16 - WorldGenerator.shift.posZ);
+		int x = (chunkX * 16 - WorldGenerator.shift.getX());
+		int z = (chunkZ * 16 - WorldGenerator.shift.getZ());
 		int x1, z1, h, w, r, b1, id;
 		boolean water = false;
 		double dx, dz, dx2, dz2;
@@ -62,11 +63,11 @@ public class RiverMaker {
 					continue;
 				int j = h-1;
 				index = j << 0 | (i1) << 12 | (k1) << 8;
-				blocks[index] = Blocks.water;
+				primer.setBlockState(index, Blocks.water.getDefaultState());
 				index = j-- << 0 | (i1) << 12 | (k1) << 8;
-				blocks[index] = Blocks.water;
+				primer.setBlockState(index, Blocks.water.getDefaultState());
 				index = j-- << 0 | (i1) << 12 | (k1) << 8;
-				blocks[index] = Blocks.water;
+				primer.setBlockState(index, Blocks.water.getDefaultState());
 				
 				//TODO make rivers that work with the new site code
 				

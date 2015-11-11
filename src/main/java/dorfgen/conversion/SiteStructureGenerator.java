@@ -13,11 +13,15 @@ import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.worldgen.WorldConstructionMaker;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockLever;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemDoor;
+import net.minecraft.util.BlockPos;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.world.World;
 
 public class SiteStructureGenerator
@@ -43,40 +47,16 @@ public class SiteStructureGenerator
 	
 	private void turnOnLever(World world, int x2, int y, int z2)
 	{
-		int h = y + 2;
-		int i1 = world.getBlockMetadata(x2,  h - 2, z2);
-		int j1 = i1 & 7;
-		int k1 = 8 - (i1 & 8);
-		world.setBlockMetadataWithNotify(x2, h - 2, z2, j1 + k1, 3);
-        world.notifyBlocksOfNeighborChange(x2, h - 2, z2, world.getBlock(x2, h - 2, z2));
-
-        if (j1 == 1)
-        {
-            world.notifyBlocksOfNeighborChange(x2 - 1, h - 2, z2, world.getBlock(x2, h - 2, z2));
-        }
-        else if (j1 == 2)
-        {
-            world.notifyBlocksOfNeighborChange(x2 + 1, h - 2, z2, world.getBlock(x2, h - 2, z2));
-        }
-        else if (j1 == 3)
-        {
-            world.notifyBlocksOfNeighborChange(x2, h - 2, z2 - 1, world.getBlock(x2, h - 2, z2));
-        }
-        else if (j1 == 4)
-        {
-            world.notifyBlocksOfNeighborChange(x2, h - 2, z2 + 1, world.getBlock(x2, h - 2, z2));
-        }
-        else if (j1 != 5 && j1 != 6)
-        {
-            if (j1 == 0 || j1 == 7)
-            {
-                world.notifyBlocksOfNeighborChange(x2, h - 2 + 1, z2, world.getBlock(x2, h - 2, z2));
-            }
-        }
-        else
-        {
-            world.notifyBlocksOfNeighborChange(x2, h - 2 - 1, z2, world.getBlock(x2, h - 2, z2));
-        }
+//		int h = y + 2;//TODO get the levers turning on again with whatever 1.8 uses for that.
+		BlockPos pos = new BlockPos(x2,y,z2);
+		IBlockState state = world.getBlockState(pos);
+		
+        state = state.cycleProperty(BlockLever.POWERED);
+        world.setBlockState(pos, state, 3);
+        world.playSoundEffect((double)pos.getX() + 0.5D, (double)pos.getY() + 0.5D, (double)pos.getZ() + 0.5D, "random.click", 0.3F, ((Boolean)state.getValue(BlockLever.POWERED)).booleanValue() ? 0.6F : 0.5F);
+        world.notifyNeighborsOfStateChange(pos, state.getBlock());
+        EnumFacing enumfacing1 = ((BlockLever.EnumOrientation)state.getValue(BlockLever.FACING)).getFacing();
+        world.notifyNeighborsOfStateChange(pos.offset(enumfacing1.getOpposite()), state.getBlock());
 	}
 	
 	private boolean isBlockSurroundedByWall(Site site, SiteStructures structures, WallSegment wall, int x1, int z1)
@@ -153,8 +133,8 @@ public class SiteStructureGenerator
 		int x = chunkX, z = chunkZ, x1, x2, z1, z2;
 		x *= 16;
 		z *= 16;
-		x -= WorldGenerator.shift.posX;
-		z -= WorldGenerator.shift.posZ;
+		x -= WorldGenerator.shift.getX();
+		z -= WorldGenerator.shift.getZ();
 		int h;
 		for(int i = 0; i<16; i++)
 		{
@@ -163,8 +143,8 @@ public class SiteStructureGenerator
 				x1 = x + i;
 				z1 = z + j;
 				
-				x2 = x1 + WorldGenerator.shift.posX;
-				z2 = z1 + WorldGenerator.shift.posZ;
+				x2 = x1 + WorldGenerator.shift.getX();
+				z2 = z1 + WorldGenerator.shift.getZ();
 				
 				HashSet<Site> sites = WorldGenerator.instance.dorfs.getSiteForCoords(x2, z2);
 				Site site = null;
@@ -186,7 +166,7 @@ public class SiteStructureGenerator
 
 						boolean surrounded = isBlockSurroundedByWall(site, structures, wall, x1, z1);
 						
-						world.setBlock(x2, h-1, z2, Blocks.stonebrick);
+						world.setBlockState(new BlockPos(x2, h-1, z2), Blocks.stonebrick.getDefaultState());
 						for(int k = h; k<h+6; k++)
 						{
 							if(k < h + 3 || k >= h + 4)
@@ -196,17 +176,17 @@ public class SiteStructureGenerator
 									if(k==h+5)
 									{
 										if((x1 + z1) % 3 > 0)
-											world.setBlock(x2, k, z2, Blocks.stonebrick);
+											world.setBlockState(new BlockPos(x2, k, z2), Blocks.stonebrick.getDefaultState());
 									}
 									else
 									{
-										world.setBlock(x2, k, z2, Blocks.stonebrick);
+										world.setBlockState(new BlockPos(x2, k, z2), Blocks.stonebrick.getDefaultState());
 									}
 								}
 							}
 							else
 							{
-								world.setBlock(x2, k, z2, Blocks.stonebrick);
+								world.setBlockState(new BlockPos(x2, k, z2), Blocks.stonebrick.getDefaultState());
 							}
 						}
 					}
@@ -230,44 +210,44 @@ public class SiteStructureGenerator
 						{
 							for(int l = 0; l<height; l++)
 							{
-								world.setBlock(x2, h+l, z2, material);
+								world.setBlockState(new BlockPos(x2, h+l, z2), material.getDefaultState());
 							}
 						}
 						else
 						{
 							for(int l = -1; l<height; l++)
 							{
-								world.setBlock(x2, h+l, z2, Blocks.air);
+								world.setBlockState(new BlockPos(x2, h+l, z2), Blocks.air.getDefaultState());
 							}
 						}
 						
-						world.setBlock(x2, h - 1, z2, material);
-						world.setBlock(x2, h + height + 1, z2, material);
+						world.setBlockState(new BlockPos(x2, h - 1, z2), material.getDefaultState());
+						world.setBlockState(new BlockPos(x2, h + height + 1, z2), material.getDefaultState());
 						
 						if(struct.shouldBeDoor(site, x1, z1, scale))
 						{
 							int meta = 0;//TODO determine direction of door  see 833 of StructureComponent
-							ItemDoor.placeDoorBlock(world, x2, h, z2, meta, Blocks.wooden_door);
+							ItemDoor.placeDoor(world, new BlockPos(x2, h, z2), EnumFacing.NORTH, Blocks.oak_door);
 						}
 						
 						if(struct.shouldBeTorch(site, x1, z1, scale))
 						{
 							if(struct.roofType != SiteMapColours.TOWERROOF)
 							{
-								world.setBlock(x2, h + height, z2, Blocks.torch);
+								world.setBlockState(new BlockPos(x2, h + height, z2), Blocks.torch.getDefaultState());
 							}
 							else
 							{
-								world.setBlock(x2, h - 1, z2, Blocks.lit_redstone_lamp);
-								world.setBlock(x2, h - 3, z2, material);
-								world.setBlock(x2,  h - 2, z2, Blocks.lever);
+								world.setBlockState(new BlockPos(x2, h - 1, z2), Blocks.lit_redstone_lamp.getDefaultState());
+								world.setBlockState(new BlockPos(x2, h - 3, z2), material.getDefaultState());
+								world.setBlockState(new BlockPos(x2,  h - 2, z2), Blocks.lever.getDefaultState());
 								turnOnLever(world, x2, h - 2, z2);
-								world.setBlock(x2, h + height, z2, material);
+								world.setBlockState(new BlockPos(x2, h + height, z2), material.getDefaultState());
 							}
 						}
 						else
 						{
-							world.setBlock(x2, h + height, z2, material);
+							world.setBlockState(new BlockPos(x2, h + height, z2), material.getDefaultState());
 						}
 						
 						if(villager)
@@ -289,8 +269,8 @@ public class SiteStructureGenerator
 				x1 = x + i;
 				z1 = z + j;
 				
-				x2 = x1 + WorldGenerator.shift.posX;
-				z2 = z1 + WorldGenerator.shift.posZ;
+				x2 = x1 + WorldGenerator.shift.getX();
+				z2 = z1 + WorldGenerator.shift.getZ();
 				
 				HashSet<Site> sites = WorldGenerator.instance.dorfs.getSiteForCoords(x2, z2);
 				Site site = null;
@@ -335,20 +315,20 @@ public class SiteStructureGenerator
 								    		// don't want to not place torches on those walls, either. By checking pos
 								    		// and neg, we can move one block toward the center of the corridor, and
 								    		// place a torch there
-											if(world.getBlock(x2, h + 1, z2) != Blocks.stonebrick)
+											if(world.getBlockState(new BlockPos(x2, h + 1, z2)).getBlock() != Blocks.stonebrick)
 											{
-												world.setBlock(x2, h + 1, z2, Blocks.torch);
-												world.getBlock(x2, h + 1, z2).onBlockAdded(world, x2, h + 1, z2);
+												world.setBlockState(new BlockPos(x2, h + 1, z2), Blocks.torch.getDefaultState());
+												world.getBlockState(new BlockPos(x2, h + 1, z2)).getBlock().onBlockAdded(world,new BlockPos(x2, h + 1, z2), Blocks.torch.getDefaultState());
 											}
-											else if(pos && world.getBlock(x2 - 1, h + 1, z2) != Blocks.stonebrick)
+											else if(pos && world.getBlockState(new BlockPos(x2 - 1, h + 1, z2)).getBlock() != Blocks.stonebrick)
 											{
-												world.setBlock(x2 - 1, h + 1, z2, Blocks.torch);
-												world.getBlock(x2 - 1, h + 1, z2).onBlockAdded(world, x2 - 1, h + 1, z2);
+												world.setBlockState(new BlockPos(x2 - 1, h + 1, z2), Blocks.torch.getDefaultState());
+												world.getBlockState(new BlockPos(x2 - 1, h + 1, z2)).getBlock().onBlockAdded(world, new BlockPos(x2 - 1, h + 1, z2), Blocks.torch.getDefaultState());
 											}
-											else if(neg && world.getBlock(x2 + 1, h + 1, z2) != Blocks.stonebrick)
+											else if(neg && world.getBlockState(new BlockPos(x2 + 1, h + 1, z2)).getBlock() != Blocks.stonebrick)
 											{
-												world.setBlock(x2 + 1, h + 1, z2, Blocks.torch);
-												world.getBlock(x2 + 1, h + 1, z2).onBlockAdded(world, x2 + 1, h + 1, z2);
+												world.setBlockState(new BlockPos(x2 + 1, h + 1, z2), Blocks.torch.getDefaultState());
+												world.getBlockState(new BlockPos(x2 + 1, h + 1, z2)).getBlock().onBlockAdded(world, new BlockPos(x2 + 1, h + 1, z2), Blocks.torch.getDefaultState());
 											}
 								    	}
 									}
@@ -357,20 +337,20 @@ public class SiteStructureGenerator
 									{
 								    	if(x1 % 3 == 0)
 								    	{
-											if(world.getBlock(x2, h + 1, z2) != Blocks.stonebrick)
+											if(world.getBlockState(new BlockPos(x2, h + 1, z2)).getBlock() != Blocks.stonebrick)
 											{
-												world.setBlock(x2, h + 1, z2, Blocks.torch);
-												world.getBlock(x2, h + 1, z2).onBlockAdded(world, x2, h + 1, z2);
+												world.setBlockState(new BlockPos(x2, h + 1, z2), Blocks.torch.getDefaultState());
+												world.getBlockState(new BlockPos(x2, h + 1, z2)).getBlock().onBlockAdded(world, new BlockPos(x2, h + 1, z2), Blocks.torch.getDefaultState());
 											}
-											else if(pos && world.getBlock(x2, h + 1, z2 - 1) != Blocks.stonebrick)
+											else if(pos && world.getBlockState(new BlockPos(x2, h + 1, z2 - 1)).getBlock() != Blocks.stonebrick)
 											{
-												world.setBlock(x2, h + 1, z2 - 1, Blocks.torch);
-												world.getBlock(x2, h + 1, z2 - 1).onBlockAdded(world, x2, h + 1, z2 - 1);
+												world.setBlockState(new BlockPos(x2, h + 1, z2 - 1), Blocks.torch.getDefaultState());
+												world.getBlockState(new BlockPos(x2, h + 1, z2 - 1)).getBlock().onBlockAdded(world, new BlockPos(x2, h + 1, z2 - 1), Blocks.torch.getDefaultState());
 											}
-											else if(neg && world.getBlock(x2 + 1, h + 1, z2) != Blocks.stonebrick)
+											else if(neg && world.getBlockState(new BlockPos(x2 + 1, h + 1, z2)).getBlock() != Blocks.stonebrick)
 											{
-												world.setBlock(x2 + 1, h + 1, z2, Blocks.torch);
-												world.getBlock(x2 + 1, h + 1, z2).onBlockAdded(world, x2 + 1, h + 1, z2);
+												world.setBlockState(new BlockPos(x2 + 1, h + 1, z2), Blocks.torch.getDefaultState());
+												world.getBlockState(new BlockPos(x2 + 1, h + 1, z2)).getBlock().onBlockAdded(world, new BlockPos(x2 + 1, h + 1, z2), Blocks.torch.getDefaultState());
 											}
 								    	}
 									}

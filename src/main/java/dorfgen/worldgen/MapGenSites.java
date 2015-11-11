@@ -56,8 +56,8 @@ public class MapGenSites extends MapGenVillage
 		int chunkX = x, chunkZ = z;
 		x *= 16;
 		z *= 16;
-		x -= WorldGenerator.shift.posX;
-		z -= WorldGenerator.shift.posZ;
+		x -= WorldGenerator.shift.getX();
+		z -= WorldGenerator.shift.getZ();
 		DorfMap dorfs = WorldGenerator.instance.dorfs;
 		
 		HashSet<Site> sites = dorfs.getSiteForCoords(x, z);
@@ -181,142 +181,143 @@ public class MapGenSites extends MapGenVillage
             }
             else if(type==3)
             {
-            	int h = 0;
-                int[][] map = WorldGenerator.instance.dorfs.elevationMap;
-        		int x1 = x * 16 - WorldGenerator.shift.posX;
-        		int z1 = z * 16 - WorldGenerator.shift.posZ;
-                
-                if(x1>0&&z1>0&&x1/scale < map.length && z1/scale < map[0].length)
-                {
-                	h = map[x1/scale][z1/scale];
-                }
-                else
-                {
-                	h = world_.getHeightValue(x*16, z*16);
-                }
-                x1 = x*16 + rand.nextInt(8);
-                z1 = z*16 + rand.nextInt(8);
-                for(int i = -4; i<=4; i++)
-                    for(int j = -4; j<=4; j++)
-                        for(int k = -4; k<=4; k++)
-                {
-                	world_.setBlock(x1 + i, h+j, z1+k, Blocks.cobblestone, 0, 2);
-                }
-                
-                byte b0 = 3;
-                int l = rand.nextInt(2) + 2;
-                int i1 = rand.nextInt(2) + 2;
-                int j1 = 3;
-                int k1;
-                int l1;
-                int i2;
-                
-                if (j1 >= 1 && j1 <= 5)
-                {
-                    for (k1 = x1 - l - 1; k1 <= x1 + l + 1; ++k1)
-                    {
-                        for (l1 = h + b0; l1 >= h - 1; --l1)
-                        {
-                            for (i2 = z1 - i1 - 1; i2 <= z1 + i1 + 1; ++i2)
-                            {
-                                if (k1 != x1 - l - 1 && l1 != h - 1 && i2 != z1 - i1 - 1 && k1 != x1 + l + 1 && l1 != h + b0 + 1 && i2 != z1 + i1 + 1)
-                                {
-                                    world_.setBlockToAir(k1, l1, i2);
-                                }
-                                else if (l1 >= 0 && !world_.getBlock(k1, l1 - 1, i2).getMaterial().isSolid())
-                                {
-                                    world_.setBlockToAir(k1, l1, i2);
-                                }
-                                else if (world_.getBlock(k1, l1, i2).getMaterial().isSolid())
-                                {
-                                    if (l1 == h - 1 && rand.nextInt(4) != 0)
-                                    {
-                                        world_.setBlock(k1, l1, i2, Blocks.mossy_cobblestone, 0, 2);
-                                    }
-                                    else
-                                    {
-                                        world_.setBlock(k1, l1, i2, Blocks.cobblestone, 0, 2);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    k1 = 0;
-
-                    while (k1 < 2)
-                    {
-                        l1 = 0;
-
-                        while (true)
-                        {
-                            if (l1 < 3)
-                            {
-                                label197:
-                                {
-                                    i2 = x1 + rand.nextInt(l * 2 + 1) - l;
-                                    int j2 = z1 + rand.nextInt(i1 * 2 + 1) - i1;
-
-                                    if (world_.isAirBlock(i2, h, j2))
-                                    {
-                                        int k2 = 0;
-
-                                        if (world_.getBlock(i2 - 1, h, j2).getMaterial().isSolid())
-                                        {
-                                            ++k2;
-                                        }
-
-                                        if (world_.getBlock(i2 + 1, h, j2).getMaterial().isSolid())
-                                        {
-                                            ++k2;
-                                        }
-
-                                        if (world_.getBlock(i2, h, j2 - 1).getMaterial().isSolid())
-                                        {
-                                            ++k2;
-                                        }
-
-                                        if (world_.getBlock(i2, h, j2 + 1).getMaterial().isSolid())
-                                        {
-                                            ++k2;
-                                        }
-
-                                        if (k2 == 1)
-                                        {
-                                            world_.setBlock(i2, h, j2, Blocks.chest, 0, 2);
-                                            TileEntityChest tileentitychest = (TileEntityChest)world_.getTileEntity(i2, h, j2);
-
-                                            if (tileentitychest != null)
-                                            {
-                                                WeightedRandomChestContent.generateChestContents(rand, ChestGenHooks.getItems(DUNGEON_CHEST, rand), tileentitychest, ChestGenHooks.getCount(DUNGEON_CHEST, rand));
-                                            }
-
-                                            break label197;
-                                        }
-                                    }
-
-                                    ++l1;
-                                    continue;
-                                }
-                            }
-
-                            ++k1;
-                            break;
-                        }
-                    }
-
-                    world_.setBlock(x1, h, z1, Blocks.mob_spawner, 0, 2);
-                    TileEntityMobSpawner tileentitymobspawner = (TileEntityMobSpawner)world_.getTileEntity(x1, h, z1);
-                    
-                    if (tileentitymobspawner != null)
-                    {
-                        tileentitymobspawner.func_145881_a().setEntityName(DungeonHooks.getRandomDungeonMob(rand));
-                    }
-                    else
-                    {
-                        System.err.println("Failed to fetch mob spawner entity at (" + x1 + ", " + h + ", " + z1 + ")");
-                    }
-                }
+            	//TODO re-copy dungeon code from 1.8 again for this
+//            	int h = 0;
+//                int[][] map = WorldGenerator.instance.dorfs.elevationMap;
+//        		int x1 = x * 16 - WorldGenerator.shift.getX();
+//        		int z1 = z * 16 - WorldGenerator.shift.getZ();
+//                
+//                if(x1>0&&z1>0&&x1/scale < map.length && z1/scale < map[0].length)
+//                {
+//                	h = map[x1/scale][z1/scale];
+//                }
+//                else
+//                {
+//                	h = world_.getHeightValue(x*16, z*16);
+//                }
+//                x1 = x*16 + rand.nextInt(8);
+//                z1 = z*16 + rand.nextInt(8);
+//                for(int i = -4; i<=4; i++)
+//                    for(int j = -4; j<=4; j++)
+//                        for(int k = -4; k<=4; k++)
+//                {
+//                	world_.setBlock(x1 + i, h+j, z1+k, Blocks.cobblestone, 0, 2);
+//                }
+//                
+//                byte b0 = 3;
+//                int l = rand.nextInt(2) + 2;
+//                int i1 = rand.nextInt(2) + 2;
+//                int j1 = 3;
+//                int k1;
+//                int l1;
+//                int i2;
+//                
+//                if (j1 >= 1 && j1 <= 5)
+//                {
+//                    for (k1 = x1 - l - 1; k1 <= x1 + l + 1; ++k1)
+//                    {
+//                        for (l1 = h + b0; l1 >= h - 1; --l1)
+//                        {
+//                            for (i2 = z1 - i1 - 1; i2 <= z1 + i1 + 1; ++i2)
+//                            {
+//                                if (k1 != x1 - l - 1 && l1 != h - 1 && i2 != z1 - i1 - 1 && k1 != x1 + l + 1 && l1 != h + b0 + 1 && i2 != z1 + i1 + 1)
+//                                {
+//                                    world_.setBlockToAir(k1, l1, i2);
+//                                }
+//                                else if (l1 >= 0 && !world_.getBlock(k1, l1 - 1, i2).getMaterial().isSolid())
+//                                {
+//                                    world_.setBlockToAir(k1, l1, i2);
+//                                }
+//                                else if (world_.getBlock(k1, l1, i2).getMaterial().isSolid())
+//                                {
+//                                    if (l1 == h - 1 && rand.nextInt(4) != 0)
+//                                    {
+//                                        world_.setBlock(k1, l1, i2, Blocks.mossy_cobblestone, 0, 2);
+//                                    }
+//                                    else
+//                                    {
+//                                        world_.setBlock(k1, l1, i2, Blocks.cobblestone, 0, 2);
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//
+//                    k1 = 0;
+//
+//                    while (k1 < 2)
+//                    {
+//                        l1 = 0;
+//
+//                        while (true)
+//                        {
+//                            if (l1 < 3)
+//                            {
+//                                label197:
+//                                {
+//                                    i2 = x1 + rand.nextInt(l * 2 + 1) - l;
+//                                    int j2 = z1 + rand.nextInt(i1 * 2 + 1) - i1;
+//
+//                                    if (world_.isAirBlock(i2, h, j2))
+//                                    {
+//                                        int k2 = 0;
+//
+//                                        if (world_.getBlock(i2 - 1, h, j2).getMaterial().isSolid())
+//                                        {
+//                                            ++k2;
+//                                        }
+//
+//                                        if (world_.getBlock(i2 + 1, h, j2).getMaterial().isSolid())
+//                                        {
+//                                            ++k2;
+//                                        }
+//
+//                                        if (world_.getBlock(i2, h, j2 - 1).getMaterial().isSolid())
+//                                        {
+//                                            ++k2;
+//                                        }
+//
+//                                        if (world_.getBlock(i2, h, j2 + 1).getMaterial().isSolid())
+//                                        {
+//                                            ++k2;
+//                                        }
+//
+//                                        if (k2 == 1)
+//                                        {
+//                                            world_.setBlock(i2, h, j2, Blocks.chest, 0, 2);
+//                                            TileEntityChest tileentitychest = (TileEntityChest)world_.getTileEntity(i2, h, j2);
+//
+//                                            if (tileentitychest != null)
+//                                            {
+//                                                WeightedRandomChestContent.generateChestContents(rand, ChestGenHooks.getItems(DUNGEON_CHEST, rand), tileentitychest, ChestGenHooks.getCount(DUNGEON_CHEST, rand));
+//                                            }
+//
+//                                            break label197;
+//                                        }
+//                                    }
+//
+//                                    ++l1;
+//                                    continue;
+//                                }
+//                            }
+//
+//                            ++k1;
+//                            break;
+//                        }
+//                    }
+//
+//                    world_.setBlock(x1, h, z1, Blocks.mob_spawner, 0, 2);
+//                    TileEntityMobSpawner tileentitymobspawner = (TileEntityMobSpawner)world_.getTileEntity(x1, h, z1);
+//                    
+//                    if (tileentitymobspawner != null)
+//                    {
+//                        tileentitymobspawner.func_145881_a().setEntityName(DungeonHooks.getRandomDungeonMob(rand));
+//                    }
+//                    else
+//                    {
+//                        System.err.println("Failed to fetch mob spawner entity at (" + x1 + ", " + h + ", " + z1 + ")");
+//                    }
+//                }
             }
 
             this.updateBoundingBox();

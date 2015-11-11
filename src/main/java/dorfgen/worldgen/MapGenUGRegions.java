@@ -8,6 +8,7 @@ import dorfgen.conversion.DorfMap.Region;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
+import net.minecraft.util.BlockPos;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -229,15 +230,15 @@ public class MapGenUGRegions extends MapGenCaves {
             
             int h = 0;
             
-        	int xAbs = d0 - WorldGenerator.shift.posX;
-        	int zAbs =  d2 - WorldGenerator.shift.posZ;
+        	int xAbs = d0 - WorldGenerator.shift.getX();
+        	int zAbs =  d2 - WorldGenerator.shift.getZ();
         	if(xAbs >=0 && xAbs <WorldGenerator.instance.dorfs.elevationMap.length && zAbs >=0 && zAbs <WorldGenerator.instance.dorfs.elevationMap[0].length)
         	{
     	    	h = heightInterpolator.interpolateHeight(WorldGenerator.scale, xAbs, zAbs, WorldGenerator.instance.dorfs.elevationMap);
         	}
         	else
         	{
-        		h = world.getHeightValue(d0, d2);
+        		h = 64;//world.getGroundAboveSeaLevel(new BlockPos(d0, d2));//TODO
         	}
         	h /= 2;
             
@@ -294,15 +295,15 @@ public class MapGenUGRegions extends MapGenCaves {
     //Vanilla bugs to make sure that we generate the map the same way vanilla does.
     private boolean isTopBlock(Block[] data, int index, int x, int y, int z, int chunkX, int chunkZ)
     {
-    	int xAbs = x + chunkX * 16 - WorldGenerator.shift.posX;
-    	int zAbs =  z + chunkZ * 16 - WorldGenerator.shift.posZ;
+    	int xAbs = x + chunkX * 16 - WorldGenerator.shift.getX();
+    	int zAbs =  z + chunkZ * 16 - WorldGenerator.shift.getZ();
     	if(xAbs >=0 && xAbs <WorldGenerator.instance.dorfs.elevationMap.length && zAbs >=0 && zAbs <WorldGenerator.instance.dorfs.elevationMap[0].length)
     	{
 	    	int h = heightInterpolator.interpolateHeight(WorldGenerator.scale, xAbs, zAbs, WorldGenerator.instance.dorfs.elevationMap);
 	    	return h <= y;
     	}
     	
-        BiomeGenBase biome = worldObj.getBiomeGenForCoords(x + chunkX * 16, z + chunkZ * 16);
+        BiomeGenBase biome = worldObj.getBiomeGenForCoords(new BlockPos(x + chunkX * 16, 0, z + chunkZ * 16));
         return (isExceptionBiome(biome) ? data[index] == Blocks.grass : data[index] == biome.topBlock);
     }
 
@@ -323,58 +324,58 @@ public class MapGenUGRegions extends MapGenCaves {
      */
     protected void digBlock(Block[] data, int index, int x, int y, int z, int chunkX, int chunkZ, boolean foundTop)
     {
-        BiomeGenBase biome = worldObj.getBiomeGenForCoords(x + chunkX * 16, z + chunkZ * 16);
-        Block top    = (isExceptionBiome(biome) ? Blocks.grass : biome.topBlock);
-        Block filler = (isExceptionBiome(biome) ? Blocks.dirt  : biome.fillerBlock);
-        Block block  = data[index];
-        Block grass = Blocks.stone;
-        
-        int h = 0;
-        int scale = WorldGenerator.scale;
-        int[][] map = WorldGenerator.instance.dorfs.elevationMap;
-		int x1 = x + chunkX * 16 - WorldGenerator.shift.posX;
-		int z1 = z + chunkZ * 16 - WorldGenerator.shift.posZ;
-        
-        if(x1>0&&z1>0&&x1/scale < map.length && z1/scale < map[0].length)
-        {
-        	h = map[x1/scale][z1/scale];
-        }
-        boolean ceiling = false;
-        for(int i = 1; i<=h-y; i++)
-        {
-        	if(index+i >= data.length)
-        	{
-        		System.out.println(y+" "+h+" "+index);
-        		ceiling = true;
-        		break;
-        	}
-        	if(data[index + i] != null)
-        	{
-        		ceiling = true;
-        		break;
-        	}
-        }
-        
-        if (block == Blocks.stone || block == filler || block == top || block==grass)
-        {
-            if (y < 10)
-            {
-                data[index] = Blocks.lava;
-            }
-            else
-            {
-                data[index] = null;
-
-                  if (foundTop && data[index - 1] == filler)
-                  {
-                      data[index - 1] = top;
-                  }
-                  else 
-                  if (ceiling && (data[index - 1] == Blocks.dirt || data[index-1] == Blocks.stone))
-                  {
-                      data[index - 1] = grass;
-                  }
-            }
-        }
+//        BiomeGenBase biome = worldObj.getBiomeGenForCoords(x + chunkX * 16, z + chunkZ * 16);
+//        Block top    = (isExceptionBiome(biome) ? Blocks.grass : biome.topBlock);
+//        Block filler = (isExceptionBiome(biome) ? Blocks.dirt  : biome.fillerBlock);
+//        Block block  = data[index];
+//        Block grass = Blocks.stone;
+//        
+//        int h = 0;
+//        int scale = WorldGenerator.scale;
+//        int[][] map = WorldGenerator.instance.dorfs.elevationMap;
+//		int x1 = x + chunkX * 16 - WorldGenerator.shift.getX();
+//		int z1 = z + chunkZ * 16 - WorldGenerator.shift.getZ();
+//        
+//        if(x1>0&&z1>0&&x1/scale < map.length && z1/scale < map[0].length)
+//        {
+//        	h = map[x1/scale][z1/scale];
+//        }
+//        boolean ceiling = false;
+//        for(int i = 1; i<=h-y; i++)
+//        {
+//        	if(index+i >= data.length)
+//        	{
+//        		System.out.println(y+" "+h+" "+index);
+//        		ceiling = true;
+//        		break;
+//        	}
+//        	if(data[index + i] != null)
+//        	{
+//        		ceiling = true;
+//        		break;
+//        	}
+//        }
+//        
+//        if (block == Blocks.stone || block == filler || block == top || block==grass)
+//        {
+//            if (y < 10)
+//            {
+//                data[index] = Blocks.lava;
+//            }
+//            else
+//            {
+//                data[index] = null;
+//
+//                  if (foundTop && data[index - 1] == filler)
+//                  {
+//                      data[index - 1] = top;
+//                  }
+//                  else 
+//                  if (ceiling && (data[index - 1] == Blocks.dirt || data[index-1] == Blocks.stone))
+//                  {
+//                      data[index - 1] = grass;
+//                  }
+//            }
+//        }
     }
 }

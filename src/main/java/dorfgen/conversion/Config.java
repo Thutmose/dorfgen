@@ -1,8 +1,8 @@
 package dorfgen.conversion;
 
-import net.minecraft.util.ChunkCoordinates;
+import net.minecraft.util.BlockPos;
 import net.minecraftforge.common.config.Configuration;
-import cpw.mods.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import dorfgen.WorldGenerator;
 
 public class Config {
@@ -30,12 +30,12 @@ public class Config {
 			z *= WorldGenerator.scale;
 		}
 		
-		WorldGenerator.spawn = new ChunkCoordinates(x, Integer.parseInt(spawnLoc[1]), z);
+		WorldGenerator.spawn = new BlockPos(x, Integer.parseInt(spawnLoc[1]), z);
 		
 		WorldGenerator.spawnSite = config.getString("spawnSite", config.CATEGORY_GENERAL, "", "Default Site for Spawning in, overrides random spawn and coord based spawn.");
 		
 		spawnLoc = config.getStringList("imageShift", config.CATEGORY_GENERAL, new String[]{"0","0"}, "offset of the image in world in blocks");
-		WorldGenerator.shift = new ChunkCoordinates(Integer.parseInt(spawnLoc[0]), 0, Integer.parseInt(spawnLoc[1]));
+		WorldGenerator.shift = new BlockPos(Integer.parseInt(spawnLoc[0]), 0, Integer.parseInt(spawnLoc[1]));
 		
 		config.save();
 	}

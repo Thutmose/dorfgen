@@ -24,7 +24,7 @@ public class WorldTypeFinite extends WorldType {
     public IChunkProvider getChunkGenerator(World world, String generatorOptions)
     {
     //	new Exception().printStackTrace();
-        return new ChunkProviderFinite(world, world.getSeed(), world.getWorldInfo().isMapFeaturesEnabled());
+        return new ChunkProviderFinite(world, world.getSeed(), world.getWorldInfo().isMapFeaturesEnabled(), generatorOptions);
     }
     
     /**
