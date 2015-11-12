@@ -71,6 +71,25 @@ public class WorldConstructionMaker
 		return false;
 	}
 	
+	private SiteMapColours getSiteMapColour(Site s, int x, int z)
+	{
+		int offset = scale/2, rgb;
+		
+		if(s.rgbmap==null || !s.isInSite(x, z))
+			return null;
+		
+		int shiftX = (x - s.corners[0][0]*scale - offset)*SiteStructureGenerator.SITETOBLOCK/scale;
+		int shiftZ = (z - s.corners[0][1]*scale - offset)*SiteStructureGenerator.SITETOBLOCK/scale;
+		if(shiftX >= s.rgbmap.length || shiftZ >= s.rgbmap[0].length)
+			return null;
+		if(shiftX < 0 || shiftZ < 0 )
+			return null;
+		rgb = s.rgbmap[shiftX][shiftZ];
+		SiteMapColours siteCol = SiteMapColours.getMatch(rgb);
+		
+		return siteCol;
+	}
+	
 	public void buildSites(World world, int chunkX, int chunkZ, ChunkPrimer blocks, BiomeGenBase[] biomes)
 	{
 		if(dorfs.structureMap.length==0)
@@ -83,6 +102,7 @@ public class WorldConstructionMaker
 		double dx, dz, dx2, dz2;
 		int offset = scale/2;
 		int n = 0;
+		
 		for (int i1 = 0; i1 < 16; i1++)
 		{
 			for (int k1 = 0; k1 < 16; k1++)
@@ -97,19 +117,11 @@ public class WorldConstructionMaker
 				
 				for(Site s: sites)
 				{
-					if(s.rgbmap==null || !s.isInSite(x1, z1))
-						continue;
+					int shiftX = (x - s.corners[0][0]*scale - offset)*SiteStructureGenerator.SITETOBLOCK/scale;
+					int shiftZ = (z - s.corners[0][1]*scale - offset)*SiteStructureGenerator.SITETOBLOCK/scale;
 					
-					int shiftX = (x1 - s.corners[0][0]*scale - offset)*SiteStructureGenerator.SITETOBLOCK/scale;
-					int shiftZ = (z1 - s.corners[0][1]*scale - offset)*SiteStructureGenerator.SITETOBLOCK/scale;
-					if(shiftX >= s.rgbmap.length || shiftZ >= s.rgbmap[0].length)
-						continue;
-					if(shiftX < 0 || shiftZ < 0 )
-						continue;
-					rgb = s.rgbmap[shiftX][shiftZ];
-					SiteMapColours siteCol = SiteMapColours.getMatch(rgb);
-					
-					if(siteCol==null)
+					SiteMapColours siteCol = getSiteMapColour(s, x1, z1);
+					if(siteCol == null)
 						continue;
 					
 					h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1, scale);
@@ -167,16 +179,10 @@ public class WorldConstructionMaker
 					if(surface==null)// || blocks[index - 1] == Blocks.water || blocks[index] == Blocks.water)
 						continue;
 					blocks.setBlockState(index, surface.getDefaultState());
-					
-//					blocks[index] = surface;
 					index = (j - 1) << 0 | (i1) << 12 | (k1) << 8;
-					if(repBlocks[0]!=null)
 					blocks.setBlockState(index, repBlocks[0].getDefaultState());
-//					blocks[index] = repBlocks[0];
 					index = (j + 1) << 0 | (i1) << 12 | (k1) << 8;
-					if(above!=null)
-						blocks.setBlockState(index, above.getDefaultState());
-//					blocks[index] = above;
+					blocks.setBlockState(index, above.getDefaultState());
 					boolean tower = siteCol.toString().contains("TOWER");
 					if(wall||roof)
 					{
@@ -188,7 +194,7 @@ public class WorldConstructionMaker
 							index = (j1) << 0 | (i1) << 12 | (k1) << 8;
 							blocks.setBlockState(index, Blocks.air.getDefaultState());
 							index = (h + num) << 0 | (i1) << 12 | (k1) << 8;
-							blocks.setBlockState(index, surface.getDefaultState());
+							blocks.setBlockState(index, surface.getDefaultState());;
 						}
 						j1 = j;
 						if(wall)
@@ -198,6 +204,61 @@ public class WorldConstructionMaker
 								j1 = j1 + 1;
 								index = (j1) << 0 | (i1) << 12 | (k1) << 8;
 								blocks.setBlockState(index, surface.getDefaultState());
+							}
+						}
+					}
+					
+					if(siteCol.toString().contains("ROAD"))
+					{
+						if(i1 > 0 && i1 < 15 && k1 > 0 && k1 < 15)
+						{
+							h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1, scale);
+							int h2;
+							
+							SiteMapColours px, nx, pz, nz;
+							px = getSiteMapColour(s, x1 + 1, z1);
+							nx = getSiteMapColour(s, x1 - 1, z1);
+							pz = getSiteMapColour(s, x1, z1 + 1);
+							nz = getSiteMapColour(s, x1, z1 - 1);
+							
+							if(px != null && !px.toString().contains("Road") && z1 % 8 == 0)
+							{
+								h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1 + 1, z1, scale);
+								index = (h2) << 0 | (i1 + 1) << 12 | (k1) << 8;
+								if(blocks.getBlockState(index - 1) != SiteMapColours.getSurfaceBlocks(SiteMapColours.ROAD)[1])
+								{
+									blocks.setBlockState(index, Blocks.torch.getDefaultState());
+								}
+							}
+							
+							if(nx != null && !nx.toString().contains("Road") && z1 % 8 == 0)
+							{
+								h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1 - 1, z1, scale);
+								index = (h2) << 0 | (i1 - 1) << 12 | (k1) << 8;
+								if(blocks.getBlockState(index - 1) != SiteMapColours.getSurfaceBlocks(SiteMapColours.ROAD)[1])
+								{
+									blocks.setBlockState(index, Blocks.torch.getDefaultState());
+								}
+							}
+							
+							if(pz != null && !pz.toString().contains("Road") && x1 % 8 == 0)
+							{
+								h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1 + 1, scale);
+								index = (h2) << 0 | (i1) << 12 | (k1 + 1) << 8;
+								if(blocks.getBlockState(index - 1) != SiteMapColours.getSurfaceBlocks(SiteMapColours.ROAD)[1])
+								{
+									blocks.setBlockState(index, Blocks.torch.getDefaultState());
+								}
+							}
+							
+							if(nz != null && !nz.toString().contains("Road") && x1 % 8 == 0)
+							{
+								h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1 - 1, scale);
+								index = (h2) << 0 | (i1) << 12 | (k1 - 1) << 8;
+								if(blocks.getBlockState(index - 1) != SiteMapColours.getSurfaceBlocks(SiteMapColours.ROAD)[1])
+								{
+									blocks.setBlockState(index, Blocks.torch.getDefaultState());
+								}
 							}
 						}
 					}
