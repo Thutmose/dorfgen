@@ -36,6 +36,7 @@ import dorfgen.conversion.SiteStructureGenerator.SiteStructures;
 import dorfgen.conversion.SiteStructureGenerator.StructureSpace;
 import dorfgen.conversion.SiteStructureGenerator.WallSegment;
 import dorfgen.conversion.SiteStructureGenerator.WallTowerSpace;
+import dorfgen.worldgen.MapGenSites;
 import dorfgen.worldgen.RiverMaker;
 import dorfgen.worldgen.WorldConstructionMaker;
 import net.minecraft.block.Block;
@@ -94,7 +95,6 @@ public class ItemDebug extends Item {
 			{
 				site = s;
 				mess += site;
-				mess += site.isInSite(x, z);
 			}
 		}
 		
@@ -170,12 +170,31 @@ public class ItemDebug extends Item {
 			
 			
 		}
+		boolean middle = false;
+		if(site!=null)
+		{
+			embarkX = (x/scale)*scale;
+			embarkZ = (z/scale)*scale;
+			
+			if(embarkX/scale != site.x || embarkZ/scale != site.z)
+			{
+				middle =  false;
+			}
+			else
+			{
+				int relX = x%scale + 8;
+				int relZ = z%scale + 8;
+				middle = relX/16 == scale/32 && relZ/16 == scale/32;
+				System.out.println(relX+" "+relZ);
+			}
+			System.out.println(MapGenSites.shouldSiteSpawn(x, z, site));
+		}
 		
 		int biome = dorfs.biomeMap[kx][kz];
+		mess += " "+middle;
+//		mess += " In a River: "+RiverMaker.isInRiver(x, z)+" "+x+" "+z+" "+BiomeGenBase.getBiome(biome)+" "+dorfs.riverMap[kx][kz];
 		
-		mess += " In a River: "+RiverMaker.isInRiver(x, z)+" "+x+" "+z+" "+BiomeGenBase.getBiome(biome)+" "+dorfs.riverMap[kx][kz];
-		
-		//player.addChatMessage(new ChatComponentText(mess));
+		player.addChatMessage(new ChatComponentText(mess));
 
 		return itemstack;
 	}

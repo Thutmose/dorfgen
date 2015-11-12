@@ -16,10 +16,14 @@ import dorfgen.conversion.SiteTerrain;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.SiteType;
 import dorfgen.conversion.SiteStructureGenerator.SiteStructures;
+import net.minecraft.block.BlockLadder;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.tileentity.TileEntityMobSpawner;
+import net.minecraft.util.BlockPos;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.WeightedRandomChestContent;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -67,11 +71,11 @@ public class MapGenSites extends MapGenVillage
 		
 		for(Site site: sites)
 		{
-			
-			if(shouldSiteSpawn(x, z, site) && !set.contains(site.id))
+			if(!set.contains(site.id) && shouldSiteSpawn(x, z, site))
 			{
 				set.add(site.id);
 				siteToGen = site;
+				System.out.println("Chosen to gen "+site);
 				return true;
 			}
 		}
@@ -79,7 +83,7 @@ public class MapGenSites extends MapGenVillage
     	return false;
     }
 	
-	private boolean shouldSiteSpawn(int x, int z, Site site)
+	public static boolean shouldSiteSpawn(int x, int z, Site site)
 	{
 		int[][] coords = site.corners;
 		if(site.type == SiteType.LAIR)
@@ -89,11 +93,21 @@ public class MapGenSites extends MapGenVillage
 			
 			if(embarkX/scale != site.x || embarkZ/scale != site.z)
 				return false;
-			int relX = x%scale;
-			int relZ = z%scale;
-			boolean middle = relX/16 == scale/32 && relZ/16 == scale/32;
-			
-			return middle;
+			for(int i = 0; i<16; i++)
+			{
+				for(int j = 0; j<16; j++)
+				{
+					int relX = (x+i)%scale + 8;
+					int relZ = (z+j)%scale + 8;
+					boolean middle = relX/16 == scale/32 && relZ/16 == scale/32;
+					if(middle)
+					{
+						System.out.println(site);
+						return true;
+					}
+				}
+			}
+			return false;
 			
 		}
 		return false;
@@ -108,6 +122,7 @@ public class MapGenSites extends MapGenVillage
 		{
 			return super.getStructureStart(x, z);
 		}
+		System.out.println("Generating Site "+site);
 		made.add(site.id);
 		if(site.type == SiteType.FORTRESS)
 		{
@@ -181,143 +196,145 @@ public class MapGenSites extends MapGenVillage
             }
             else if(type==3)
             {
+            	System.out.println("Making a lair");
+            	
+            	int h = WorldGenerator.instance.dorfs.biomeInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x*16, z*16, scale);
+            	
+            	BlockPos pos = new BlockPos(x * 16, h-5, z * 16);
+                BlockPos blockpos1;
+                int i = rand.nextInt(2) + 2;
+                int j = -i - 1;
+                int k = i + 1;
+                boolean flag1 = true;
+                boolean flag2 = true;
+                int l = rand.nextInt(2) + 2;
+                int i1 = -l - 1;
+                int j1 = l + 1;
+                int k1 = 0;
+                int l1;
+                int i2;
+                int j2;
+            	for (l1 = j; l1 <= k; ++l1)
+                {
+                    for (i2 = 3; i2 >= -1; --i2)
+                    {
+                        for (j2 = i1; j2 <= j1; ++j2)
+                        {
+                            blockpos1 = pos.add(l1, i2, j2);
+                            world_.setBlockState(blockpos1, Blocks.stone.getDefaultState(), 2);
+                        }
+                    }
+                }
+                world_.setBlockState(pos.add(k-1,4,0), Blocks.trapdoor.getDefaultState(), 2);
+                System.out.println(pos);
+            	
             	//TODO re-copy dungeon code from 1.8 again for this
-//            	int h = 0;
-//                int[][] map = WorldGenerator.instance.dorfs.elevationMap;
-//        		int x1 = x * 16 - WorldGenerator.shift.getX();
-//        		int z1 = z * 16 - WorldGenerator.shift.getZ();
-//                
-//                if(x1>0&&z1>0&&x1/scale < map.length && z1/scale < map[0].length)
-//                {
-//                	h = map[x1/scale][z1/scale];
-//                }
-//                else
-//                {
-//                	h = world_.getHeightValue(x*16, z*16);
-//                }
-//                x1 = x*16 + rand.nextInt(8);
-//                z1 = z*16 + rand.nextInt(8);
-//                for(int i = -4; i<=4; i++)
-//                    for(int j = -4; j<=4; j++)
-//                        for(int k = -4; k<=4; k++)
-//                {
-//                	world_.setBlock(x1 + i, h+j, z1+k, Blocks.cobblestone, 0, 2);
-//                }
-//                
-//                byte b0 = 3;
-//                int l = rand.nextInt(2) + 2;
-//                int i1 = rand.nextInt(2) + 2;
-//                int j1 = 3;
-//                int k1;
-//                int l1;
-//                int i2;
-//                
-//                if (j1 >= 1 && j1 <= 5)
-//                {
-//                    for (k1 = x1 - l - 1; k1 <= x1 + l + 1; ++k1)
-//                    {
-//                        for (l1 = h + b0; l1 >= h - 1; --l1)
-//                        {
-//                            for (i2 = z1 - i1 - 1; i2 <= z1 + i1 + 1; ++i2)
-//                            {
-//                                if (k1 != x1 - l - 1 && l1 != h - 1 && i2 != z1 - i1 - 1 && k1 != x1 + l + 1 && l1 != h + b0 + 1 && i2 != z1 + i1 + 1)
-//                                {
-//                                    world_.setBlockToAir(k1, l1, i2);
-//                                }
-//                                else if (l1 >= 0 && !world_.getBlock(k1, l1 - 1, i2).getMaterial().isSolid())
-//                                {
-//                                    world_.setBlockToAir(k1, l1, i2);
-//                                }
-//                                else if (world_.getBlock(k1, l1, i2).getMaterial().isSolid())
-//                                {
-//                                    if (l1 == h - 1 && rand.nextInt(4) != 0)
-//                                    {
-//                                        world_.setBlock(k1, l1, i2, Blocks.mossy_cobblestone, 0, 2);
-//                                    }
-//                                    else
-//                                    {
-//                                        world_.setBlock(k1, l1, i2, Blocks.cobblestone, 0, 2);
-//                                    }
-//                                }
-//                            }
-//                        }
-//                    }
-//
-//                    k1 = 0;
-//
-//                    while (k1 < 2)
-//                    {
-//                        l1 = 0;
-//
-//                        while (true)
-//                        {
-//                            if (l1 < 3)
-//                            {
-//                                label197:
-//                                {
-//                                    i2 = x1 + rand.nextInt(l * 2 + 1) - l;
-//                                    int j2 = z1 + rand.nextInt(i1 * 2 + 1) - i1;
-//
-//                                    if (world_.isAirBlock(i2, h, j2))
-//                                    {
-//                                        int k2 = 0;
-//
-//                                        if (world_.getBlock(i2 - 1, h, j2).getMaterial().isSolid())
-//                                        {
-//                                            ++k2;
-//                                        }
-//
-//                                        if (world_.getBlock(i2 + 1, h, j2).getMaterial().isSolid())
-//                                        {
-//                                            ++k2;
-//                                        }
-//
-//                                        if (world_.getBlock(i2, h, j2 - 1).getMaterial().isSolid())
-//                                        {
-//                                            ++k2;
-//                                        }
-//
-//                                        if (world_.getBlock(i2, h, j2 + 1).getMaterial().isSolid())
-//                                        {
-//                                            ++k2;
-//                                        }
-//
-//                                        if (k2 == 1)
-//                                        {
-//                                            world_.setBlock(i2, h, j2, Blocks.chest, 0, 2);
-//                                            TileEntityChest tileentitychest = (TileEntityChest)world_.getTileEntity(i2, h, j2);
-//
-//                                            if (tileentitychest != null)
-//                                            {
-//                                                WeightedRandomChestContent.generateChestContents(rand, ChestGenHooks.getItems(DUNGEON_CHEST, rand), tileentitychest, ChestGenHooks.getCount(DUNGEON_CHEST, rand));
-//                                            }
-//
-//                                            break label197;
-//                                        }
-//                                    }
-//
-//                                    ++l1;
-//                                    continue;
-//                                }
-//                            }
-//
-//                            ++k1;
-//                            break;
-//                        }
-//                    }
-//
-//                    world_.setBlock(x1, h, z1, Blocks.mob_spawner, 0, 2);
-//                    TileEntityMobSpawner tileentitymobspawner = (TileEntityMobSpawner)world_.getTileEntity(x1, h, z1);
-//                    
-//                    if (tileentitymobspawner != null)
-//                    {
-//                        tileentitymobspawner.func_145881_a().setEntityName(DungeonHooks.getRandomDungeonMob(rand));
-//                    }
-//                    else
-//                    {
-//                        System.err.println("Failed to fetch mob spawner entity at (" + x1 + ", " + h + ", " + z1 + ")");
-//                    }
-//                }
+            	for (l1 = j; l1 <= k; ++l1)
+                {
+                    for (i2 = 3; i2 >= -1; --i2)
+                    {
+                        for (j2 = i1; j2 <= j1; ++j2)
+                        {
+                            blockpos1 = pos.add(l1, i2, j2);
+
+                            if (l1 != j && i2 != -1 && j2 != i1 && l1 != k && i2 != 4 && j2 != j1)
+                            {
+                                if (world_.getBlockState(blockpos1).getBlock() != Blocks.chest)
+                                {
+                                    world_.setBlockToAir(blockpos1);
+                                }
+                            }
+                            else if (blockpos1.getY() >= 0 && !world_.getBlockState(blockpos1.down()).getBlock().getMaterial().isSolid())
+                            {
+                                world_.setBlockToAir(blockpos1);
+                            }
+                            else if (world_.getBlockState(blockpos1).getBlock().getMaterial().isSolid() && world_.getBlockState(blockpos1).getBlock() != Blocks.chest)
+                            {
+                                if (i2 == -1 && rand.nextInt(4) != 0)
+                                {
+                                    world_.setBlockState(blockpos1, Blocks.mossy_cobblestone.getDefaultState(), 2);
+                                }
+                                else
+                                {
+                                    world_.setBlockState(blockpos1, Blocks.cobblestone.getDefaultState(), 2);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                l1 = 0;
+
+                while (l1 < 2)
+                {
+                    i2 = 0;
+
+                    while (true)
+                    {
+                        if (i2 < 3)
+                        {
+                            label197:
+                            {
+                                j2 = pos.getX() + rand.nextInt(i * 2 + 1) - i;
+                                int l2 = pos.getY();
+                                int i3 = pos.getZ() + rand.nextInt(l * 2 + 1) - l;
+                                BlockPos blockpos2 = new BlockPos(j2, l2, i3);
+
+                                if (world_.isAirBlock(blockpos2))
+                                {
+                                    int k2 = 0;
+                                    Iterator iterator = EnumFacing.Plane.HORIZONTAL.iterator();
+
+                                    while (iterator.hasNext())
+                                    {
+                                        EnumFacing enumfacing = (EnumFacing)iterator.next();
+
+                                        if (world_.getBlockState(blockpos2.offset(enumfacing)).getBlock().getMaterial().isSolid())
+                                        {
+                                            ++k2;
+                                        }
+                                    }
+
+                                    if (k2 == 1)
+                                    {
+                                        world_.setBlockState(blockpos2, Blocks.chest.correctFacing(world_, blockpos2, Blocks.chest.getDefaultState()), 2);
+                                        TileEntity tileentity1 = world_.getTileEntity(blockpos2);
+
+                                        if (tileentity1 instanceof TileEntityChest)
+                                        {
+                                            WeightedRandomChestContent.generateChestContents(rand, ChestGenHooks.getItems(DUNGEON_CHEST, rand), (TileEntityChest)tileentity1, ChestGenHooks.getCount(DUNGEON_CHEST, rand));
+                                        }
+
+                                        break label197;
+                                    }
+                                }
+
+                                ++i2;
+                                continue;
+                            }
+                        }
+
+                        ++l1;
+                        break;
+                    }
+                }
+                //Build Ladder
+            	for(int h1 = 0; h1<4; h1++)
+            	{
+                    world_.setBlockState(pos.add(k-1,h1,0), Blocks.ladder.getDefaultState().withProperty(BlockLadder.FACING, EnumFacing.WEST), 2);
+            	}
+            	
+                world_.setBlockState(pos, Blocks.mob_spawner.getDefaultState(), 2);
+                TileEntity tileentity = world_.getTileEntity(pos);
+
+                if (tileentity instanceof TileEntityMobSpawner)
+                {
+                    ((TileEntityMobSpawner)tileentity).getSpawnerBaseLogic().setEntityName(DungeonHooks.getRandomDungeonMob(rand));
+                }
+                else
+                {
+                    System.err.println("Failed to fetch mob spawner entity at (" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + ")");
+                }
             }
 
             this.updateBoundingBox();

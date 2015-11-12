@@ -210,6 +210,7 @@ public class ChunkProviderFinite extends ChunkProviderGenerate {
 //					chunkZ, ablock);
 //			this.scatteredFeatureGenerator.func_151539_a(this, this.worldObj,
 //					chunkX, chunkZ, ablock);
+			this.villageGenerator.func_175792_a(this, this.worldObj, chunkX, chunkZ, primer);
 		}
 
 		Chunk chunk;// = new BigChunk(this.worldObj, ablock, abyte, chunkX, chunkZ);

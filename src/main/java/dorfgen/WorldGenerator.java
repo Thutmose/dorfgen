@@ -96,7 +96,7 @@ public class WorldGenerator {
 	public WorldGenerator() {
 		instance = this;
 	}
-
+	Block roadgravel;
 	@EventHandler
 	public void preInit(FMLPreInitializationEvent e) {
 		MinecraftForge.EVENT_BUS.register(this);
@@ -104,9 +104,10 @@ public class WorldGenerator {
 		new Config(e);
 		File file = e.getSuggestedConfigurationFile();
 		String seperator = System.getProperty("file.separator");
-
+		
 		GameRegistry.registerItem(new ItemDebug(), "debugItem");//TODO texture
-		GameRegistry.registerBlock(new BlockRoadSurface(), "roadgravel");
+		GameRegistry.registerBlock(roadgravel = new BlockRoadSurface(), "roadgravel");
+		
 
 		String folder = file.getAbsolutePath();
 		String name = file.getName();
@@ -124,7 +125,11 @@ public class WorldGenerator {
 			//chunkClass = Class.forName("bigworld.storage.BigChunk");
 		} catch (Exception e) {
 		}
-
+		if(evt.getSide() == Side.CLIENT)
+		{
+			Minecraft.getMinecraft().getRenderItem().getItemModelMesher()
+		    .register(Item.getItemFromBlock(roadgravel), 0, new ModelResourceLocation("dorfgen:roadgravel", "inventory"));
+		}
 	}
 
 	@EventHandler
@@ -143,6 +148,7 @@ public class WorldGenerator {
 		{
 			Minecraft.getMinecraft().getRenderItem().getItemModelMesher().register
 			(Item.getItemFromBlock(BlockRoadSurface.uggrass), 0, new ModelResourceLocation("dorfgen:roadgravel", "inventory"));
+			
 		}
 	}
 	

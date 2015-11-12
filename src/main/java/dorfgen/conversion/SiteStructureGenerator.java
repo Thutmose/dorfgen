@@ -244,6 +244,10 @@ public class SiteStructureGenerator
 							{
 								world.setBlockState(new BlockPos(x2, h+l, z2), Blocks.air.getDefaultState());
 							}
+							if(struct.roofType != SiteMapColours.TOWERROOF)
+							{
+								world.setBlockState(new BlockPos(x2, h, z2), Blocks.carpet.getDefaultState());
+							}
 						}
 						
 						world.setBlockState(new BlockPos(x2, h - 1, z2), material.getDefaultState());
@@ -251,8 +255,7 @@ public class SiteStructureGenerator
 						
 						if(struct.shouldBeDoor(site, x1, z1, scale))
 						{
-							int meta = 0;//TODO determine direction of door  see 833 of StructureComponent
-							ItemDoor.placeDoor(world, new BlockPos(x2, h, z2), EnumFacing.NORTH, Blocks.oak_door);
+							ItemDoor.placeDoor(world, new BlockPos(x2, h, z2), struct.getDoorDirection(site, x1, z1, scale, structures), Blocks.oak_door);
 						}
 						
 						if(struct.shouldBeTorch(site, x1, z1, scale))
@@ -779,6 +782,21 @@ public class SiteStructureGenerator
 				return true;
 			}
 			return false;
+		}
+		
+		public EnumFacing getDoorDirection(Site site, int x, int z, int scale, SiteStructures structures)
+		{
+			EnumFacing ret = EnumFacing.UP;
+			
+			for(EnumFacing dir: EnumFacing.HORIZONTALS)
+			{
+				StructureSpace other = structures.getStructure(x + dir.getFrontOffsetX(), z + dir.getFrontOffsetZ(), scale);
+				if(other!=this)
+				{
+					return dir.getOpposite();
+				}
+			}
+			return ret;
 		}
 		
 		public boolean shouldBeTorch(Site site, int x, int z, int scale)
