@@ -182,7 +182,7 @@ public class WorldConstructionMaker
 					index = (j - 1) << 0 | (i1) << 12 | (k1) << 8;
 					blocks.setBlockState(index, repBlocks[0].getDefaultState());
 					index = (j + 1) << 0 | (i1) << 12 | (k1) << 8;
-					blocks.setBlockState(index, above.getDefaultState());
+					if(above != null) blocks.setBlockState(index, above.getDefaultState());
 					boolean tower = siteCol.toString().contains("TOWER");
 					if(wall||roof)
 					{
@@ -221,44 +221,32 @@ public class WorldConstructionMaker
 							pz = getSiteMapColour(s, x1, z1 + 1);
 							nz = getSiteMapColour(s, x1, z1 - 1);
 							
-							if(px != null && !px.toString().contains("Road") && z1 % 8 == 0)
+							if(px != null && !px.toString().contains("ROAD") && z1 % 8 == 0)
 							{
 								h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1 + 1, z1, scale);
 								index = (h2) << 0 | (i1 + 1) << 12 | (k1) << 8;
-								if(blocks.getBlockState(index - 1) != SiteMapColours.getSurfaceBlocks(SiteMapColours.ROAD)[1])
-								{
-									blocks.setBlockState(index, Blocks.torch.getDefaultState());
-								}
+								blocks.setBlockState(index, Blocks.torch.getDefaultState());
 							}
 							
-							if(nx != null && !nx.toString().contains("Road") && z1 % 8 == 0)
+							if(nx != null && !nx.toString().contains("ROAD") && z1 % 8 == 0)
 							{
 								h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1 - 1, z1, scale);
 								index = (h2) << 0 | (i1 - 1) << 12 | (k1) << 8;
-								if(blocks.getBlockState(index - 1) != SiteMapColours.getSurfaceBlocks(SiteMapColours.ROAD)[1])
-								{
-									blocks.setBlockState(index, Blocks.torch.getDefaultState());
-								}
+								blocks.setBlockState(index, Blocks.torch.getDefaultState());
 							}
 							
-							if(pz != null && !pz.toString().contains("Road") && x1 % 8 == 0)
+							if(pz != null && !pz.toString().contains("ROAD") && x1 % 8 == 0)
 							{
 								h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1 + 1, scale);
 								index = (h2) << 0 | (i1) << 12 | (k1 + 1) << 8;
-								if(blocks.getBlockState(index - 1) != SiteMapColours.getSurfaceBlocks(SiteMapColours.ROAD)[1])
-								{
-									blocks.setBlockState(index, Blocks.torch.getDefaultState());
-								}
+								blocks.setBlockState(index, Blocks.torch.getDefaultState());
 							}
 							
-							if(nz != null && !nz.toString().contains("Road") && x1 % 8 == 0)
+							if(nz != null && !nz.toString().contains("ROAD") && x1 % 8 == 0)
 							{
 								h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1 - 1, scale);
 								index = (h2) << 0 | (i1) << 12 | (k1 - 1) << 8;
-								if(blocks.getBlockState(index - 1) != SiteMapColours.getSurfaceBlocks(SiteMapColours.ROAD)[1])
-								{
-									blocks.setBlockState(index, Blocks.torch.getDefaultState());
-								}
+								blocks.setBlockState(index, Blocks.torch.getDefaultState());
 							}
 						}
 					}

@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap.Site;
@@ -14,6 +15,8 @@ import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.worldgen.WorldConstructionMaker;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockLever;
+import net.minecraft.block.BlockTorch;
+import net.minecraft.block.properties.IProperty;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.init.Blocks;
@@ -53,7 +56,6 @@ public class SiteStructureGenerator
 		
         state = state.cycleProperty(BlockLever.POWERED);
         world.setBlockState(pos, state, 3);
-        world.playSoundEffect((double)pos.getX() + 0.5D, (double)pos.getY() + 0.5D, (double)pos.getZ() + 0.5D, "random.click", 0.3F, ((Boolean)state.getValue(BlockLever.POWERED)).booleanValue() ? 0.6F : 0.5F);
         world.notifyNeighborsOfStateChange(pos, state.getBlock());
         EnumFacing enumfacing1 = ((BlockLever.EnumOrientation)state.getValue(BlockLever.FACING)).getFacing();
         world.notifyNeighborsOfStateChange(pos.offset(enumfacing1.getOpposite()), state.getBlock());
@@ -116,6 +118,29 @@ public class SiteStructureGenerator
 		}
 		
 		return surrounded;
+	}
+	
+	public void placeTorch(World world, int x, int y, int z)
+	{
+		BlockPos pos = new BlockPos(x, y, z);
+		IBlockState state = Blocks.torch.getDefaultState();
+		Iterator iterator = EnumFacing.Plane.HORIZONTAL.iterator();
+		EnumFacing enumfacing1 = EnumFacing.EAST;
+		
+		do
+		{
+			if (!iterator.hasNext())
+			{
+				break;
+			}
+			
+			enumfacing1 = (EnumFacing)iterator.next();
+		}
+		while (!world.isSideSolid(pos.offset(enumfacing1.getOpposite()), enumfacing1, true));
+		
+		state = Blocks.torch.getDefaultState().withProperty(BlockTorch.FACING, enumfacing1);
+       
+		world.setBlockState(pos, state);
 	}
 	
 	/**
@@ -234,7 +259,7 @@ public class SiteStructureGenerator
 						{
 							if(struct.roofType != SiteMapColours.TOWERROOF)
 							{
-								world.setBlockState(new BlockPos(x2, h + height, z2), Blocks.torch.getDefaultState());
+								placeTorch(world, x2, h + height, z2);
 							}
 							else
 							{
@@ -317,18 +342,15 @@ public class SiteStructureGenerator
 								    		// place a torch there
 											if(world.getBlockState(new BlockPos(x2, h + 1, z2)).getBlock() != Blocks.stonebrick)
 											{
-												world.setBlockState(new BlockPos(x2, h + 1, z2), Blocks.torch.getDefaultState());
-												world.getBlockState(new BlockPos(x2, h + 1, z2)).getBlock().onBlockAdded(world,new BlockPos(x2, h + 1, z2), Blocks.torch.getDefaultState());
+												placeTorch(world, x2, h + 1, z2);
 											}
 											else if(pos && world.getBlockState(new BlockPos(x2 - 1, h + 1, z2)).getBlock() != Blocks.stonebrick)
 											{
-												world.setBlockState(new BlockPos(x2 - 1, h + 1, z2), Blocks.torch.getDefaultState());
-												world.getBlockState(new BlockPos(x2 - 1, h + 1, z2)).getBlock().onBlockAdded(world, new BlockPos(x2 - 1, h + 1, z2), Blocks.torch.getDefaultState());
+												placeTorch(world, x2 - 1, h + 1, z2);
 											}
 											else if(neg && world.getBlockState(new BlockPos(x2 + 1, h + 1, z2)).getBlock() != Blocks.stonebrick)
 											{
-												world.setBlockState(new BlockPos(x2 + 1, h + 1, z2), Blocks.torch.getDefaultState());
-												world.getBlockState(new BlockPos(x2 + 1, h + 1, z2)).getBlock().onBlockAdded(world, new BlockPos(x2 + 1, h + 1, z2), Blocks.torch.getDefaultState());
+												placeTorch(world, x2 + 1, h + 1, z2);
 											}
 								    	}
 									}
@@ -339,18 +361,15 @@ public class SiteStructureGenerator
 								    	{
 											if(world.getBlockState(new BlockPos(x2, h + 1, z2)).getBlock() != Blocks.stonebrick)
 											{
-												world.setBlockState(new BlockPos(x2, h + 1, z2), Blocks.torch.getDefaultState());
-												world.getBlockState(new BlockPos(x2, h + 1, z2)).getBlock().onBlockAdded(world, new BlockPos(x2, h + 1, z2), Blocks.torch.getDefaultState());
+												placeTorch(world, x2, h + 1, z2);
 											}
 											else if(pos && world.getBlockState(new BlockPos(x2, h + 1, z2 - 1)).getBlock() != Blocks.stonebrick)
 											{
-												world.setBlockState(new BlockPos(x2, h + 1, z2 - 1), Blocks.torch.getDefaultState());
-												world.getBlockState(new BlockPos(x2, h + 1, z2 - 1)).getBlock().onBlockAdded(world, new BlockPos(x2, h + 1, z2 - 1), Blocks.torch.getDefaultState());
+												placeTorch(world, x2, h + 1, z2 - 1);
 											}
 											else if(neg && world.getBlockState(new BlockPos(x2 + 1, h + 1, z2)).getBlock() != Blocks.stonebrick)
 											{
-												world.setBlockState(new BlockPos(x2 + 1, h + 1, z2), Blocks.torch.getDefaultState());
-												world.getBlockState(new BlockPos(x2 + 1, h + 1, z2)).getBlock().onBlockAdded(world, new BlockPos(x2 + 1, h + 1, z2), Blocks.torch.getDefaultState());
+												placeTorch(world, x2, h + 1, z2 + 1);
 											}
 								    	}
 									}

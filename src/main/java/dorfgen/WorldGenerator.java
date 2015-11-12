@@ -57,7 +57,7 @@ import dorfgen.worldgen.WorldChunkManagerFinite;
 import dorfgen.worldgen.WorldTypeFinite;
 import dorfgen.worldgen.MapGenSites.Start;
 
-@Mod(modid = WorldGenerator.MODID, name = WorldGenerator.NAME, version = "1.7.10", acceptableRemoteVersions = "*")
+@Mod(modid = WorldGenerator.MODID, name = WorldGenerator.NAME, version = "1.8", acceptableRemoteVersions = "*")
 public class WorldGenerator {
 
 	public static final String MODID = "dorfgen";
