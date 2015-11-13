@@ -16,6 +16,7 @@ import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.util.BlockPos;
+import net.minecraft.util.EnumWorldBlockLayer;
 import net.minecraft.world.ColorizerGrass;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
@@ -23,7 +24,6 @@ import net.minecraft.world.World;
 public class BlockRoadSurface extends BlockFalling
 {
 	public static BlockRoadSurface uggrass;
-
 
 	protected BlockRoadSurface()
 	{
@@ -46,6 +46,7 @@ public class BlockRoadSurface extends BlockFalling
 		super.updateTick(world, pos, state, rand);
 	}
 
+	@Override
     /**
      * Get the Item that this Block should drop when harvested.
      *  
@@ -68,4 +69,39 @@ public class BlockRoadSurface extends BlockFalling
 		int j1 = 200;
 		return (l / 1 & 255) << 16 | (i1 / 1 & 255) << 8 | j1 / 1 & 255;
 	}
+	
+    @SideOnly(Side.CLIENT)
+    public int getBlockColor()
+    {
+		int l = 200;
+		int i1 = 200;
+		int j1 = 200;
+		return (l / 1 & 255) << 16 | (i1 / 1 & 255) << 8 | j1 / 1 & 255;
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public int getRenderColor(IBlockState state)
+    {
+		int l = 200;
+		int i1 = 200;
+		int j1 = 200;
+		return (l / 1 & 255) << 16 | (i1 / 1 & 255) << 8 | j1 / 1 & 255;
+    }
+    
+    @Override
+    @SideOnly(Side.CLIENT)
+    public EnumWorldBlockLayer getBlockLayer()
+    {
+        return EnumWorldBlockLayer.CUTOUT_MIPPED;
+    }
+
+    @Override
+    /**
+     * The type of render function that is called for this block
+     */
+    public int getRenderType()
+    {
+        return 3;
+    }
 }
