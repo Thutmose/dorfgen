@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import dorfgen.conversion.DorfMap;
+import dorfgen.conversion.DorfMap.Region;
 import dorfgen.conversion.DorfMap.Site;
 import net.minecraft.command.ICommand;
 import net.minecraft.command.ICommandSender;
@@ -97,6 +98,19 @@ public class Commands implements ICommand
 				entity.addChatMessage(new ChatComponentText("Teleported to "+telesite));
 				entity.setPositionAndUpdate(x, y, z);
 			}
+		}
+		else if(args.length > 0 && args[0].equalsIgnoreCase("info") && sender instanceof EntityPlayer)
+		{
+			EntityPlayer entity = (EntityPlayer) sender;
+			BlockPos pos = entity.getPosition();
+			Region region = WorldGenerator.instance.dorfs.getRegionForCoords(pos.getX(), pos.getZ());
+			HashSet<Site> sites = WorldGenerator.instance.dorfs.getSiteForCoords(pos.getX(), pos.getZ());
+			String message = "Region: "+region.toString();
+			for(Site site: sites)
+			{
+				message += ", Site: "+site;
+			}
+			entity.addChatMessage(new ChatComponentText(message));
 		}
 	}
 

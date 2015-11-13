@@ -105,7 +105,7 @@ public enum SiteMapColours
 		if(point==LIGHTYELLOWFARMSPACER)
 		{
 			ret[0] = Blocks.water;
-			ret[1] = Blocks.dirt;
+			ret[1] = Blocks.farmland;
 		}
 		if(point==YELLOWFARM)
 		{
@@ -115,7 +115,7 @@ public enum SiteMapColours
 		if(point==YELLOWFARMSPACER)
 		{
 			ret[0] = Blocks.water;
-			ret[1] = Blocks.dirt;
+			ret[1] = Blocks.farmland;
 		}
 		if(point==BROWNFARM)
 		{
@@ -125,7 +125,7 @@ public enum SiteMapColours
 		if(point==BROWNFARMSPACER)
 		{
 			ret[0] = Blocks.water;
-			ret[1] = Blocks.dirt;
+			ret[1] = Blocks.farmland;
 		}
 		if(point==RIVER)
 		{
