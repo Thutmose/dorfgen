@@ -3,8 +3,17 @@ package dorfgen.conversion;
 import static dorfgen.WorldGenerator.scale;
 
 import java.awt.Color;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -537,7 +546,7 @@ public class SiteStructureGenerator
 		
 		private void initStructures()
 		{
-			if(site.rgbmap != null)
+			if(site.rgbmap != null && !readFromFile())
 			{
 				HashSet<Integer> found = new HashSet();
 				
@@ -621,7 +630,116 @@ public class SiteStructureGenerator
 					}
 					
 				}
+				writeToFile();
 			}
+		}
+		
+		private boolean readFromFile()
+		{
+			File sites = new File(FileLoader.resourceDir.getAbsolutePath()+File.separator+"sitescaches");
+			if(!sites.exists())
+			{
+				sites.mkdirs();
+				return false;
+			}
+			
+			for (File f : sites.listFiles())
+			{
+				String s = f.getName();
+				if(s.contains("sitecache"+site.id))
+				{
+					BufferedReader br = null;
+					
+					try {
+						InputStream res = new FileInputStream(f);
+						br = new BufferedReader(new InputStreamReader(res));
+						String line;
+						String[] args;
+						while ((line = br.readLine()) != null)
+						{
+							args = line.split(":");
+							String type = args[0];
+							if(type.equalsIgnoreCase("structurespace"))
+							{
+								int roofrgb = Integer.parseInt(args[1]);
+								int minx = Integer.parseInt(args[2]);
+								int miny = Integer.parseInt(args[3]);
+								int maxx = Integer.parseInt(args[4]);
+								int maxy = Integer.parseInt(args[5]);
+								SiteMapColours colour = SiteMapColours.getMatch(roofrgb);
+								int[] min = {minx, miny};
+								int[] max = {maxx, maxy};
+								StructureSpace structure;
+								if(colour == SiteMapColours.TOWERROOF)
+								{
+									structure = new WallTowerSpace(min, max);
+								}
+								else
+								{
+									structure = new StructureSpace(min, max, colour);
+								}
+								structures.add(structure);
+							}
+							else if(type.equalsIgnoreCase("wallsegment"))
+							{
+								HashSet<Integer> pixels = new HashSet();
+								for(int i = 1; i<args.length; i++)
+								{
+									pixels.add(Integer.parseInt(args[i]));
+								}
+								walls.add(new WallSegment(pixels));
+							}
+						}
+						br.close();
+						return true;
+					} catch (Exception e) {
+						return false;
+					}
+				}
+			}
+			return false;
+		}
+		
+		private void writeToFile()
+		{
+			File sites = new File(FileLoader.resourceDir.getAbsolutePath()+File.separator+"sitescaches");
+			String file = sites.getAbsolutePath()+File.separator+"sitecache"+site.id;
+			
+			FileWriter fwriter;
+			PrintWriter out;
+			try
+			{
+				fwriter = new FileWriter(file);
+				out = new PrintWriter(fwriter);
+				
+				for(StructureSpace struct : structures)
+				{
+					String line = "structurespace";
+					line += ":"+struct.roofType.colour.getRGB();
+					line += ":"+struct.min[0];
+					line += ":"+struct.min[1];
+					line += ":"+struct.max[0];
+					line += ":"+struct.max[1];
+					out.println(line);
+				}
+				for(WallSegment wall: walls)
+				{
+					String line = "wallsegment";
+					for(Integer i: wall.pixels)
+					{
+						line += ":"+i;
+					}
+					out.println(line);
+				}
+				
+				out.close();
+				fwriter.close();
+			}
+			catch(Exception e)
+			{
+				
+			}
+			
 		}
 		
 		//TODO see if I need to implement this and get it working.
@@ -1020,6 +1138,11 @@ public class SiteStructureGenerator
 		public WallSegment(Site site, int x, int y)
 		{
 			initWallSegment(site, x, y);
+		}
+		
+		public WallSegment(Collection<Integer> pixels_)
+		{
+			pixels.addAll(pixels_);
 		}
 		
 		/**
