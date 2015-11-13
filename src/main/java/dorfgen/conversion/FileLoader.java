@@ -46,6 +46,8 @@ public class FileLoader
 
 	public static String biomes = "";
 
+	public static File resourceDir = null;
+	
 	public String	elevation				= "";
 	public String	elevationWater			= "";
 	public String	biome					= "";
@@ -70,7 +72,7 @@ public class FileLoader
 		{
 			temp.mkdirs();
 		}
-
+		resourceDir = temp;
 		for (File f : temp.listFiles())
 		{
 			String s = f.getName();
