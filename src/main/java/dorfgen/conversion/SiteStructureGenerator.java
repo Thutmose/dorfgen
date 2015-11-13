@@ -895,8 +895,11 @@ public class SiteStructureGenerator
 			//middle of a wall
 			if((x == midx && (z==bounds[0][1] || z == bounds[1][1])) || (z == midz && (x==bounds[0][0] || x == bounds[1][0])))
 			{
-			//	SiteStructures structs = WorldGenerator.instance.structureGen.getStructuresForSite(site);
-//				System.out.println("door");
+				SiteStructures structs = WorldGenerator.instance.structureGen.getStructuresForSite(site);
+				EnumFacing dir = getDoorDirection(site, x, z, scale, structs).getOpposite();
+				StructureSpace other = structs.getStructure(x + dir.getFrontOffsetX(), z + dir.getFrontOffsetZ(), scale);
+				if(other!=null && other.getFloor(site, scale)!=getFloor(site, scale))
+					return false;
 				return true;
 			}
 			return false;

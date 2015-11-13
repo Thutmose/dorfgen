@@ -23,6 +23,7 @@ import dorfgen.conversion.SiteStructureGenerator.SiteStructures;
 import dorfgen.conversion.SiteStructureGenerator.StructureSpace;
 import dorfgen.conversion.SiteTerrain;
 import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.world.World;
@@ -134,55 +135,32 @@ public class WorldConstructionMaker
 						h = j+1;
 						continue;//TODO move stuff into SiteStructureGenerator
 					}
-					//Make Town walls only 1 thick
-					if(siteCol == SiteMapColours.TOWNWALL && false)
-					{
-						if(scale > 51)
-						{
-							int shiftX2 = (x1 + 1 - s.corners[0][0]*scale)*SiteStructureGenerator.SITETOBLOCK/scale;
-							int shiftZ2 = (z1 + 1 - s.corners[0][1]*scale)*SiteStructureGenerator.SITETOBLOCK/scale;
-							int shiftX3 = (x1 - 1 - s.corners[0][0]*scale)*SiteStructureGenerator.SITETOBLOCK/scale;
-							int shiftZ3 = (z1 - 1 - s.corners[0][1]*scale)*SiteStructureGenerator.SITETOBLOCK/scale;
-
-							int rgbxp = s.rgbmap[shiftX2][shiftZ];
-							int rgbzm = s.rgbmap[shiftX][shiftZ3];
-							int rgbxm = s.rgbmap[shiftX3][shiftZ];
-							int rgbzp = s.rgbmap[shiftX][shiftZ2];
-
-							SiteMapColours col1 = SiteMapColours.getMatch(rgbxp);
-							SiteMapColours col2 = SiteMapColours.getMatch(rgbzm);
-							SiteMapColours col3 = SiteMapColours.getMatch(rgbxm);
-							SiteMapColours col4 = SiteMapColours.getMatch(rgbzp);
-							
-							if(col1==SiteMapColours.TOWNWALLMID || col2==SiteMapColours.TOWNWALLMID || col3==SiteMapColours.TOWNWALLMID || col4==SiteMapColours.TOWNWALLMID)
-							{
-								siteCol = SiteMapColours.TOWNWALLMID;
-							}
-						}
-					}
 					
-					Block[] repBlocks = SiteMapColours.getSurfaceBlocks(siteCol);
+					IBlockState[] repBlocks = SiteMapColours.getSurfaceBlocks(siteCol);
 					
 					index = j << 0 | (i1) << 12 | (k1) << 8;
 
 					BiomeGenBase biome = biomes[i1+16*k1];
 					
-					Block surface =  repBlocks[1];
-					Block above = repBlocks[2];
+					IBlockState surface =  repBlocks[1];
+					IBlockState above = repBlocks[2];
 
 					boolean wall = siteCol== SiteMapColours.TOWNWALL;
 					boolean roof = siteCol.toString().contains("ROOF");
+					boolean farm = siteCol.toString().contains("FARM");
+					if(farm)
+						biomes[i1+16*k1] = BiomeGenBase.plains;
 					
 					if(surface==null && siteCol.toString().contains("ROOF"))
-						surface = Blocks.brick_block;
+						surface = Blocks.brick_block.getDefaultState();
 					
 					if(surface==null)// || blocks[index - 1] == Blocks.water || blocks[index] == Blocks.water)
 						continue;
-					blocks.setBlockState(index, surface.getDefaultState());
+					blocks.setBlockState(index, surface);
 					index = (j - 1) << 0 | (i1) << 12 | (k1) << 8;
-					blocks.setBlockState(index, repBlocks[0].getDefaultState());
+					blocks.setBlockState(index, repBlocks[0]);
 					index = (j + 1) << 0 | (i1) << 12 | (k1) << 8;
-					if(above != null) blocks.setBlockState(index, above.getDefaultState());
+					if(above != null) blocks.setBlockState(index, above);
 					boolean tower = siteCol.toString().contains("TOWER");
 					if(wall||roof)
 					{
@@ -194,7 +172,7 @@ public class WorldConstructionMaker
 							index = (j1) << 0 | (i1) << 12 | (k1) << 8;
 							blocks.setBlockState(index, Blocks.air.getDefaultState());
 							index = (h + num) << 0 | (i1) << 12 | (k1) << 8;
-							blocks.setBlockState(index, surface.getDefaultState());;
+							blocks.setBlockState(index, surface);;
 						}
 						j1 = j;
 						if(wall)
@@ -203,7 +181,7 @@ public class WorldConstructionMaker
 							{
 								j1 = j1 + 1;
 								index = (j1) << 0 | (i1) << 12 | (k1) << 8;
-								blocks.setBlockState(index, surface.getDefaultState());
+								blocks.setBlockState(index, surface);
 							}
 						}
 					}
