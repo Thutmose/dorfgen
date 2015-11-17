@@ -45,6 +45,10 @@ public class SiteStructureGenerator
 	public SiteStructureGenerator(DorfMap dorfs_)
 	{
 		dorfs = dorfs_;
+	}
+	
+	public void init()
+	{
 		System.out.println("Processing Site Maps for structures");
 		for(Integer i: dorfs.sitesById.keySet())
 		{

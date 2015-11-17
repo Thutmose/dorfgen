@@ -40,6 +40,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.ModMetadata;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLLoadCompleteEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
@@ -77,8 +78,8 @@ public class WorldGenerator {
 	public BufferedImage vegitationMap;
 	public BufferedImage structuresMap;
 
-	public DorfMap dorfs;
-	public SiteStructureGenerator structureGen;
+	public final DorfMap dorfs = new DorfMap();
+	public final SiteStructureGenerator structureGen = new SiteStructureGenerator(dorfs);
 
 	public static int scale;
 	public static boolean finite;
@@ -91,8 +92,8 @@ public class WorldGenerator {
 
 	public static String configLocation;
 	public static String biomes;
-
-	public static Class chunkClass = Chunk.class;
+	
+	private final boolean[] done = {false};
 
 	public WorldGenerator() {
 		instance = this;
@@ -116,6 +117,19 @@ public class WorldGenerator {
 		//
 		MapGenStructureIO.registerStructureComponent(Start.class, "dorfsitestart");
 		MapGenStructureIO.registerStructure(Start.class, "dorfsitestart");
+		
+		Thread dorfProcess = new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				new FileLoader();
+				dorfs.init();
+				structureGen.init();
+				done[0] = true;
+			}
+		});
+		dorfProcess.setName("dorfgen image processor");
+		dorfProcess.start();
 		//
 	}
 
@@ -135,16 +149,12 @@ public class WorldGenerator {
 
 	@EventHandler
 	public void postInit(FMLPostInitializationEvent e) {
-		new FileLoader();
-		dorfs = new DorfMap();
-		structureGen = new SiteStructureGenerator(dorfs);
 
-		for (BiomeGenBase b : BiomeGenBase.getBiomeGenArray()) {
-			if (b != null && !MapGenVillage.villageSpawnBiomes.contains(b)) {
-				BiomeManager.addVillageBiome(b, true);
-			}
-		}
-		
+//		for (BiomeGenBase b : BiomeGenBase.getBiomeGenArray()) {//TODO see if this is still needed
+//			if (b != null && !MapGenVillage.villageSpawnBiomes.contains(b)) {
+//				BiomeManager.addVillageBiome(b, true);
+//			}
+//		}
 		if(FMLCommonHandler.instance().getEffectiveSide() == Side.CLIENT)
 		{
 			Minecraft.getMinecraft().getRenderItem().getItemModelMesher().register
@@ -215,30 +225,19 @@ public class WorldGenerator {
 			}
 		}
 	}
-
-	@SubscribeEvent
-	public void chunkLoadEvent(PopulateChunkEvent.Post evt) {
-		World world = evt.world;
-		int cX = evt.chunkX * 16;
-		int cZ = evt.chunkZ * 16;
-//		for (int i = 0; i < 16; i++) {
-//			for (int k = 0; k < 16; k++) {
-//				BiomeGenBase biome = world.getBiomeGenForCoords(new BlockPos(cX + i, 0, cZ + k));
-//				if (biome != BiomeGenBase.river) // || true)
-//					continue;
-//
-//				for (int j = 255; j > 0; j--) {
-//					Block b = world.getBlock(cX + i, j, cZ + k);
-//					if (b != Blocks.air && b != null) {
-//						if (b == Blocks.water) {
-//							b.onNeighborBlockChange(world, cX + i, j, cZ + k, b);
-//						}
-//						break;
-//					}
-//
-//				}
-//			}
-//		}
+	
+	@EventHandler
+	public void LoadComplete(FMLLoadCompleteEvent event)
+	{
+		while(!done[0])
+		{
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		System.out.println("Done Loading");
 	}
 
 }

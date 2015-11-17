@@ -67,7 +67,10 @@ public class DorfMap {
 		sites.add(site);
 	}
 	
-	public DorfMap() {
+	public DorfMap() {}
+
+	public void init()
+	{
 		populateBiomeMap();
 		populateElevationMap();
 		populateWaterMap();
@@ -83,7 +86,7 @@ public class DorfMap {
 			postProcessBiomeMap();
 		}
 	}
-
+	
 	public void populateBiomeMap()
 	{
 		BufferedImage img = WorldGenerator.instance.biomeMap;
