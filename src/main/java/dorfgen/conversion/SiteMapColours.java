@@ -4,7 +4,7 @@ import java.awt.Color;
 import java.util.HashMap;
 
 import dorfgen.BlockRoadSurface;
-import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 
 public enum SiteMapColours
@@ -60,7 +60,7 @@ public enum SiteMapColours
 	TOWERROOF(110,110,110),
 	;
 
-	private static HashMap<Integer, SiteMapColours> colourMap = new HashMap();
+    private static HashMap<Integer, SiteMapColours> colourMap = new HashMap<Integer, SiteMapColours>();
 	public static boolean init = false;
 	public final Color colour;
 	SiteMapColours(int red, int green, int blue)
@@ -87,50 +87,52 @@ public enum SiteMapColours
 		return colourMap.get(rgb);
 	}
 	
-	public static Block[] getSurfaceBlocks(SiteMapColours point)
+	public static IBlockState[] getSurfaceBlocks(SiteMapColours point)
 	{
-		Block[] ret = new Block[3];
-		ret[0] = Blocks.dirt;
+		IBlockState[] ret = new IBlockState[3];
+		ret[0] = Blocks.DIRT.getDefaultState();
 		
 		if(point==ROAD)
 		{
-			ret[0] = Blocks.cobblestone;
-			ret[1] = BlockRoadSurface.uggrass;
+			ret[0] = Blocks.COBBLESTONE.getDefaultState();
+			ret[1] = BlockRoadSurface.uggrass.getDefaultState();
 		}
 		if(point==LIGHTYELLOWFARM)
 		{
-			ret[1] = Blocks.farmland;
-			ret[2] = Blocks.carrots;
-		}
-		if(point==LIGHTYELLOWFARMSPACER)
-		{
-			ret[0] = Blocks.water;
-			ret[1] = Blocks.dirt;
+			ret[1] = Blocks.FARMLAND.getDefaultState();
+			ret[2] = Blocks.CARROTS.getDefaultState();
 		}
 		if(point==YELLOWFARM)
 		{
-			ret[1] = Blocks.farmland;
-			ret[2] = Blocks.potatoes;
-		}
-		if(point==YELLOWFARMSPACER)
-		{
-			ret[0] = Blocks.water;
-			ret[1] = Blocks.dirt;
+			ret[1] = Blocks.FARMLAND.getDefaultState();
+			ret[2] = Blocks.POTATOES.getDefaultState();
 		}
 		if(point==BROWNFARM)
 		{
-			ret[1] = Blocks.farmland;;
-			ret[2] = Blocks.wheat;
+			ret[1] = Blocks.FARMLAND.getDefaultState();
+			ret[2] = Blocks.WHEAT.getDefaultState();
 		}
 		if(point==BROWNFARMSPACER)
 		{
-			ret[0] = Blocks.water;
-			ret[1] = Blocks.dirt;
+			ret[0] = Blocks.WATER.getDefaultState();
+			ret[1] = Blocks.DIRT.getStateFromMeta(2);
 		}
+		if(point==YELLOWFARMSPACER)
+		{
+			ret[0] = Blocks.WATER.getDefaultState();
+			ret[1] = Blocks.DIRT.getStateFromMeta(2);
+		}
+		if(point==LIGHTYELLOWFARMSPACER)
+		{
+			ret[0] = Blocks.WATER.getDefaultState();
+			ret[1] = Blocks.DIRT.getStateFromMeta(2);
+		}
+		
+		
 		if(point==RIVER)
 		{
-			ret[0] = Blocks.water;
-			ret[1] = Blocks.water;
+			ret[0] = Blocks.WATER.getDefaultState();
+			ret[1] = Blocks.WATER.getDefaultState();
 		}
 //		if(point==SiteMapColours.LIGHTBROWNBUILDINGWALL)
 //		{

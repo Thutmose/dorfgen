@@ -16,7 +16,7 @@ public enum SiteTerrain
 	ELFGREEN(0,160,0)
 	;
 	
-	private static HashMap<Integer, SiteTerrain> colourMap = new HashMap();
+    private static HashMap<Integer, SiteTerrain> colourMap = new HashMap<Integer, SiteTerrain>();
 	public static boolean init = false;
 	final Color colour;
 	SiteTerrain(int red, int green, int blue)

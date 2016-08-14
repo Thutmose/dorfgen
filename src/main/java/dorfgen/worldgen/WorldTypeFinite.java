@@ -2,10 +2,8 @@ package dorfgen.worldgen;
 
 import net.minecraft.world.World;
 import net.minecraft.world.WorldType;
-import net.minecraft.world.biome.WorldChunkManager;
-import net.minecraft.world.chunk.IChunkProvider;
-import net.minecraft.world.gen.ChunkProviderFlat;
-import net.minecraft.world.gen.ChunkProviderGenerate;
+import net.minecraft.world.biome.BiomeProvider;
+import net.minecraft.world.chunk.IChunkGenerator;
 
 public class WorldTypeFinite extends WorldType {
 
@@ -14,17 +12,17 @@ public class WorldTypeFinite extends WorldType {
 	}
 
     @Override
-	public WorldChunkManager getChunkManager(World world)
+	public BiomeProvider getBiomeProvider(World world)
     {
     //	new Exception().printStackTrace();
-    	return new WorldChunkManagerFinite(world);
+    	return new BiomeProviderFinite(world);
     }
     
     @Override
-    public IChunkProvider getChunkGenerator(World world, String generatorOptions)
+    public IChunkGenerator getChunkGenerator(World world, String generatorOptions)
     {
     //	new Exception().printStackTrace();
-        return new ChunkProviderFinite(world, world.getSeed(), world.getWorldInfo().isMapFeaturesEnabled());
+        return new ChunkProviderFinite(world, world.getSeed(), world.getWorldInfo().isMapFeaturesEnabled(), generatorOptions);
     }
     
     /**
