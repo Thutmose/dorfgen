@@ -3,8 +3,6 @@ package dorfgen.finite;
 import javax.vecmath.Vector3f;
 
 import dorfgen.WorldGenerator;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.world.biome.Biome;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityEvent.EnteringChunk;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -19,8 +17,6 @@ public class FiniteHandler
     @SubscribeEvent
     public void Wrap(EnteringChunk evt)
     {
-        // TODO properly handle riding entities
-        if (evt.getEntity().isBeingRidden()) return;
 
         Vector3f pos = new Vector3f();
         pos.x = (float) evt.getEntity().posX;
@@ -29,10 +25,10 @@ public class FiniteHandler
         int[] shift = new int[2];
         shift[0] = WorldGenerator.shift.getX();
         shift[1] = WorldGenerator.shift.getY();
-        // TODO maybe make a config as to which map to use for wrapping.
+        //TODO maybe make a config as to which map to use for wrapping.
         if (!isInImage(WorldGenerator.instance.dorfs.biomeMap, shift, WorldGenerator.scale, pos))
         {
-            Biome[][] image = WorldGenerator.instance.dorfs.biomeMap;
+            int[][] image = WorldGenerator.instance.dorfs.biomeMap;
             int scale = WorldGenerator.scale;
             int dx = 0, dy = 0, xMin = 0, xMax = 0, yMin = 0, yMax = 0;
             dx = shift[0];
@@ -61,16 +57,17 @@ public class FiniteHandler
                 pos.z = yMax - (yMin - pos.z) - 1;
             }
 
-            boolean newIn = isInImage(WorldGenerator.instance.dorfs.biomeMap, shift, WorldGenerator.scale, pos);
-            // TODO remove this print when done.
-            if (evt.getEntity() instanceof EntityPlayer) System.out.println(
-                    pos + " " + xMin + " " + xMax + " " + yMin + " " + yMax + " " + scale + " " + posOld + " " + newIn);
-            Transporter.teleportEntity(evt.getEntity(), pos, evt.getEntity().dimension, false);
+//            boolean newIn = isInImage(WorldGenerator.instance.dorfs.biomeMap, shift, WorldGenerator.scale, pos);
+//            //TODO remove this print when done.
+//            if (evt.entity instanceof EntityPlayer) System.out.println(
+//                    pos + " " + xMin + " " + xMax + " " + yMin + " " + yMax + " " + scale + " " + posOld + " " + newIn);
+//            TelDestination tele = new TelDestination(evt.entity.dimension, pos);
+//            Transporter.teleportEntity(evt.entity, tele);
 
         }
     }
 
-    public boolean isInImage(Object[][] image, int[] shift, int scale, Vector3f position)
+    public boolean isInImage(int[][] image, int[] shift, int scale, Vector3f position)
     {
         int dx = 0, dy = 0, xMin = 0, xMax = 0, yMin = 0, yMax = 0;
         if (shift != null)

@@ -167,7 +167,7 @@ public class FileLoader
         }
         loadLegends(legends);
         loadLegendsPlus(legendsPlus);
-        loadFineConstructLocations(constructionFineCoords);
+        if (!constructionFineCoords.isEmpty()) loadFineConstructLocations(constructionFineCoords);
         if (!siteInfo.isEmpty()) loadSiteInfo(siteInfo);
 
         WorldGenerator.instance.biomeMap = getImage(biome);
@@ -214,7 +214,6 @@ public class FileLoader
                 String typeName = null;
                 String name = null;
                 String coords = null;
-                String rectangle = null;
                 for (int j = 0; j < siteNode.getChildNodes().getLength(); j++)
                 {
                     Node node = siteNode.getChildNodes().item(j);
@@ -235,10 +234,6 @@ public class FileLoader
                     {
                         coords = node.getFirstChild().getNodeValue();
                     }
-                    if (nodeName.equals("rectangle"))
-                    {
-                        rectangle = node.getFirstChild().getNodeValue();
-                    }
                 }
                 if (id == -1) continue;
                 SiteType type = SiteType.getSite(typeName);
@@ -258,17 +253,6 @@ public class FileLoader
                         }
                     }
                     sites.remove(id);
-                }
-                if (rectangle != null)
-                {
-                    String[] rect = rectangle.split(":");
-                    String[] corner1 = rect[0].split(",");
-                    int x1 = Integer.parseInt(corner1[0]);
-                    int y1 = Integer.parseInt(corner1[1]);
-                    String[] corner2 = rect[1].split(",");
-                    int x2 = Integer.parseInt(corner2[0]);
-                    int y2 = Integer.parseInt(corner2[1]);
-                    site.setSiteLocation(x1, y1, x2, y2);
                 }
                 DorfMap.sitesById.put(id, site);
             }
@@ -670,6 +654,7 @@ public class FileLoader
         catch (Exception e)
         {
             e.printStackTrace();
+            System.err.println("Error with file " + file);
         }
     }
 
@@ -783,6 +768,7 @@ public class FileLoader
             r = Integer.parseInt(row.get(0));
             g = Integer.parseInt(row.get(1));
             b = Integer.parseInt(row.get(2));
+
             try
             {
                 biomeId = Integer.parseInt(row.get(3));
@@ -794,10 +780,10 @@ public class FileLoader
 
             if (biomeId < 0)
             {
-                Iterator<Biome> iterator = Biome.REGISTRY.iterator();
-                while (iterator.hasNext())
+                Iterator<Biome> iter = Biome.REGISTRY.iterator();
+                while (iter.hasNext())
                 {
-                    Biome biome = iterator.next();
+                    Biome biome = iter.next();
                     if (biome != null
                             && biome.getBiomeName().replace(" ", "").equalsIgnoreCase(biomeName.replace(" ", "")))
                     {
@@ -812,7 +798,7 @@ public class FileLoader
                 continue;
             }
             Color c = new Color(r, g, b);
-            BiomeList.biomes.put(c.getRGB(), new BiomeConversion(c, Biome.getBiome(biomeId)));
+            BiomeList.biomes.put(c.getRGB(), new BiomeConversion(c, biomeId));
         }
 
     }

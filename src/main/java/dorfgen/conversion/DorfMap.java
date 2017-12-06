@@ -10,13 +10,13 @@ import java.util.Set;
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.init.Biomes;
 import net.minecraft.world.biome.Biome;
 
 public class DorfMap
 {
 
-    public Biome[][]                                           biomeMap             = new Biome[0][0];
+    public int[][]                                             biomeMap             = new int[0][0];
     public int[][]                                             elevationMap         = new int[0][0];
     public int[][]                                             waterMap             = new int[0][0];
     public int[][]                                             riverMap             = new int[0][0];
@@ -44,6 +44,10 @@ public class DorfMap
     public BicubicInterpolator                                 biomeInterpolator    = new BicubicInterpolator();
     public CachedBicubicInterpolator                           heightInterpolator   = new CachedBicubicInterpolator();
     public CachedBicubicInterpolator                           miscInterpolator     = new CachedBicubicInterpolator();
+
+    public ISigmoid                                            sigmoid              = new ISigmoid()
+                                                                                    {
+                                                                                    };
 
     static void addSiteByCoord(int x, int z, Site site)
     {
@@ -83,23 +87,27 @@ public class DorfMap
     {
         BufferedImage img = WorldGenerator.instance.biomeMap;
         if (img == null) return;
-        biomeMap = new Biome[img.getWidth()][img.getHeight()];
+        biomeMap = new int[img.getWidth()][img.getHeight()];
         for (int y = 0; y < img.getHeight(); y++)
         {
             for (int x = 0; x < img.getWidth(); x++)
             {
                 int rgb = WorldGenerator.instance.biomeMap.getRGB(x, y);
-                biomeMap[x][y] = BiomeList.GetBiome(rgb);
+                biomeMap[x][y] = BiomeList.GetBiomeIndex(rgb);
             }
         }
         WorldGenerator.instance.biomeMap = null;
     }
 
-    public static int elevationSigmoid(int preHeight)
+    public void setElevationSigmoid(ISigmoid sigmoid)
     {
-        double a = preHeight;
+        this.sigmoid = sigmoid;
+        populateElevationMap();
+    }
 
-        return (int) (Math.min(Math.max(((215. / (1 + Math.exp(-(a - 128.) / 20.))) + 45. + a) / 2., 10), 245));
+    private int elevationSigmoid(int preHeight)
+    {
+        return sigmoid.elevationSigmoid(preHeight);
     }
 
     public void populateElevationMap()
@@ -108,8 +116,8 @@ public class DorfMap
         if (img == null) return;
         int shift = 10;
         elevationMap = new int[img.getWidth()][img.getHeight()];
-        Biome hillsPlus = Biome.REGISTRY.getObject(new ResourceLocation("extreme_hills_with_trees"));
-        Biome hills = Biome.REGISTRY.getObject(new ResourceLocation("extreme_hills"));
+        int max = Integer.MIN_VALUE;
+        int min = Integer.MAX_VALUE;
         for (int y = 0; y < img.getHeight(); y++)
         {
             for (int x = 0; x < img.getWidth(); x++)
@@ -122,15 +130,21 @@ public class DorfMap
                 {
                     h = b + waterShift;
                 }
-                h = Math.max(10, h);
-                elevationMap[x][y] = h;// elevationSigmoid(h);
-                if (biomeMap.length > 0) if (h < 145 && biomeMap[x][y] == hillsPlus)
-                {
-                    biomeMap[x][y] = hills;
-                }
+                h = Math.max(0, h);
+                elevationMap[x][y] = elevationSigmoid(h);
+                if (elevationMap[x][y] > max) max = elevationMap[x][y];
+                if (elevationMap[x][y] < min) min = elevationMap[x][y];
+
+                if (biomeMap.length > 0)
+                    if (h < 145 && biomeMap[x][y] == Biome.getIdForBiome(Biomes.MUTATED_EXTREME_HILLS))
+                    {
+                    biomeMap[x][y] = Biome.getIdForBiome(Biomes.EXTREME_HILLS);
+                    }
             }
         }
-        WorldGenerator.instance.elevationMap = null;
+        System.out.println(max+" "+min);
+        //Don't clear the elevation map, it is needed again if sigmoid changes.
+//        WorldGenerator.instance.elevationMap = null;
     }
 
     public void populateWaterMap()
@@ -139,9 +153,6 @@ public class DorfMap
         if (img == null) return;
         waterMap = new int[img.getWidth()][img.getHeight()];
         riverMap = new int[img.getWidth()][img.getHeight()];
-        Biome riverId = Biome.REGISTRY.getObject(new ResourceLocation("river"));
-        Biome oceanId = Biome.REGISTRY.getObject(new ResourceLocation("ocean"));
-        Biome deep_oceanId = Biome.REGISTRY.getObject(new ResourceLocation("deep_ocean"));
         for (int y = 0; y < img.getHeight(); y++)
         {
             for (int x = 0; x < img.getWidth(); x++)
@@ -149,28 +160,29 @@ public class DorfMap
                 int rgb = WorldGenerator.instance.elevationWaterMap.getRGB(x, y);
 
                 int r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = (rgb >> 0) & 0xFF;
-                Biome biome = biomeMap[x][y];
+                int biome = biomeMap[x][y];
+                Biome temp = Biome.getBiome(biome);
 
-                if (r == 0 && g == 0 && biome != riverId)
+                if (r == 0 && g == 0 && temp != Biomes.RIVER)
                 {
                     waterMap[x][y] = b + 25 + waterShift;
                     if (biomeMap.length > 0)
                     {
                         if (waterMap[x][y] < 50)
                         {
-                            biomeMap[x][y] = deep_oceanId;
+                            biomeMap[x][y] = Biome.getIdForBiome(Biomes.DEEP_OCEAN);
                         }
                         else
                         {
-                            biomeMap[x][y] = oceanId;
+                            biomeMap[x][y] = Biome.getIdForBiome(Biomes.OCEAN);
                         }
                         riverMap[x][y] = -1;
                     }
                 }
-                else if (r == 0 || biome == riverId)
+                else if (r == 0 || temp == Biomes.RIVER)
                 {
                     waterMap[x][y] = -1;
-                    riverMap[x][y] = biome == riverId ? b - waterShift : b;
+                    riverMap[x][y] = temp == Biomes.RIVER ? b - waterShift : b;
                 }
                 else
                 {
@@ -342,19 +354,19 @@ public class DorfMap
     public void postProcessBiomeMap()
     {
         boolean hasThermalMap = temperatureMap.length > 0;
-        Biome riverId = Biome.REGISTRY.getObject(new ResourceLocation("river"));
+
         for (int x = 0; x < biomeMap.length; x++)
             for (int z = 0; z < biomeMap[0].length; z++)
             {
-                Biome biome = biomeMap[x][z];
+                int biome = biomeMap[x][z];
                 int temperature = hasThermalMap ? temperatureMap[x][z] : 128;
                 int drainage = drainageMap.length > 0 ? drainageMap[x][z] : 100;
                 int rain = rainMap.length > 0 ? rainMap[x][z] : 100;
                 int evil = evilMap.length > 0 ? evilMap[x][z] : 100;
                 Region region = getRegionForCoords(x * scale, z * scale);
-                if (biome != riverId)
+                if (biome != Biome.getIdForBiome(Biomes.RIVER))
                 {
-                    Biome newBiome = BiomeList.getBiomeFromValues(biome, temperature, drainage, rain, evil, region);
+                    int newBiome = BiomeList.getBiomeFromValues(biome, temperature, drainage, rain, evil, region);
                     biomeMap[x][z] = newBiome;
                 }
             }

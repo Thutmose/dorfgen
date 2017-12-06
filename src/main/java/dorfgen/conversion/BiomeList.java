@@ -4,9 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Random;
+import java.util.Set;
 
 import dorfgen.conversion.DorfMap.Region;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.init.Biomes;
 import net.minecraft.world.biome.Biome;
 import net.minecraftforge.common.BiomeDictionary;
 import net.minecraftforge.common.BiomeDictionary.Type;
@@ -27,53 +28,54 @@ public class BiomeList
 
     private static ArrayList<Biome>                 biomeArray;
 
-    public static Biome GetBiome(int rgb)
+    public static int GetBiomeIndex(int rgb)
     {
         if (biomes.containsKey(rgb)) return biomes.get(rgb).mineCraftBiome;
-        return Biome.getBiome(0);
+        return 0;
     }
 
-    public static Biome getBiomeFromValues(Biome biome, int temperature, int drainage, int rainfall, int evil,
+    public static int getBiomeFromValues(int biome, int temperature, int drainage, int rainfall, int evil,
             Region region)
     {
-        Biome river = Biome.REGISTRY.getObject(new ResourceLocation("river"));
-        if (temperature < TEMPERATE && !BiomeDictionary.isBiomeOfType(biome, Type.COLD))
+        Biome b = Biome.getBiome(biome);
+
+        if (temperature < TEMPERATE && !BiomeDictionary.hasType(b, Type.COLD))
         {
             boolean freezing = temperature < FREEZING;
             boolean matched = false;
-            if (freezing && (BiomeDictionary.isBiomeOfType(biome, Type.OCEAN)
-                    || BiomeDictionary.isBiomeOfType(biome, Type.RIVER) || BiomeDictionary.isBiomeOfType(biome, Type.BEACH)))
+            if (freezing && (BiomeDictionary.hasType(b, Type.OCEAN) || BiomeDictionary.hasType(b, Type.RIVER)
+                    || BiomeDictionary.hasType(b, Type.BEACH)))
             {
-                Biome temp = getMatch(biome, Type.SNOWY);
-                if (temp != biome)
+                Biome temp = getMatch(b, Type.SNOWY);
+                if (temp != b)
                 {
-                    biome = temp;
+                    b = temp;
                     matched = true;
                 }
                 if (!matched)
                 {
-                    biome = getMatch(biome, Type.COLD);
+                    b = getMatch(b, Type.COLD);
                 }
             }
-            else if (biome != river)
+            else if (b != Biomes.RIVER)
             {
                 // b = getMatch(b, Type.COLD);
             }
         }
 
         // if(true)
-        return biome;
+        return Biome.getIdForBiome(b);
         // //TODO finish this
         //
-        // if(temperature > WARM && !BiomeDictionary.isBiomeOfType(b, Type.HOT))
+        // if(temperature > WARM && !BiomeDictionary.hasType(b, Type.HOT))
         // {
         // b = getMatch(b, Type.HOT);
         // }
-        // if(rainfall > WET && !BiomeDictionary.isBiomeOfType(b, Type.WET))
+        // if(rainfall > WET && !BiomeDictionary.hasType(b, Type.WET))
         // {
         // b = getMatch(b, Type.WET);
         // }
-        // if(rainfall < DRY && !BiomeDictionary.isBiomeOfType(b, Type.DRY))
+        // if(rainfall < DRY && !BiomeDictionary.hasType(b, Type.DRY))
         // {
         // b = getMatch(b, Type.DRY);
         // }
@@ -81,10 +83,10 @@ public class BiomeList
         // if(region!=null)
         // {
         // if(region.type==RegionType.GLACIER &&
-        // BiomeDictionary.isBiomeOfType(b, Type.PLAINS))
+        // BiomeDictionary.hasType(b, Type.PLAINS))
         // {
-        // boolean cold = BiomeDictionary.isBiomeOfType(b, Type.COLD) ||
-        // BiomeDictionary.isBiomeOfType(b, Type.SNOWY);
+        // boolean cold = BiomeDictionary.hasType(b, Type.COLD) ||
+        // BiomeDictionary.hasType(b, Type.SNOWY);
         // if(!cold)
         // {
         // b = getMatch(Biome.icePlains, Type.SNOWY);
@@ -117,7 +119,7 @@ public class BiomeList
                 if (b != null) biomeArray.add(b);
             }
         }
-        Type[] existing = BiomeDictionary.getTypesForBiome(toMatch);
+        Set<Type> existing = BiomeDictionary.getTypes(toMatch);
         int i = rand.nextInt(123456);
         biomes:
         for (int j = 0; j < biomeArray.size(); j++)
@@ -125,10 +127,10 @@ public class BiomeList
             Biome b = biomeArray.get((j + i) % biomeArray.size());
             if (b != toMatch && b != null)
             {
-                if (!BiomeDictionary.isBiomeOfType(b, type)) continue;
+                if (!BiomeDictionary.hasType(b, type)) continue;
                 for (Type t : existing)
                 {
-                    if (!BiomeDictionary.isBiomeOfType(b, t)) continue biomes;
+                    if (!BiomeDictionary.hasType(b, t)) continue biomes;
                 }
                 return b;
             }

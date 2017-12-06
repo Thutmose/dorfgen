@@ -31,20 +31,20 @@ public class Commands extends CommandBase
     }
 
     @Override
-    public String getCommandName()
+    public String getName()
     {
         return "dorfgen";
     }
 
     @Override
-    public String getCommandUsage(ICommandSender sender)
+    public String getUsage(ICommandSender sender)
     {
         // TODO Auto-generated method stub
         return "dorfgen <text>";
     }
 
     @Override
-    public List<String> getCommandAliases()
+    public List<String> getAliases()
     {
         return aliases;
     }
@@ -88,10 +88,9 @@ public class Commands extends CommandBase
             {
                 int x = telesite.x * WorldGenerator.scale + WorldGenerator.scale;
                 int z = telesite.z * WorldGenerator.scale + WorldGenerator.scale;
-
                 int y = WorldGenerator.instance.dorfs.elevationMap[(x - WorldGenerator.shift.getX())
                         / WorldGenerator.scale][(z - WorldGenerator.shift.getZ()) / WorldGenerator.scale];
-                entity.addChatMessage(new TextComponentString("Teleported to " + telesite));
+                entity.sendMessage(new TextComponentString("Teleported to " + telesite));
                 entity.setPositionAndUpdate(x, y, z);
             }
         }
@@ -106,13 +105,13 @@ public class Commands extends CommandBase
             {
                 message += ", Site: " + site;
             }
-            entity.addChatMessage(new TextComponentString(message));
+            entity.sendMessage(new TextComponentString(message));
         }
     }
 
     @Override
-    public List<String> getTabCompletionOptions(MinecraftServer server, ICommandSender sender, String[] args,
-            @Nullable BlockPos pos)
+    public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args,
+            @Nullable BlockPos targetPos)
     {
         // TODO Auto-generated method stub
 
@@ -138,7 +137,7 @@ public class Commands extends CommandBase
                 String text = args[1];
                 for (String name : names)
                 {
-                    if (name.contains(text))
+                    if (name.startsWith(text))
                     {
                         ret.add(name);
                     }
@@ -146,7 +145,19 @@ public class Commands extends CommandBase
             }
             return ret;
         }
-        return null;
+        return super.getTabCompletions(server, sender, args, targetPos);
     }
 
+    @Override
+    public boolean isUsernameIndex(String[] p_82358_1_, int p_82358_2_)
+    {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public int getRequiredPermissionLevel()
+    {
+        return 4;
+    }
 }

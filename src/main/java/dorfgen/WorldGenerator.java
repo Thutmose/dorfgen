@@ -11,32 +11,44 @@ import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.SiteType;
 import dorfgen.conversion.FileLoader;
+import dorfgen.conversion.ISigmoid;
 import dorfgen.conversion.SiteMapColours;
 import dorfgen.conversion.SiteStructureGenerator;
-import dorfgen.worldgen.BiomeProviderFinite;
-import dorfgen.worldgen.MapGenSites.Start;
-import dorfgen.worldgen.WorldTypeFinite;
+import dorfgen.worldgen.common.MapGenSites.Start;
+import dorfgen.worldgen.cubic.WorldTypeCubic;
+import dorfgen.worldgen.vanilla.BiomeProviderFinite;
+import dorfgen.worldgen.vanilla.WorldTypeFinite;
+import net.minecraft.block.Block;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemBlock;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.WorldType;
 import net.minecraft.world.gen.structure.MapGenStructureIO;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.event.terraingen.DecorateBiomeEvent.Decorate;
 import net.minecraftforge.event.terraingen.DecorateBiomeEvent.Decorate.EventType;
 import net.minecraftforge.event.world.WorldEvent.Load;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Optional;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLLoadCompleteEvent;
+import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.eventhandler.Event.Result;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
-@Mod(modid = Reference.MOD_ID, name = Reference.MOD_NAME, version = Reference.VERSION, 
-dependencies = Reference.DEPSTRING, acceptableRemoteVersions = "*")
+@Mod(modid = WorldGenerator.MODID, name = WorldGenerator.NAME, version = "1.8", acceptableRemoteVersions = "*")
 public class WorldGenerator
 {
-    @Mod.Instance(Reference.MOD_ID)
+
+    public static final String          MODID        = "dorfgen";
+    public static final String          NAME         = "DF World Generator";
+
+    @Mod.Instance(MODID)
     public static WorldGenerator        instance;
 
     public BufferedImage                elevationMap;
@@ -54,6 +66,7 @@ public class WorldGenerator
 
     public static int                   scale;
     public static boolean               finite;
+    public static int                   yMin         = 0;
     public static BlockPos              spawn;
     public static BlockPos              shift;
     public static String                spawnSite    = "";
@@ -64,27 +77,62 @@ public class WorldGenerator
     public static String                configLocation;
     public static String                biomes;
 
+    public static Item                  debugItem    = new ItemDebug()
+            .setRegistryName(new ResourceLocation(MODID, "debugger"));
+    public static Block                 roadSurface  = new BlockRoadSurface()
+            .setRegistryName(new ResourceLocation(MODID, "road"));
+
     private final boolean[]             done         = { false };
 
     public WorldGenerator()
     {
+        MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.TERRAIN_GEN_BUS.register(this);
         instance = this;
+    }
+
+    @SubscribeEvent
+    public void registerI(RegistryEvent.Register<Item> event)
+    {
+        event.getRegistry().register(debugItem);
+        ItemBlock road = new ItemBlock(roadSurface);
+        road.setRegistryName(roadSurface.getRegistryName());
+        event.getRegistry().register(road);
+    }
+
+    @SubscribeEvent
+    public void registerB(RegistryEvent.Register<Block> event)
+    {
+        event.getRegistry().register(roadSurface);
     }
 
     @EventHandler
     public void preInit(FMLPreInitializationEvent e)
     {
-        MinecraftForge.EVENT_BUS.register(this);
-        MinecraftForge.TERRAIN_GEN_BUS.register(this);
         new Config(e);
         File file = e.getSuggestedConfigurationFile();
         String seperator = System.getProperty("file.separator");
 
         String folder = file.getAbsolutePath();
         String name = file.getName();
-        FileLoader.biomes = folder.replace(name, Reference.MOD_ID + seperator + "biomes.csv");
+        FileLoader.biomes = folder.replace(name, MODID + seperator + "biomes.csv");
         //
         MapGenStructureIO.registerStructure(Start.class, "dorfsitestart");
+
+        Thread dorfProcess = new Thread(new Runnable()
+        {
+
+            @Override
+            public void run()
+            {
+                new FileLoader();
+                dorfs.init();
+                structureGen.init();
+                done[0] = true;
+            }
+        });
+        dorfProcess.setName("dorfgen image processor");
+        dorfProcess.start();
         //
     }
 
@@ -92,28 +140,18 @@ public class WorldGenerator
     public void load(FMLInitializationEvent evt)
     {
         finiteWorldType = new WorldTypeFinite("finite");
+    }
 
-        Thread dorfProcess = new Thread(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                new FileLoader();
-                dorfs.init();
-                structureGen.init();
-                System.out.println("DF MAP LOADING COMPLETE");
-                done[0] = true;
-            }
-        });
-        dorfProcess.setName("dorfgen image processor");
-        dorfProcess.start();
-        try
-        {
-            // chunkClass = Class.forName("bigworld.storage.BigChunk");
-        }
-        catch (Exception e)
-        {
-        }
+    @Optional.Method(modid = "cubicchunks")
+    @EventHandler
+    public void loadCC(FMLInitializationEvent evt)
+    {
+        new WorldTypeCubic("cublic_finite");
+    }
+
+    @EventHandler
+    public void postInit(FMLPostInitializationEvent e)
+    {
     }
 
     @EventHandler
@@ -125,7 +163,11 @@ public class WorldGenerator
     @SubscribeEvent
     public void genEvent(Load evt)
     {
-        if (evt.getWorld().provider.getBiomeProvider() instanceof BiomeProviderFinite)
+        System.out.println("load");
+        
+        //TODO replace sigmoid accordingly here.
+//        if (true) return;
+        if (evt.getWorld().getBiomeProvider() instanceof BiomeProviderFinite)
         {
             if (!spawnSite.isEmpty())
             {

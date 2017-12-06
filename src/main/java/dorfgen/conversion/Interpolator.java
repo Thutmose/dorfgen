@@ -14,8 +14,7 @@ public class Interpolator
 
     public static class BicubicInterpolator extends CubicInterpolator
     {
-        private double[] arr = new double[4];
-
+        private double[] arr  = new double[4];
         public double getValue(double[][] p, double x, double y)
         {
             arr[0] = getValue(p[0], y);
@@ -48,19 +47,19 @@ public class Interpolator
             return (int) Math.round(getValue(arr, x, y));
         }
 
-        public Object interpolateBiome(Object[][] image, int xAbs, int yAbs, int scale)
+        public int interpolateBiome(int[][] image, int xAbs, int yAbs, int scale)
         {
             int pixelX = xAbs / scale;
             int pixelY = yAbs / scale;
 
-            if (pixelX >= image.length || pixelY >= image[0].length) return 0;
-
-            Object val = image[pixelX][pixelY];
+            if(pixelX>=image.length || pixelY>=image[0].length) return 0;
+            
+            int val = image[pixelX][pixelY];
             double x = (xAbs - scale * pixelX) / (double) scale, y = (yAbs - scale * pixelY) / (double) scale;
 
             double max = -1;
             int index = -1;
-            Object[] biomes = new Object[16];
+            int[] biomes = new int[16];
             for (int i = -1; i < 3; i++)
                 for (int k = -1; k < 3; k++)
                 {
@@ -73,7 +72,7 @@ public class Interpolator
                 }
             for (int n = 0; n < 16; n++)
             {
-                Object num = biomes[n];
+                int num = biomes[n];
                 double[][] arr = new double[4][4];
                 for (int i = 0; i < 16; i++)
                 {
@@ -95,15 +94,15 @@ public class Interpolator
 
     public static class CachedBicubicInterpolator
     {
-        private double     a00, a01, a02, a03;
-        private double     a10, a11, a12, a13;
-        private double     a20, a21, a22, a23;
-        private double     a30, a31, a32, a33;
+        private double a00, a01, a02, a03;
+        private double a10, a11, a12, a13;
+        private double a20, a21, a22, a23;
+        private double a30, a31, a32, a33;
 
         private double[][] arr = new double[4][4];
 
-        private int        lastX, lastY;
-        private int[][]    lastArr;
+        private int     lastX, lastY;
+        private int[][] lastArr;
 
         public int interpolate(double x, double y)
         {
@@ -114,7 +113,7 @@ public class Interpolator
         {
             int pixelX = xAbs / scale;
             int pixelY = yAbs / scale;
-            if (pixelX >= image.length || pixelY >= image[0].length) return 10;
+            if(pixelX>=image.length || pixelY>=image[0].length) return 10;
             updateCoefficients(image, pixelX, pixelY);
             int val = image[pixelX][pixelY];
             double x = (xAbs - scale * pixelX) / (double) scale, y = (yAbs - scale * pixelY) / (double) scale;

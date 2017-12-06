@@ -3,7 +3,9 @@ package dorfgen.conversion;
 import java.awt.Color;
 import java.util.HashMap;
 
+import dorfgen.BlockRoadSurface;
 import net.minecraft.block.BlockDirt;
+import net.minecraft.block.BlockDirt.DirtType;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 
@@ -73,7 +75,7 @@ public enum SiteMapColours
         if (point == ROAD)
         {
             ret[0] = Blocks.COBBLESTONE.getDefaultState();
-            ret[1] = Blocks.GRAVEL.getDefaultState();
+            ret[1] = BlockRoadSurface.uggrass.getDefaultState();
         }
         if (point == LIGHTYELLOWFARM)
         {
@@ -93,17 +95,17 @@ public enum SiteMapColours
         if (point == BROWNFARMSPACER)
         {
             ret[0] = Blocks.WATER.getDefaultState();
-            ret[1] = Blocks.DIRT.getDefaultState().withProperty(BlockDirt.VARIANT, BlockDirt.DirtType.PODZOL);
+            ret[1] = Blocks.DIRT.getDefaultState().withProperty(BlockDirt.VARIANT, DirtType.PODZOL);
         }
         if (point == YELLOWFARMSPACER)
         {
             ret[0] = Blocks.WATER.getDefaultState();
-            ret[1] = Blocks.DIRT.getDefaultState().withProperty(BlockDirt.VARIANT, BlockDirt.DirtType.PODZOL);
+            ret[1] = Blocks.DIRT.getDefaultState().withProperty(BlockDirt.VARIANT, DirtType.PODZOL);
         }
         if (point == LIGHTYELLOWFARMSPACER)
         {
             ret[0] = Blocks.WATER.getDefaultState();
-            ret[1] = Blocks.DIRT.getDefaultState().withProperty(BlockDirt.VARIANT, BlockDirt.DirtType.PODZOL);
+            ret[1] = Blocks.DIRT.getDefaultState().withProperty(BlockDirt.VARIANT, DirtType.PODZOL);
         }
 
         if (point == RIVER)
