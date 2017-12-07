@@ -1,67 +1,91 @@
 package dorfgen.worldgen.cubic;
 
-import static dorfgen.WorldGenerator.scale;
-
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 
 import com.google.common.collect.Maps;
 
+import cubicchunks.api.worldgen.biome.CubicBiome;
+import cubicchunks.api.worldgen.populator.CubePopulatorEvent;
+import cubicchunks.api.worldgen.populator.ICubicPopulator;
 import cubicchunks.util.Box;
+import cubicchunks.util.Coords;
+import cubicchunks.util.CubePos;
 import cubicchunks.world.ICubicWorld;
 import cubicchunks.world.cube.Cube;
 import cubicchunks.worldgen.generator.BasicCubeGenerator;
+import cubicchunks.worldgen.generator.CubeGeneratorsRegistry;
 import cubicchunks.worldgen.generator.CubePrimer;
 import cubicchunks.worldgen.generator.ICubePrimer;
-import cubicchunks.worldgen.generator.custom.CustomGeneratorSettings;
 import cubicchunks.worldgen.generator.custom.biome.replacer.IBiomeBlockReplacer;
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.ISigmoid;
-import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
+import dorfgen.worldgen.common.BiomeProviderFinite;
+import dorfgen.worldgen.common.CachedInterpolator;
+import dorfgen.worldgen.common.MapGenSites;
 import dorfgen.worldgen.common.RiverMaker;
-import dorfgen.worldgen.common.WorldConstructionMaker;
+import dorfgen.worldgen.common.RoadMaker;
+import dorfgen.worldgen.common.SiteMaker;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
+import net.minecraftforge.common.MinecraftForge;
 
 public class CubeGeneratorFinite extends BasicCubeGenerator
 {
+    public CachedInterpolator                          elevationInterpolator = new CachedInterpolator();
+    public CachedInterpolator                          waterInterpolator     = new CachedInterpolator();
+    public CachedBicubicInterpolator                   cachedInterpolator    = new CachedBicubicInterpolator();
+    public RiverMaker                                  riverMaker            = new RiverMaker();
+    public RoadMaker                                   roadMaker             = new RoadMaker();
+    public MapGenSites                                 villageGenerator      = new MapGenSites();
+    public SiteMaker                                   constructor           = new SiteMaker();
 
-    public BicubicInterpolator                         bicubicInterpolator = new BicubicInterpolator();
-    public CachedBicubicInterpolator                   cachedInterpolator  = new CachedBicubicInterpolator();
-    private RiverMaker                                 riverMaker          = new RiverMaker();
-    private WorldConstructionMaker                     constructor         = new WorldConstructionMaker();
-
-    private int                                        lastX               = Integer.MIN_VALUE,
+    private int                                        lastX                 = Integer.MIN_VALUE,
             lastZ = Integer.MIN_VALUE;
     private Random                                     rand;
     private Biome[]                                    biomesForGeneration;
+    private boolean                                    generateSites         = true;
+    private boolean                                    generateConstructions = false;
+    private boolean                                    generateRivers        = true;
+    private int                                        scale                 = WorldGenerator.scale;
 
-    private Map<ResourceLocation, IBiomeBlockReplacer> replacerMap         = Maps.newHashMap();
-
-    private final CustomGeneratorSettings              conf;
+    private Map<ResourceLocation, IBiomeBlockReplacer> replacerMap           = Maps.newHashMap();
 
     public CubeGeneratorFinite(ICubicWorld world)
     {
         super(world);
         this.rand = new Random();
-
         String json = world.getWorldInfo().getGeneratorOptions();
-        this.conf = CustomGeneratorSettings.fromJson(json);
-        WorldGenerator.scale = 51;
+        final GeneratorInfo info = GeneratorInfo.fromJson(json);
+
         WorldGenerator.instance.dorfs.setElevationSigmoid(new ISigmoid()
         {
             @Override
             public int elevationSigmoid(int preHeight)
             {
-                return (preHeight) * 8;
+                return (preHeight) * info.scalev;
             }
         });
+
+        scale = info.scaleh;
+        generateConstructions = info.constructs;
+        generateRivers = info.rivers;
+        generateSites = info.sites;
+        riverMaker.setRespectsSites(generateSites).setScale(scale);
+        roadMaker.setRespectsSites(generateSites).setScale(scale);
+        riverMaker.bicubicInterpolator = elevationInterpolator;
+        roadMaker.bicubicInterpolator = elevationInterpolator;
+        constructor.setScale(scale);
+        villageGenerator.setScale(scale);
+        WorldGenerator.instance.dorfs.setScale(scale);
+        WorldGenerator.instance.structureGen.setScale(scale);
+        ((BiomeProviderFinite) world.getBiomeProvider()).scale = scale;
         initGenerator(world.getSeed());
     }
 
@@ -93,7 +117,7 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
                         }
                         else
                         {
-                            h1 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x, z,
+                            h1 = elevationInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x, z,
                                     scale);
                             h1 -= y;
                             // Cube at this point is above ground.
@@ -136,7 +160,7 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
                 }
                 else
                 {
-                    h1 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x + i1, z + k1,
+                    h1 = elevationInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x + i1, z + k1,
                             scale);
                 }
                 h1 -= yMin;
@@ -158,7 +182,8 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
         int b0 = (int) (world.getProvider().getHorizon());
         int yMin = y * 16;
         b0 -= yMin;
-        int x1, z1, w = 0;
+        int x1, z1;
+        // int w = 0;
         int rx = x * 16;
         int rz = z * 16;
 
@@ -174,6 +199,8 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
                 }
                 else
                 {
+                    // TODO fill in lakes here? might need to check rivers or
+                    // something for whether it should fill.
                     // w =
                     // bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap,
                     // rx + i, rz + k,
@@ -201,6 +228,7 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
     {
         this.rand.setSeed((long) cubeX * 341873128712L + (long) cubeZ * 132897987541L);
         CubePrimer primer = new CubePrimer();
+        elevationInterpolator.initImage(WorldGenerator.instance.dorfs.elevationMap, cubeX, cubeZ, 32, scale);
         if (lastX != cubeX || lastZ != cubeZ) this.biomesForGeneration = this.world.getBiomeProvider()
                 .getBiomes(this.biomesForGeneration, cubeX * 16, cubeZ * 16, 16, 16);
         lastX = cubeX;
@@ -209,29 +237,62 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
 
         int imgX = cubeX * 16 - WorldGenerator.shift.getX();
         int imgZ = cubeZ * 16 - WorldGenerator.shift.getZ();
+        int x = imgX;
+        int z = imgZ;
+        int yMin = cubeY * 16;
+        int yMax = cubeY * 16 + 15;
+        boolean imgGen = false;
+        PrimerWrapper wrapper = new PrimerWrapper(primer);
         if (imgX >= 0 && imgZ >= 0 && (imgX + 16) / scale <= WorldGenerator.instance.dorfs.elevationMap.length
                 && (imgZ + 16) / scale <= WorldGenerator.instance.dorfs.elevationMap[0].length)
         {
-            int x = imgX;
-            int z = imgZ;
-            int yMin = cubeY * 16;
-            int yMax = cubeY * 16 + 15;
-            PrimerWrapper wrapper = new PrimerWrapper(primer);
+            imgGen = true;
             populateBlocksFromImage(scale, cubeX, cubeY, cubeZ, primer);
-//            riverMaker.makeRiversForChunk((World) world, cubeX, cubeZ, wrapper, biomesForGeneration, yMin, yMax);
-            constructor.buildSites((World) world, cubeX, cubeZ, wrapper, biomesForGeneration, yMin, yMax);
-//            constructor.buildRoads((World) world, cubeX, cubeZ, wrapper, biomesForGeneration, yMin, yMax);
             makeBeaches(scale, x / scale, cubeY, z / scale, primer);
         }
         this.replaceBiomeBlocks(world, cubeX, cubeY, cubeZ, primer, biomesForGeneration);
+
+        // this.villageGenerator.generate((World) world, cubeX, cubeZ, wrapper);
         fillOceans(cubeX, cubeY, cubeZ, primer);
+        if (imgGen)
+        {
+            if (generateRivers)
+                riverMaker.makeRiversForChunk((World) world, cubeX, cubeZ, wrapper, biomesForGeneration, yMin, yMax);
+            if (generateSites)
+                constructor.buildSites((World) world, cubeX, cubeZ, wrapper, biomesForGeneration, yMin, yMax);
+            if (generateConstructions)
+                roadMaker.buildRoads((World) world, cubeX, cubeZ, wrapper, biomesForGeneration, yMin, yMax);
+        }
         return primer;
     }
 
     @Override
     public void populate(Cube cube)
     {
-        // TODO site structure generator for cubes
+        /** If event is not canceled we will use default biome decorators and
+         * cube populators from registry. **/
+        if (!MinecraftForge.EVENT_BUS.post(new CubePopulatorEvent(world, cube)))
+        {
+            elevationInterpolator.initImage(WorldGenerator.instance.dorfs.elevationMap, cube.getX(), cube.getZ(), 32,
+                    scale);
+            int y = cube.getY();
+            if (generateSites) WorldGenerator.instance.structureGen.generate(cube.getX(), cube.getZ(), (World) world,
+                    y * 16, y * 16 + 15);
+            if (generateRivers) riverMaker.postInitRivers((World) world, cube.getX(), cube.getZ(), y * 16, y * 16 + 15);
+
+            CubicBiome biome = CubicBiome.getCubic(cube.getCubicWorld().getBiome(Coords.getCubeCenter(cube)));
+            CubePos pos = cube.getCoords();
+            // For surface generators we should actually use special RNG with
+            // seed
+            // that depends only in world seed and cube X/Z
+            // but using this for surface generation doesn't cause any
+            // noticeable issues
+            Random rand = new Random(cube.cubeRandomSeed());
+
+            ICubicPopulator decorator = biome.getDecorator();
+            decorator.generate(world, rand, pos, biome);
+            CubeGeneratorsRegistry.generateWorld(world, rand, pos, biome);
+        }
     }
 
     /** Retrieve the blockstate appropriate for the specified builder entry

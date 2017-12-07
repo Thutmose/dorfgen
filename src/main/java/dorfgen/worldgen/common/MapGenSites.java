@@ -1,7 +1,5 @@
 package dorfgen.worldgen.common;
 
-import static dorfgen.WorldGenerator.scale;
-
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -29,13 +27,19 @@ import net.minecraftforge.common.DungeonHooks;
 
 public class MapGenSites extends MapGenVillage
 {
-    HashSet<Integer> set       = new HashSet<Integer>();
-    HashSet<Integer> made      = new HashSet<Integer>();
-    Site             siteToGen = null;
+    HashSet<Integer>   set       = new HashSet<Integer>();
+    HashSet<Integer>   made      = new HashSet<Integer>();
+    Site               siteToGen = null;
+    private static int scale     = WorldGenerator.scale;
 
     public MapGenSites()
     {
         super();
+    }
+
+    public void setScale(int scale)
+    {
+        MapGenSites.scale = scale;
     }
 
     public MapGenSites(Map<String, String> p_i2093_1_)
@@ -70,7 +74,7 @@ public class MapGenSites extends MapGenVillage
         return false;
     }
 
-    public static boolean shouldSiteSpawn(int x, int z, Site site)
+    public boolean shouldSiteSpawn(int x, int z, Site site)
     {
         if (site.type == SiteType.LAIR)
         {

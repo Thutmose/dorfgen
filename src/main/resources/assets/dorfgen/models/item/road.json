@@ -1,5 +1,5 @@
 {
-    "parent": "block/road",
+    "parent": "block/gravel",
 	"textures": {
 		"layer0": "blocks/gravel"
 	},

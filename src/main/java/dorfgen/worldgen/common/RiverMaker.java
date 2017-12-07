@@ -1,6 +1,5 @@
 package dorfgen.worldgen.common;
 
-import static dorfgen.WorldGenerator.scale;
 import static net.minecraft.util.EnumFacing.EAST;
 import static net.minecraft.util.EnumFacing.NORTH;
 import static net.minecraft.util.EnumFacing.SOUTH;
@@ -14,54 +13,102 @@ import javax.vecmath.Vector3d;
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Site;
-import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.conversion.SiteStructureGenerator.RiverExit;
 import dorfgen.conversion.SiteStructureGenerator.SiteStructures;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.BlockPos.MutableBlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.ChunkPrimer;
 
-public class RiverMaker
+public class RiverMaker extends PathMaker
 {
-    public static BicubicInterpolator bicubicInterpolator = new BicubicInterpolator();
     public static DorfMap             dorfs;
 
     public RiverMaker()
     {
         dorfs = WorldGenerator.instance.dorfs;
-        // TODO Auto-generated constructor stub
     }
 
-    public void makeRiversForChunk(World world, int chunkX, int chunkZ, ChunkPrimer primer, Biome[] biomes, int minY, int maxY)
+    public void postInitRivers(World world, int chunkX, int chunkZ, int minY, int maxY)
     {
-
-        // if(true)
-        // return;
-        //
         int x = (chunkX * 16 - WorldGenerator.shift.getX());
         int z = (chunkZ * 16 - WorldGenerator.shift.getZ());
-        int x1, z1, h;
+        int x1, z1;
+        MutableBlockPos pos = new MutableBlockPos();
         for (int i1 = 0; i1 < 16; i1++)
         {
             for (int k1 = 0; k1 < 16; k1++)
             {
                 x1 = (x + i1);
                 z1 = (z + k1);
-                if (x1 >= WorldGenerator.instance.dorfs.waterMap.length
-                        || z1 >= WorldGenerator.instance.dorfs.waterMap[0].length)
+                if (isInRiver(x1, z1)) for (int y = minY; y <= maxY; y++)
+                {
+                    pos.setPos(x1, y, z1);
+                    IBlockState state = world.getBlockState(pos);
+                    if (state.getMaterial().isLiquid())
+                    {
+                        world.notifyNeighborsOfStateChange(pos, state.getBlock(), true);
+                    }
+                }
+
+            }
+        }
+    }
+
+    public void makeRiversForChunk(World world, int chunkX, int chunkZ, ChunkPrimer primer, Biome[] biomes, int minY,
+            int maxY)
+    {
+        int x = (chunkX * 16 - WorldGenerator.shift.getX());
+        int z = (chunkZ * 16 - WorldGenerator.shift.getZ());
+        int x1, z1, x2, z2, h;
+        boolean skip = false;
+        boolean oob = false;
+        for (int i1 = 0; i1 < 16; i1++)
+        {
+            for (int k1 = 0; k1 < 16; k1++)
+            {
+                x1 = (x + i1);
+                z1 = (z + k1);
+                x2 = (x + i1 + 1);
+                z2 = (z + k1 + 1);
+
+                if (x2 / scale + x2 % scale >= WorldGenerator.instance.dorfs.waterMap.length
+                        || z2 / scale + z2 % scale >= WorldGenerator.instance.dorfs.waterMap[0].length)
                 {
                     h = 1;
+                    skip = true;
                 }
-                else h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x + i1, z + k1,
-                        scale);
+                else
+                {
+                    h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1, scale);
+                    int minS = h;
+                    if (x1 > 0 && z1 > 0) for (EnumFacing side : EnumFacing.HORIZONTALS)
+                    {
+                        int h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap,
+                                x1 + side.getFrontOffsetX(), z1 + side.getFrontOffsetZ(), scale);
+                        if (h2 > h - 1) minS = Math.min(minS, h2);
+                    }
+                    h = minS;
+                }
+                oob = (h < minY - 4) || (h > maxY + 4);
+                if (oob || skip) continue;
                 boolean river = isInRiver(x1, z1);
                 if (!river) continue;
-                int j = h - 1;
-                for (int i = 0; i < 3; i++)
-                    if (j - i > WorldGenerator.yMin) primer.setBlockState(i1, j - i, k1, Blocks.WATER.getDefaultState());
+                int y = h;
+                for (int i = 1; i < 4; i++)
+                {
+                    y = h - i - minY;
+                    if (y >= WorldGenerator.yMin) primer.setBlockState(i1, y, k1, Blocks.WATER.getDefaultState());
+                }
+                for (int i = 0; i < 4; i++)
+                {
+                    y = h + i - minY;
+                    if (y >= WorldGenerator.yMin) primer.setBlockState(i1, y, k1, Blocks.AIR.getDefaultState());
+                }
             }
         }
     }
@@ -69,7 +116,7 @@ public class RiverMaker
     static Color        STRMAPRIVER = new Color(0, 192, 255);
     static EnumFacing[] DIRS        = { EAST, WEST, NORTH, SOUTH };
 
-    public static boolean[] getRiverDirection(int xAbs, int zAbs)
+    public boolean[] getRiverDirection(int xAbs, int zAbs)
     {
         boolean[] ret = new boolean[4];
 
@@ -93,13 +140,14 @@ public class RiverMaker
         return ret;
     }
 
-    private static boolean isRiver(int x, int z)
+    private boolean isRiver(int x, int z)
     {
         int kx = x / scale;// Abs/(scale);
         int kz = z / scale;// Abs/(scale);
         int key = kx + 8192 * kz;
         if (kx >= WorldGenerator.instance.dorfs.waterMap.length
                 || kz >= WorldGenerator.instance.dorfs.waterMap[0].length) { return false; }
+        if (kx < 0 || kz < 0) return false;
 
         int rgb = dorfs.structureMap[kx][kz];
         Color col1 = new Color(rgb);
@@ -138,7 +186,7 @@ public class RiverMaker
         return river;
     }
 
-    public static boolean isInRiver(int x1, int z1)
+    public boolean isInRiver(int x1, int z1)
     {
         int x = x1, z = z1;
         boolean river = false;
@@ -149,7 +197,7 @@ public class RiverMaker
         Site site;
         HashSet<Site> ret = DorfMap.sitesByCoord.get(key);
         boolean hasRivers = false;
-        if (ret != null)
+        if (respectsSites && ret != null)
         {
             for (Site s : ret)
             {
@@ -163,8 +211,9 @@ public class RiverMaker
                 }
             }
         }
-        boolean[] dirs = RiverMaker.getRiverDirection(x1, z1);
+        boolean[] dirs = getRiverDirection(x1, z1);
         int width = 3 * scale / SiteStructureGenerator.SITETOBLOCK;
+        width = Math.max(3, width);
         river = dirs[0] || dirs[1] || dirs[2] || dirs[3];
         int[] point1 = null;
         int[] point2 = null;
@@ -178,7 +227,8 @@ public class RiverMaker
             if (dirs[3])
             {
                 key = kx + 8192 * (kz + 1);
-                ret = DorfMap.sitesByCoord.get(key);
+                ret = null;
+                if (respectsSites) ret = DorfMap.sitesByCoord.get(key);
                 int[] nearest = null;
                 if (ret != null)
                 {
@@ -210,7 +260,8 @@ public class RiverMaker
             if (dirs[1])
             {
                 key = (kx - 1) + 8192 * (kz);
-                ret = DorfMap.sitesByCoord.get(key);
+                ret = null;
+                if (respectsSites) ret = DorfMap.sitesByCoord.get(key);
                 int[] nearest = null;
                 if (ret != null)
                 {
@@ -242,7 +293,8 @@ public class RiverMaker
             if (dirs[2])
             {
                 key = kx + 8192 * (kz - 1);
-                ret = DorfMap.sitesByCoord.get(key);
+                ret = null;
+                if (respectsSites) ret = DorfMap.sitesByCoord.get(key);
                 int[] nearest = null;
                 if (ret != null)
                 {
@@ -271,15 +323,15 @@ public class RiverMaker
                 }
                 if (ret == null || isRiver(nearest[0], nearest[1]))
                 {
-                    // System.out.println(Arrays.toString(nearest));
                     point3 = nearest;
                 }
             }
             if (dirs[0])
             {
                 key = (kx + 1) + 8192 * (kz);
-                ret = DorfMap.sitesByCoord.get(key);
                 int[] nearest = null;
+                ret = null;
+                if (respectsSites) ret = DorfMap.sitesByCoord.get(key);
                 if (ret != null)
                 {
                     for (Site s : ret)
@@ -305,6 +357,7 @@ public class RiverMaker
                 {
                     nearest = new int[] { (kx + 1) * scale, (kz) * scale + offset };
                 }
+
                 if (ret == null || isRiver(nearest[0], nearest[1])) point4 = nearest;
 
             }
@@ -312,9 +365,13 @@ public class RiverMaker
 
         try
         {
-            // System.out.println(Arrays.toString(point1)+"
-            // "+Arrays.toString(point2) +" "+Arrays.toString(point3)+"
-            // "+Arrays.toString(point4)+" "+river);
+            //@formatter:off
+//            System.out.println(Arrays.toString(point1) + 
+//                    "  " + Arrays.toString(point2) + 
+//                    "  " + Arrays.toString(point3)+ 
+//                    "  " + Arrays.toString(point4) + 
+//                    "  " + river);
+            //@formatter:on
         }
         catch (Exception e)
         {

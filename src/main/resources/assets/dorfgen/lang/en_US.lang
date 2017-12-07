@@ -1,0 +1,3 @@
+generator.cubic_finite=DorfGen CC
+generator.finite=Dorfgen
+tile.roadgravel.name=Road Gravel

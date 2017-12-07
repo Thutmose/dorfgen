@@ -1,7 +1,5 @@
 package dorfgen.conversion;
 
-import static dorfgen.WorldGenerator.scale;
-
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -49,6 +47,8 @@ public class DorfMap
                                                                                     {
                                                                                     };
 
+    static int                                                 scale                = WorldGenerator.scale;
+
     static void addSiteByCoord(int x, int z, Site site)
     {
         int coord = x + 8192 * z;
@@ -63,6 +63,11 @@ public class DorfMap
 
     public DorfMap()
     {
+    }
+
+    public void setScale(int scale)
+    {
+        DorfMap.scale = scale;
     }
 
     public void init()
@@ -142,9 +147,9 @@ public class DorfMap
                     }
             }
         }
-        System.out.println(max+" "+min);
-        //Don't clear the elevation map, it is needed again if sigmoid changes.
-//        WorldGenerator.instance.elevationMap = null;
+        System.out.println(max + " " + min);
+        // Don't clear the elevation map, it is needed again if sigmoid changes.
+        // WorldGenerator.instance.elevationMap = null;
     }
 
     public void populateWaterMap()
@@ -672,6 +677,18 @@ public class DorfMap
             z = z / (scale * 16);
             int key = x + 2048 * z;
             return worldCoords.contains(key);
+        }
+
+        public int getYValue(int x, int surfaceY, int z)
+        {
+            x = x / (scale);
+            z = z / (scale);
+            int key = x + 8192 * z;
+            if (!embarkCoords.containsKey(key)) return Integer.MIN_VALUE;
+            Integer i = embarkCoords.get(key);
+            if (i == -1) return surfaceY;
+            return WorldGenerator.instance.dorfs.sigmoid.elevationSigmoid(i);
+
         }
 
         public boolean isInConstruct(int x, int y, int z)

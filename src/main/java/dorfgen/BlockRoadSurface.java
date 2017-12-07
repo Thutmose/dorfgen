@@ -15,8 +15,6 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 public class BlockRoadSurface extends BlockFalling
 {
-	public static BlockRoadSurface uggrass;
-
 	protected BlockRoadSurface()
 	{
 		super(Material.SAND);
@@ -24,7 +22,6 @@ public class BlockRoadSurface extends BlockFalling
 		this.setCreativeTab(CreativeTabs.BUILDING_BLOCKS);
 		this.setHardness(0.6F).setUnlocalizedName("roadgravel");
 		this.setTickRandomly(true);
-		uggrass = this;
 	}
 
 	@Override

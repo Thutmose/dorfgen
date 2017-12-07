@@ -1,7 +1,12 @@
 package dorfgen.worldgen.vanilla;
 
+import dorfgen.worldgen.common.BiomeProviderFinite;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiCreateWorld;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldType;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 public class WorldTypeFinite extends WorldType
 {
@@ -32,5 +37,18 @@ public class WorldTypeFinite extends WorldType
     public float getCloudHeight()
     {
         return 200.0F;
+    }
+
+    @Override
+    public boolean isCustomizable()
+    {
+        return true;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public void onCustomizeButton(Minecraft mc, GuiCreateWorld guiCreateWorld)
+    {
+        mc.displayGuiScreen(
+                new dorfgen.client.GuiCustomizeWorld(guiCreateWorld, guiCreateWorld.chunkProviderSettingsJson, false));
     }
 }

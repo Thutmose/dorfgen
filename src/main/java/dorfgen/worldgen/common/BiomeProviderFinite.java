@@ -1,6 +1,4 @@
-package dorfgen.worldgen.cubic;
-
-import static dorfgen.WorldGenerator.scale;
+package dorfgen.worldgen.common;
 
 import java.util.List;
 
@@ -15,7 +13,7 @@ import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeProvider;
 import net.minecraft.world.gen.structure.MapGenVillage;
 
-public class BiomeProviderCubic extends BiomeProvider
+public class BiomeProviderFinite extends BiomeProvider
 {
     /** The biomes that are used to generate the chunk */
     private Biome[]                  biomesForGeneration = new Biome[256];
@@ -25,13 +23,14 @@ public class BiomeProviderCubic extends BiomeProvider
     public BicubicInterpolator       biomeInterpolator   = new BicubicInterpolator();
     public CachedBicubicInterpolator heightInterpolator  = new CachedBicubicInterpolator();
     public CachedBicubicInterpolator miscInterpolator    = new CachedBicubicInterpolator();
+    public int                       scale               = WorldGenerator.scale;
 
-    public BiomeProviderCubic()
+    public BiomeProviderFinite()
     {
         super();
     }
 
-    public BiomeProviderCubic(World world)
+    public BiomeProviderFinite(World world)
     {
         super(world.getWorldInfo());
     }
@@ -99,16 +98,14 @@ public class BiomeProviderCubic extends BiomeProvider
      * @param blocks */
     private Biome[] makeBiomes(Biome[] biomes, int scale, int x, int z)
     {
-        int gridSize = 16;
-        int blockSize = 1;
         int index;
-        for (int i1 = 0; i1 < gridSize; i1++)
+        for (int i1 = 0; i1 < 16; i1++)
         {
-            for (int k1 = 0; k1 < gridSize; k1++)
+            for (int k1 = 0; k1 < 16; k1++)
             {
-                index = (i1) + (k1) * gridSize;
-                int biome = getBiomeFromMaps(x + (i1 * blockSize) - WorldGenerator.shift.getX(),
-                        z + (k1 * blockSize) - WorldGenerator.shift.getZ());
+                index = (i1) + (k1) * 16;
+                int biome = getBiomeFromMaps(x + i1 - WorldGenerator.shift.getX(),
+                        z + k1 - WorldGenerator.shift.getZ());
 
                 biomes[index] = Biome.getBiome(biome);
             }
@@ -137,6 +134,7 @@ public class BiomeProviderCubic extends BiomeProvider
         int h1 = hasHeightmap ? heightInterpolator.interpolateHeight(scale, x, z, dorfs.elevationMap) : 64;
         int t1 = hasThermalMap ? miscInterpolator.interpolateHeight(scale, x, z, dorfs.temperatureMap) : 128;
 
+        // TODO here define high/deep based on some better method.
         if (h1 > 60 && (temp == Biomes.DEEP_OCEAN || temp == Biomes.OCEAN))
         {
             temp = Biomes.BEACH;

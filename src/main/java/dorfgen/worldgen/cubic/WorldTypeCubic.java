@@ -5,10 +5,15 @@ import cubicchunks.world.ICubicWorld;
 import cubicchunks.world.type.ICubicWorldType;
 import cubicchunks.worldgen.generator.ICubeGenerator;
 import dorfgen.WorldGenerator;
+import dorfgen.worldgen.common.BiomeProviderFinite;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiCreateWorld;
 import net.minecraft.world.DimensionType;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.WorldType;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 public class WorldTypeCubic extends WorldType implements ICubicWorldType
 {
@@ -22,7 +27,7 @@ public class WorldTypeCubic extends WorldType implements ICubicWorldType
     @Override
     public net.minecraft.world.biome.BiomeProvider getBiomeProvider(World world)
     {
-        return new BiomeProviderCubic(world);
+        return new BiomeProviderFinite(world);
     }
 
     /** Get the height to render the clouds for this world type
@@ -31,7 +36,7 @@ public class WorldTypeCubic extends WorldType implements ICubicWorldType
     @Override
     public float getCloudHeight()
     {
-        return 2000.0F;
+        return WorldGenerator.instance.dorfs.sigmoid.elevationSigmoid(128);
     }
 
     @Override
@@ -50,5 +55,18 @@ public class WorldTypeCubic extends WorldType implements ICubicWorldType
     public IntRange calculateGenerationHeightRange(WorldServer world)
     {
         return new IntRange(-2048, 2048);
+    }
+
+    @Override
+    public boolean isCustomizable()
+    {
+        return true;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public void onCustomizeButton(Minecraft mc, GuiCreateWorld guiCreateWorld)
+    {
+        mc.displayGuiScreen(
+                new dorfgen.client.GuiCustomizeWorld(guiCreateWorld, guiCreateWorld.chunkProviderSettingsJson, true));
     }
 }

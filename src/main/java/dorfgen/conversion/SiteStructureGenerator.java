@@ -1,7 +1,5 @@
 package dorfgen.conversion;
 
-import static dorfgen.WorldGenerator.scale;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -37,9 +35,18 @@ public class SiteStructureGenerator
     public static int                SITETOBLOCK  = 51;
     HashMap<Integer, SiteStructures> structureMap = new HashMap<Integer, SiteStructures>();
 
+    private int                      minY         = 0;
+    private int                      maxY         = 255;
+    private int                      scale        = WorldGenerator.scale;
+
     public SiteStructureGenerator(DorfMap dorfs_)
     {
         dorfs = dorfs_;
+    }
+
+    public void setScale(int scale)
+    {
+        this.scale = scale;
     }
 
     public void init()
@@ -62,7 +69,7 @@ public class SiteStructureGenerator
         IBlockState state = world.getBlockState(pos);
 
         state = state.cycleProperty(BlockLever.POWERED);
-        world.setBlockState(pos, state, 3);
+        setBlock(world, pos, state, 3);
         world.notifyNeighborsOfStateChange(pos, state.getBlock(), false);
         EnumFacing enumfacing1 = ((BlockLever.EnumOrientation) state.getValue(BlockLever.FACING)).getFacing();
         world.notifyNeighborsOfStateChange(pos.offset(enumfacing1.getOpposite()), state.getBlock(), false);
@@ -142,10 +149,27 @@ public class SiteStructureGenerator
             enumfacing1 = (EnumFacing) iterator.next();
         }
         while (!world.isSideSolid(pos.offset(enumfacing1.getOpposite()), enumfacing1, true));
-
         state = Blocks.TORCH.getDefaultState().withProperty(BlockTorch.FACING, enumfacing1);
+        setBlock(world, pos, state);
+    }
 
-        world.setBlockState(pos, state);
+    void setBlock(World world, BlockPos pos, IBlockState state, int flag)
+    {
+        if (pos.getY() >= minY && pos.getY() >= maxY)
+        {
+            world.setBlockState(pos, state, flag);
+        }
+    }
+
+    void setBlock(World world, BlockPos pos, IBlockState state)
+    {
+        setBlock(world, pos, state, 3);
+    }
+
+    IBlockState getBlock(World world, BlockPos pos)
+    {
+        if (pos.getY() >= minY && pos.getY() >= maxY) { return world.getBlockState(pos); }
+        return Blocks.AIR.getDefaultState();
     }
 
     /** Takes Chunk Coordinates
@@ -154,10 +178,10 @@ public class SiteStructureGenerator
      * @param x
      * @param z
      * @param world */
-    public void generate(int chunkX, int chunkZ, World world)
+    public void generate(int chunkX, int chunkZ, World world, int minY, int maxY)
     {
-
-        int scale = WorldGenerator.scale;
+        this.maxY = maxY;
+        this.minY = minY;
         int x = chunkX, z = chunkZ, x1, x2, z1, z2;
         x *= 16;
         z *= 16;
@@ -189,11 +213,12 @@ public class SiteStructureGenerator
                     if (wall != null)
                     {
                         h = dorfs.biomeInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
+                        if (h < minY - 32 || h < maxY + 32) continue;
 
                         boolean surrounded = isBlockSurroundedByWall(site, structures, wall, x1, z1);
 
-                        world.setBlockState(new BlockPos(x2, h - 1, z2), Blocks.STONEBRICK.getDefaultState());
-                        world.setBlockState(new BlockPos(x2, h - 2, z2), Blocks.STONEBRICK.getDefaultState());
+                        setBlock(world, new BlockPos(x2, h - 1, z2), Blocks.STONEBRICK.getDefaultState());
+                        setBlock(world, new BlockPos(x2, h - 2, z2), Blocks.STONEBRICK.getDefaultState());
                         for (int k = h; k < h + 6; k++)
                         {
                             if (k < h + 3 || k >= h + 4)
@@ -202,19 +227,18 @@ public class SiteStructureGenerator
                                 {
                                     if (k == h + 5)
                                     {
-                                        if ((x1 + z1) % 3 > 0) world.setBlockState(new BlockPos(x2, k, z2),
+                                        if ((x1 + z1) % 3 > 0) setBlock(world, new BlockPos(x2, k, z2),
                                                 Blocks.STONEBRICK.getDefaultState());
                                     }
                                     else
                                     {
-                                        world.setBlockState(new BlockPos(x2, k, z2),
-                                                Blocks.STONEBRICK.getDefaultState());
+                                        setBlock(world, new BlockPos(x2, k, z2), Blocks.STONEBRICK.getDefaultState());
                                     }
                                 }
                             }
                             else
                             {
-                                world.setBlockState(new BlockPos(x2, k, z2), Blocks.STONEBRICK.getDefaultState());
+                                setBlock(world, new BlockPos(x2, k, z2), Blocks.STONEBRICK.getDefaultState());
                             }
                         }
                     }
@@ -237,37 +261,40 @@ public class SiteStructureGenerator
                         }
 
                         h = struct.getFloor(site, scale);
+
+                        if (h < minY - 32 || h < maxY + 32) continue;
+
                         boolean inWall;
                         if (inWall = struct.inWall(site, x1, z1, scale))
                         {
                             for (int l = 0; l < height; l++)
                             {
-                                world.setBlockState(new BlockPos(x2, h + l, z2), material.getDefaultState(), 2);
+                                setBlock(world, new BlockPos(x2, h + l, z2), material.getDefaultState(), 2);
                             }
                         }
                         else
                         {
                             for (int l = height - 1; l >= -1; l--)
                             {
-                                world.setBlockState(new BlockPos(x2, h + l, z2), Blocks.AIR.getDefaultState(), 2);
+                                setBlock(world, new BlockPos(x2, h + l, z2), Blocks.AIR.getDefaultState(), 2);
                             }
                             if (struct.roofType != SiteMapColours.TOWERROOF)
                             {
-                                world.setBlockState(new BlockPos(x2, h, z2), Blocks.CARPET.getDefaultState());
+                                setBlock(world, new BlockPos(x2, h, z2), Blocks.CARPET.getDefaultState());
                             }
                         }
 
                         if (!tower)
                         {
-                            world.setBlockState(new BlockPos(x2, h - 1, z2), material.getDefaultState());
-                            world.setBlockState(new BlockPos(x2, h + height + 1, z2), material.getDefaultState());
+                            setBlock(world, new BlockPos(x2, h - 1, z2), material.getDefaultState());
+                            setBlock(world, new BlockPos(x2, h + height + 1, z2), material.getDefaultState());
                         }
                         else
                         {
                             // Floor
-                            world.setBlockState(new BlockPos(x2, h - 1, z2), material.getDefaultState());
+                            setBlock(world, new BlockPos(x2, h - 1, z2), material.getDefaultState());
                             // Crenellation
-                            if (inWall && (x1 + z1) % 3 > 0) world.setBlockState(new BlockPos(x2, h + height + 1, z2),
+                            if (inWall && (x1 + z1) % 3 > 0) setBlock(world, new BlockPos(x2, h + height + 1, z2),
                                     Blocks.STONEBRICK.getDefaultState());
                         }
 
@@ -289,10 +316,10 @@ public class SiteStructureGenerator
                             else
                             {
                                 // Towers get lamps with levers under them
-                                world.setBlockState(new BlockPos(x2, h - 1, z2),
+                                setBlock(world, new BlockPos(x2, h - 1, z2),
                                         Blocks.LIT_REDSTONE_LAMP.getDefaultState());
-                                world.setBlockState(new BlockPos(x2, h - 3, z2), material.getDefaultState());
-                                world.setBlockState(new BlockPos(x2, h - 2, z2), Blocks.LEVER.getDefaultState());
+                                setBlock(world, new BlockPos(x2, h - 3, z2), material.getDefaultState());
+                                setBlock(world, new BlockPos(x2, h - 2, z2), Blocks.LEVER.getDefaultState());
                                 turnOnLever(world, x2, h - 2, z2);
                             }
                         }
@@ -301,7 +328,7 @@ public class SiteStructureGenerator
                             // Otherwise fill in roof
                             if (!tower)
                             {
-                                world.setBlockState(new BlockPos(x2, h + height, z2), material.getDefaultState());
+                                setBlock(world, new BlockPos(x2, h + height, z2), material.getDefaultState());
                             }
                         }
                         if (tower)
@@ -310,12 +337,12 @@ public class SiteStructureGenerator
                             // Floor lowered due to Crenellated walls.
                             if (!(mid || inWall) && air)
                             {
-                                world.setBlockState(new BlockPos(x2, h + height - 1, z2), material.getDefaultState());
+                                setBlock(world, new BlockPos(x2, h + height - 1, z2), material.getDefaultState());
                             }
                             // place blocks under wall
                             if (inWall)
                             {
-                                world.setBlockState(new BlockPos(x2, h + height, z2), material.getDefaultState());
+                                setBlock(world, new BlockPos(x2, h + height, z2), material.getDefaultState());
                             }
                         }
 
@@ -357,6 +384,7 @@ public class SiteStructureGenerator
                     if (wall != null)
                     {
                         h = dorfs.biomeInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
+                        if (h < minY - 32 || h < maxY + 32) continue;
 
                         boolean surrounded = isBlockSurroundedByWall(site, structures, wall, x1, z1);
 
@@ -454,6 +482,7 @@ public class SiteStructureGenerator
                         int height = 10;
                         boolean mid;
                         h = struct.getFloor(site, scale);
+                        if (h < minY - 32 || h < maxY + 32) continue;
                         mid = x1 == struct.getMid(site, scale)[0] && z1 == struct.getMid(site, scale)[1];
                         boolean tower = struct.roofType == SiteMapColours.TOWERROOF;
 
@@ -465,17 +494,16 @@ public class SiteStructureGenerator
                             {
                                 // TODO see about moving the ladder elsewhere if
                                 // needed
-                                world.setBlockState(new BlockPos(x2 - 1, h + l, z2), material.getDefaultState(), 2);
+                                setBlock(world, new BlockPos(x2 - 1, h + l, z2), material.getDefaultState(), 2);
                                 BlockPos pos = new BlockPos(x2, h + l, z2);
                                 IBlockState state = Blocks.LADDER.getDefaultState();
                                 EnumFacing enumfacing1 = EnumFacing.EAST;
                                 state = Blocks.LADDER.getDefaultState().withProperty(BlockLadder.FACING, enumfacing1);
-                                world.setBlockState(pos, state);
+                                setBlock(world, pos, state);
 
                             }
-                            world.setBlockState(new BlockPos(x2 + 1, h + height - 1, z2), material.getDefaultState(),
-                                    2);
-                            world.setBlockState(new BlockPos(x2, h + height - 1, z2),
+                            setBlock(world, new BlockPos(x2 + 1, h + height - 1, z2), material.getDefaultState(), 2);
+                            setBlock(world, new BlockPos(x2, h + height - 1, z2),
                                     Blocks.TRAPDOOR.getDefaultState()
                                             .withProperty(BlockTrapDoor.HALF, BlockTrapDoor.DoorHalf.TOP)
                                             .withProperty(BlockTrapDoor.FACING, EnumFacing.WEST),
@@ -924,8 +952,8 @@ public class SiteStructureGenerator
         /** Pixel Coordinates in the site map image */
         public final int[]          max;
 
-        protected int[][] bounds;
-        protected int[]   mid;
+        protected int[][]           bounds;
+        protected int[]             mid;
 
         public StructureSpace(int[] minCoords, int[] maxCoords, SiteMapColours roof)
         {

@@ -18,10 +18,14 @@ public class Config
         Configuration config = new Configuration(e.getSuggestedConfigurationFile());
         config.load();
 
-        WorldGenerator.scale = config.getInt("scale", Configuration.CATEGORY_GENERAL, 51, 1, 256,
+        WorldGenerator.scale = DorfMap.scale = config.getInt("scale", Configuration.CATEGORY_GENERAL, 51, 1, 256,
                 "number of blocks per pixel, for best results, use a multiple of 51");
+        WorldGenerator.cubicHeightScale = config.getInt("cubicHeightScale", Configuration.CATEGORY_GENERAL, 8, 1, 256,
+                "Scaling factor for world height when cubic chunks mod is being used.");
         WorldGenerator.finite = config.getBoolean("finite", Configuration.CATEGORY_GENERAL, true,
                 "Whether everything outside the bounds of the image is deep ocean");
+        WorldGenerator.roadBlock = config.getBoolean("roadBlock", Configuration.CATEGORY_GENERAL, true,
+                "Is there a custom block for roads, set to false to enable server-side only.");
         boolean spawnpixel = config.getBoolean("pixel", Configuration.CATEGORY_GENERAL, false,
                 "Whether the x and z coordinates for spawn given are pixel or block locations");
         String[] spawnLoc = config.getStringList("worldspawn", Configuration.CATEGORY_GENERAL,

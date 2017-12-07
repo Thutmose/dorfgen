@@ -3,7 +3,7 @@ package dorfgen.conversion;
 import java.awt.Color;
 import java.util.HashMap;
 
-import dorfgen.BlockRoadSurface;
+import dorfgen.WorldGenerator;
 import net.minecraft.block.BlockDirt;
 import net.minecraft.block.BlockDirt.DirtType;
 import net.minecraft.block.state.IBlockState;
@@ -75,7 +75,7 @@ public enum SiteMapColours
         if (point == ROAD)
         {
             ret[0] = Blocks.COBBLESTONE.getDefaultState();
-            ret[1] = BlockRoadSurface.uggrass.getDefaultState();
+            ret[1] = WorldGenerator.roadSurface.getDefaultState();
         }
         if (point == LIGHTYELLOWFARM)
         {

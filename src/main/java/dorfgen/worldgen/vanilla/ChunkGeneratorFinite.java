@@ -1,6 +1,5 @@
 package dorfgen.worldgen.vanilla;
 
-import static dorfgen.WorldGenerator.scale;
 import static net.minecraftforge.event.terraingen.InitMapGenEvent.EventType.MINESHAFT;
 import static net.minecraftforge.event.terraingen.InitMapGenEvent.EventType.RAVINE;
 import static net.minecraftforge.event.terraingen.PopulateChunkEvent.Populate.EventType.ANIMALS;
@@ -12,9 +11,12 @@ import java.util.Random;
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
+import dorfgen.worldgen.common.BiomeProviderFinite;
 import dorfgen.worldgen.common.MapGenSites;
 import dorfgen.worldgen.common.RiverMaker;
-import dorfgen.worldgen.common.WorldConstructionMaker;
+import dorfgen.worldgen.common.RoadMaker;
+import dorfgen.worldgen.common.SiteMaker;
+import dorfgen.worldgen.cubic.GeneratorInfo;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockFalling;
 import net.minecraft.block.state.IBlockState;
@@ -30,7 +32,6 @@ import net.minecraft.world.gen.ChunkGeneratorOverworld;
 import net.minecraft.world.gen.MapGenBase;
 import net.minecraft.world.gen.MapGenRavine;
 import net.minecraft.world.gen.structure.MapGenMineshaft;
-import net.minecraft.world.gen.structure.MapGenVillage;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.terraingen.PopulateChunkEvent;
 import net.minecraftforge.event.terraingen.TerrainGen;
@@ -47,19 +48,24 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld
     // /** Holds Stronghold Generator */
     // private MapGenStronghold strongholdGenerator = new MapGenStronghold();
     /** Holds Village Generator */
-    private MapGenVillage            villageGenerator    = new MapGenSites();
+    private MapGenSites              villageGenerator      = new MapGenSites();
     /** Holds Mineshaft Generator */
-    private MapGenMineshaft          mineshaftGenerator  = new MapGenMineshaft();
+    private MapGenMineshaft          mineshaftGenerator    = new MapGenMineshaft();
     // private MapGenScatteredFeature scatteredFeatureGenerator = new
     // MapGenScatteredFeature();
     /** Holds ravine generator */
-    private MapGenBase               ravineGenerator     = new MapGenRavine();
-    private RiverMaker               riverMaker          = new RiverMaker();
-    private WorldConstructionMaker   constructor         = new WorldConstructionMaker();
+    private MapGenBase               ravineGenerator       = new MapGenRavine();
+    private RiverMaker               riverMaker            = new RiverMaker();
+    private RoadMaker                roadMaker             = new RoadMaker();
+    private SiteMaker                constructor           = new SiteMaker();
     /** The biomes that are used to generate the chunk */
     private Biome[]                  biomesForGeneration;
-    public BicubicInterpolator       bicubicInterpolator = new BicubicInterpolator();
-    public CachedBicubicInterpolator cachedInterpolator  = new CachedBicubicInterpolator();
+    private boolean                  generateSites         = true;
+    private boolean                  generateConstructions = false;
+    private boolean                  generateRivers        = true;
+    private int                      scale;
+    public BicubicInterpolator       bicubicInterpolator   = new BicubicInterpolator();
+    public CachedBicubicInterpolator cachedInterpolator    = new CachedBicubicInterpolator();
 
     {
         mineshaftGenerator = (MapGenMineshaft) TerrainGen.getModdedMapGen(mineshaftGenerator, MINESHAFT);
@@ -72,6 +78,18 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld
         this.worldObj = world; // remove
         this.mapFeaturesEnabled = features;
         this.rand = new Random(seed);
+        String json = world.getWorldInfo().getGeneratorOptions();
+        final GeneratorInfo info = GeneratorInfo.fromJson(json);
+        scale = info.scaleh;
+        generateConstructions = info.constructs;
+        generateRivers = info.rivers;
+        generateSites = info.sites;
+        villageGenerator.setScale(scale);
+        riverMaker.setRespectsSites(generateSites).setScale(scale);
+        roadMaker.setRespectsSites(generateSites).setScale(scale);
+        constructor.setScale(scale);
+        WorldGenerator.instance.structureGen.setScale(scale);
+        ((BiomeProviderFinite) world.getBiomeProvider()).scale = scale;
     }
 
     /** Takes Chunk Coordinates */
@@ -153,7 +171,7 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld
     {
         this.rand.setSeed((long) chunkX * 341873128712L + (long) chunkZ * 132897987541L);
 
-        ChunkPrimer primer = new ChunkPrimer();
+        ChunkPrimer primer = new PrimerWrapper(new ChunkPrimer());
 
         // Block[] ablock = new Block[256 * worldObj.getHeight()];
         // byte[] abyte = new byte[256 * worldObj.getHeight()];
@@ -164,16 +182,18 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld
 
         int imgX = chunkX * 16 - WorldGenerator.shift.getX();
         int imgZ = chunkZ * 16 - WorldGenerator.shift.getZ();
+        int x = imgX;
+        int z = imgZ;
 
         if (imgX >= 0 && imgZ >= 0 && (imgX + 16) / scale <= WorldGenerator.instance.dorfs.elevationMap.length
                 && (imgZ + 16) / scale <= WorldGenerator.instance.dorfs.elevationMap[0].length)
         {
-            int x = imgX;
-            int z = imgZ;
             populateBlocksFromImage(scale, chunkX, chunkZ, primer);
-            riverMaker.makeRiversForChunk(worldObj, chunkX, chunkZ, primer, biomesForGeneration, 0, 255);
-            constructor.buildSites(worldObj, chunkX, chunkZ, primer, biomesForGeneration, 0, 255);
-            constructor.buildRoads(worldObj, chunkX, chunkZ, primer, biomesForGeneration, 0, 255);
+            if (generateRivers)
+                riverMaker.makeRiversForChunk(worldObj, chunkX, chunkZ, primer, biomesForGeneration, 0, 255);
+            if (generateSites) constructor.buildSites(worldObj, chunkX, chunkZ, primer, biomesForGeneration, 0, 255);
+            if (generateConstructions)
+                roadMaker.buildRoads(worldObj, chunkX, chunkZ, primer, biomesForGeneration, 0, 255);
             makeBeaches(scale, x / scale, z / scale, primer);
         }
         else if (WorldGenerator.finite)
@@ -189,7 +209,7 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld
 
         if (this.mapFeaturesEnabled)
         {
-            this.villageGenerator.generate(this.worldObj, chunkX, chunkZ, primer);
+            if (generateSites) this.villageGenerator.generate(this.worldObj, chunkX, chunkZ, primer);
         }
 
         Chunk chunk;
@@ -240,12 +260,16 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld
 
         MinecraftForge.EVENT_BUS.post(new PopulateChunkEvent.Pre(this, worldObj, rand, x, z, flag));
 
-        if (this.mapFeaturesEnabled)
+        if (generateSites) if (this.mapFeaturesEnabled)
         {
             // TODO more map features if needed
             this.mineshaftGenerator.generateStructure(this.worldObj, this.rand, new ChunkPos(x, z));
             flag = this.villageGenerator.generateStructure(this.worldObj, this.rand, new ChunkPos(x, z));
-            WorldGenerator.instance.structureGen.generate(x, z, worldObj);
+            WorldGenerator.instance.structureGen.generate(x, z, worldObj, 0, 255);
+        }
+        if (generateRivers)
+        {
+            riverMaker.postInitRivers(worldObj, x, z, 0, 255);
         }
 
         int k1;

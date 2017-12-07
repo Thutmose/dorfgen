@@ -1,6 +1,5 @@
 package dorfgen.worldgen.common;
 
-import static dorfgen.WorldGenerator.scale;
 import static net.minecraft.util.EnumFacing.EAST;
 import static net.minecraft.util.EnumFacing.NORTH;
 import static net.minecraft.util.EnumFacing.SOUTH;
@@ -8,36 +7,44 @@ import static net.minecraft.util.EnumFacing.WEST;
 
 import java.util.HashSet;
 
-import dorfgen.BlockRoadSurface;
+import javax.vecmath.Vector3d;
+
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.ConstructionType;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.WorldConstruction;
-import dorfgen.conversion.Interpolator.BicubicInterpolator;
-import dorfgen.conversion.SiteMapColours;
 import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.conversion.SiteStructureGenerator.RoadExit;
 import dorfgen.conversion.SiteStructureGenerator.SiteStructures;
-import dorfgen.conversion.SiteStructureGenerator.StructureSpace;
-import dorfgen.conversion.SiteTerrain;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.init.Biomes;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.ChunkPrimer;
 
-public class WorldConstructionMaker
+public class RoadMaker extends PathMaker
 {
-    public static BicubicInterpolator bicubicInterpolator = new BicubicInterpolator();
-    final DorfMap                     dorfs;
+    public int                       minY          = 0;
+    public int                       maxY          = 255;
+    public double[]                  DIR_TO_RELX;
+    public double[]                  DIR_TO_RELZ;
+    public boolean                   respectsSites = true;
+    public static final EnumFacing[] DIRS          = { EAST, WEST, NORTH, SOUTH };
 
-    public WorldConstructionMaker()
+    public RoadMaker()
     {
-        dorfs = WorldGenerator.instance.dorfs;
+        // TODO Auto-generated constructor stub
+    }
+
+    public PathMaker setScale(int scale)
+    {
+        this.scale = scale;
+        DIR_TO_RELX = new double[] { ((double) scale), 0., ((double) scale) / 2., ((double) scale) / 2. };
+        DIR_TO_RELZ = new double[] { ((double) scale) / 2., ((double) scale) / 2., 0, ((double) scale) };
+        return this;
     }
 
     public boolean shouldConstruct(int chunkX, int chunkZ, ConstructionType type)
@@ -58,7 +65,7 @@ public class WorldConstructionMaker
             {
                 for (WorldConstruction construct : DorfMap.constructionsByCoord.get(key))
                 {
-                    if (construct.type == type && construct.isInConstruct(x, 0, z)) return true;
+                    if (construct.type == type && construct.isInConstruct(x, minY % 16, z)) return true;
                 }
                 return false;
             }
@@ -67,155 +74,7 @@ public class WorldConstructionMaker
         return false;
     }
 
-    private SiteMapColours getSiteMapColour(Site s, int x, int z)
-    {
-        int offset = scale / 2, rgb;
-
-        if (s.rgbmap == null || !s.isInSite(x, z)) return null;
-
-        int shiftX = (x - s.corners[0][0] * scale - offset) * SiteStructureGenerator.SITETOBLOCK / scale;
-        int shiftZ = (z - s.corners[0][1] * scale - offset) * SiteStructureGenerator.SITETOBLOCK / scale;
-        if (shiftX >= s.rgbmap.length || shiftZ >= s.rgbmap[0].length) return null;
-        if (shiftX < 0 || shiftZ < 0) return null;
-        rgb = s.rgbmap[shiftX][shiftZ];
-        SiteMapColours siteCol = SiteMapColours.getMatch(rgb);
-
-        return siteCol;
-    }
-
-    public void buildSites(World world, int chunkX, int chunkZ, ChunkPrimer blocks, Biome[] biomes, int minY, int maxY)
-    {
-        if (dorfs.structureMap.length == 0) return;
-        SiteStructureGenerator structureGen = WorldGenerator.instance.structureGen;
-        int x = (chunkX * 16 - WorldGenerator.shift.getX());
-        int z = (chunkZ * 16 - WorldGenerator.shift.getZ());
-        int x1, z1, h;
-
-        for (int i1 = 0; i1 < 16; i1++)
-        {
-            for (int k1 = 0; k1 < 16; k1++)
-            {
-                x1 = (x + i1);// / scale;
-                z1 = (z + k1);// / scale;
-
-                HashSet<Site> sites = dorfs.getSiteForCoords(x1, z1);
-
-                if (sites == null) continue;
-
-                for (Site s : sites)
-                {
-                    SiteMapColours siteCol = getSiteMapColour(s, x1, z1);
-                    if (siteCol == null) continue;
-
-                    h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1, scale);
-                    int j = h - 1;
-
-                    if (Math.abs(j - minY) > 64) return;
-                    if (Math.abs(maxY - j) > 64) return;
-
-                    SiteStructures structs = structureGen.getStructuresForSite(s);
-                    StructureSpace struct = structs.getStructure(x1, z1, scale);
-                    if (struct != null)
-                    {
-                        j = struct.getFloor(s, scale) - 1;
-                        h = j + 1;
-                        continue;// TODO move stuff into SiteStructureGenerator
-                    }
-
-                    IBlockState[] repBlocks = SiteMapColours.getSurfaceBlocks(siteCol);
-
-                    IBlockState surface = repBlocks[1];
-                    IBlockState above = repBlocks[2];
-
-                    boolean wall = siteCol == SiteMapColours.TOWNWALL;
-                    boolean roof = siteCol.toString().contains("ROOF");
-                    boolean farm = siteCol.toString().contains("FARM");
-                    if (farm) biomes[i1 + 16 * k1] = Biomes.PLAINS;
-
-                    if (surface == null && siteCol.toString().contains("ROOF"))
-                        surface = Blocks.BRICK_BLOCK.getDefaultState();
-
-                    if (surface == null) continue;
-                    blocks.setBlockState(i1, j - minY, k1, surface);
-                    blocks.setBlockState(i1, j - 1 - minY, k1, repBlocks[0]);
-                    if (above != null) blocks.setBlockState(i1, j + 1, k1, above);
-                    boolean tower = siteCol.toString().contains("TOWER");
-                    if (wall || roof)
-                    {
-                        int j1 = j;
-                        int num = tower ? 10 : 3;
-                        while (j1 < h + 1)
-                        {
-                            j1 = j1 + 1;
-                            blocks.setBlockState(i1, j1 - minY, k1, Blocks.AIR.getDefaultState());
-                            blocks.setBlockState(i1, h + num - minY, k1, surface);
-                        }
-                        j1 = j;
-                        if (wall)
-                        {
-                            while (j1 < h + num)
-                            {
-                                j1 = j1 + 1;
-                                blocks.setBlockState(i1, j1 - minY, k1, surface);
-                            }
-                        }
-                    }
-
-                    if (siteCol.toString().contains("ROAD"))
-                    {
-                        if (i1 > 0 && i1 < 15 && k1 > 0 && k1 < 15)
-                        {
-                            h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1,
-                                    scale);
-                            int h2;
-
-                            SiteMapColours px, nx, pz, nz;
-                            px = getSiteMapColour(s, x1 + 1, z1);
-                            nx = getSiteMapColour(s, x1 - 1, z1);
-                            pz = getSiteMapColour(s, x1, z1 + 1);
-                            nz = getSiteMapColour(s, x1, z1 - 1);
-
-                            if (px != null && !px.toString().contains("ROAD") && z1 % 8 == 0)
-                            {
-                                h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1 + 1,
-                                        z1, scale);
-                                blocks.setBlockState(i1, h2 - minY, k1, Blocks.TORCH.getDefaultState());
-                            }
-
-                            if (nx != null && !nx.toString().contains("ROAD") && z1 % 8 == 0)
-                            {
-                                h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1 - 1,
-                                        z1, scale);
-                                blocks.setBlockState(i1, h2 - minY, k1, Blocks.TORCH.getDefaultState());
-                            }
-
-                            if (pz != null && !pz.toString().contains("ROAD") && x1 % 8 == 0)
-                            {
-                                h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1,
-                                        z1 + 1, scale);
-                                blocks.setBlockState(i1, h2 - minY, k1, Blocks.TORCH.getDefaultState());
-                            }
-
-                            if (nz != null && !nz.toString().contains("ROAD") && x1 % 8 == 0)
-                            {
-                                h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1,
-                                        z1 - 1, scale);
-                                blocks.setBlockState(i1, h2 - minY, k1, Blocks.TORCH.getDefaultState());
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private static final EnumFacing[] DIRS        = { EAST, WEST, NORTH, SOUTH };
-    private static double[]           DIR_TO_RELX = { ((double) scale), 0., ((double) scale) / 2.,
-            ((double) scale) / 2. };
-    private static double[]           DIR_TO_RELZ = { ((double) scale) / 2., ((double) scale) / 2., 0,
-            ((double) scale) };
-
-    private int dirToIndex(EnumFacing dir)
+    public int dirToIndex(EnumFacing dir)
     {
         if (dir == EAST) return 0;
         if (dir == WEST) return 1;
@@ -224,31 +83,28 @@ public class WorldConstructionMaker
         return 0;
     }
 
-    private void safeSetToRoad(int x, int z, int h, int chunkX, int chunkZ, ChunkPrimer blocks, Block block)
+    public void safeSetToRoad(int x, int z, int h, int chunkX, int chunkZ, ChunkPrimer blocks, Block block)
     {
-        int x1 = x - chunkX;
-        int z1 = z - chunkZ;
-
-        if (x1 < 16 && z1 < 16 && x1 >= 0 && z1 >= 0)
+        int x1 = x;
+        int z1 = z;
+        h -= minY;
+        for (int i = 5; i > -2; i--)
         {
-            for (int i = 2; i > -4; i--)
-            {
-                if (h + i < 0) break;
-                IBlockState state = i > 0 ? Blocks.AIR.getDefaultState()
-                        : i < 0 ? Blocks.COBBLESTONE.getDefaultState() : block.getDefaultState();
-                blocks.setBlockState(x1, h + i, z1, state);
-            }
+            IBlockState state = i > 0 ? Blocks.AIR.getDefaultState()
+                    : i == -1 ? Blocks.COBBLESTONE.getDefaultState()
+                            : i != 0 ? Blocks.AIR.getDefaultState() : block.getDefaultState();
+            blocks.setBlockState(x1, h + i, z1, state);
         }
     }
 
-    private void safeSetToRoad(int x, int z, int h, int chunkX, int chunkZ, ChunkPrimer blocks)
+    public void safeSetToRoad(int x, int z, int h, int chunkX, int chunkZ, ChunkPrimer blocks)
     {
-        safeSetToRoad(x, z, h, chunkX, chunkZ, blocks, BlockRoadSurface.uggrass);
+        safeSetToRoad(x, z, h, chunkX, chunkZ, blocks, WorldGenerator.roadSurface);
     }
 
-    private static final int ROADWIDTH = 3;
+    public static final int ROADWIDTH = 3;
 
-    private void genSingleRoad(EnumFacing begin, EnumFacing end, int x, int z, int chunkX, int chunkZ,
+    public void genSingleRoad(EnumFacing begin, EnumFacing end, int x, int z, int chunkX, int chunkZ,
             ChunkPrimer blocks)
     {
         int nearestEmbarkX = x - (x % scale);
@@ -270,7 +126,8 @@ public class WorldConstructionMaker
 
             nearestX = (int) interX;
             nearestZ = (int) interZ;
-
+            // TODO Check what section of road is highest, and build all at that
+            // lvl.
             for (int w = -ROADWIDTH; w <= ROADWIDTH; w++)
             {
                 for (int w2 = -ROADWIDTH; w2 <= ROADWIDTH; w2++)
@@ -284,7 +141,7 @@ public class WorldConstructionMaker
         }
     }
 
-    private void genSingleRoadToPos(int x, int z, int chunkX, int chunkZ, int toRoadX, int toRoadZ, ChunkPrimer blocks)
+    public void genSingleRoadToPos(int x, int z, int chunkX, int chunkZ, int toRoadX, int toRoadZ, ChunkPrimer blocks)
     {
         int nearestEmbarkX = x - (x % scale);
         int nearestEmbarkZ = z - (z % scale);
@@ -344,28 +201,7 @@ public class WorldConstructionMaker
         }
     }
 
-    private boolean isInSite(int x, int z)
-    {
-        int kx = x / scale;
-        int kz = z / scale;
-
-        int key = kx + 8192 * kz;
-
-        HashSet<Site> sites = DorfMap.sitesByCoord.get(key);
-
-        if (sites != null)
-        {
-            for (Site site : sites)
-            {
-                SiteStructures structs = WorldGenerator.instance.structureGen.getStructuresForSite(site);
-                if (structs != null && !structs.roads.isEmpty()) return true;
-            }
-        }
-
-        return false;
-    }
-
-    public static int[] getClosestRoadEnd(int x, int z, Site site)
+    public int[] getClosestRoadEnd(int x, int z, Site site)
     {
         int[] edge = null;
         int[] result = null;
@@ -386,15 +222,16 @@ public class WorldConstructionMaker
         return result;
     }
 
-    private int roundToEmbark(int a)
+    public int roundToEmbark(int a)
     {
         return a - (a % scale);
     }
 
-    static private final int ROAD_SEARCH_AREA = 3;
+    static public final int ROAD_SEARCH_AREA = 3;
 
-    private boolean isNearSiteRoadEnd(int x, int z)
+    public boolean isNearSiteRoadEnd(int x, int z)
     {
+        if (!respectsSites) return false;
         HashSet<Site> sites = new HashSet<Site>(), subSites;
 
         int kx = x / scale;
@@ -426,8 +263,9 @@ public class WorldConstructionMaker
         return false;
     }
 
-    private int[] getSiteRoadEnd(int x, int z)
+    public int[] getSiteRoadEnd(int x, int z)
     {
+        if (!respectsSites) return null;
         HashSet<Site> sites = new HashSet<Site>(), subSites;
 
         int kx = x / scale;
@@ -459,7 +297,7 @@ public class WorldConstructionMaker
         return null;
     }
 
-    private void genRoads(int x, int z, int chunkX, int chunkZ, ChunkPrimer blocks)
+    public void genRoads(int x, int z, int chunkX, int chunkZ, ChunkPrimer blocks)
     {
         int nearestEmbarkX = x - (x % scale);
         int nearestEmbarkZ = z - (z % scale);
@@ -478,21 +316,141 @@ public class WorldConstructionMaker
         }
     }
 
-    boolean hasRoad(int x, int z)
+    public boolean isInRoad(int xAbs, int h, int zAbs)
     {
-        HashSet<WorldConstruction> cons = WorldGenerator.instance.dorfs.getConstructionsForCoords(x, z);
+        int x = xAbs, z = zAbs;
+        int kx = xAbs / scale;
+        int kz = zAbs / scale;
+        int offset = scale / 2;
+        if (respectsSites && isInSite(xAbs, zAbs)) return false;
+        boolean[] dirs = getRoadDirection(x, z);
+        int width = 3 * scale / SiteStructureGenerator.SITETOBLOCK;
+        width = Math.max(3, width);
+        boolean road = dirs[0] || dirs[1] || dirs[2] || dirs[3];
+        if (!road) return false;
+        else if (road) return true;
+        int[] point1 = null;
+        int[] point2 = null;
+        int[] point3 = null;
+        int[] point4 = null;
 
-        if (cons == null || cons.isEmpty()) return false;
-
-        for (WorldConstruction con : cons)
+        if (dirs[0])
         {
-            if (con.type == DorfMap.ConstructionType.ROAD)
+            int[] nearest = new int[] { kx * scale + offset, (kz + 1) * scale };
+            if (hasRoad(nearest[0], h, nearest[1])) point1 = nearest;
+        }
+
+        if (dirs[1])
+        {
+            int[] nearest = new int[] { (kx - 1) * scale + scale, (kz) * scale + offset };
+            if (hasRoad(nearest[0], h, nearest[1])) point2 = nearest;
+        }
+
+        if (dirs[2])
+        {
+            int[] nearest = new int[] { kx * scale + offset, (kz - 1) * scale + scale };
+            if (hasRoad(nearest[0], h, nearest[1])) point3 = nearest;
+        }
+
+        if (dirs[3])
+        {
+            int[] nearest = new int[] { (kx + 1) * scale, (kz) * scale + offset };
+            if (hasRoad(nearest[0], h, nearest[1])) point4 = nearest;
+        }
+
+        if (point1 != null && point2 != null)
+        {
+            Vector3d dir = new Vector3d(point1[0] - point2[0], 0, point1[1] - point2[1]);
+            double distance = dir.length();
+            dir.normalize();
+            for (double i = 0; i < distance; i++)
             {
-                if (con.isInConstruct(x, 0, z)) { return true; }
+                int tx = (point2[0] + (int) (dir.x * i)) - x;
+                int tz = (point2[1] + (int) (dir.z * i)) - z;
+                if (Math.abs(tx) < width && Math.abs(tz) < width) return true;
+            }
+        }
+        if (point1 != null && point3 != null)
+        {
+            Vector3d dir = new Vector3d(point1[0] - point3[0], 0, point1[1] - point3[1]);
+            double distance = dir.length();
+            dir.normalize();
+            for (double i = 0; i < distance; i++)
+            {
+                int tx = (point3[0] + (int) (dir.x * i)) - x;
+                int tz = (point3[1] + (int) (dir.z * i)) - z;
+                tx = Math.abs(tx);
+                tz = Math.abs(tz);
+                if (tx < width && tz < width) return true;
+            }
+        }
+        if (point1 != null && point4 != null)
+        {
+            Vector3d dir = new Vector3d(point1[0] - point4[0], 0, point1[1] - point4[1]);
+            double distance = dir.length();
+            dir.normalize();
+            for (double i = 0; i < distance; i++)
+            {
+                int tx = (point4[0] + (int) (dir.x * i)) - x;
+                int tz = (point4[1] + (int) (dir.z * i)) - z;
+                if (Math.abs(tx) < width && Math.abs(tz) < width) return true;
+            }
+        }
+        if (point2 != null && point3 != null)
+        {
+            Vector3d dir = new Vector3d(point2[0] - point3[0], 0, point2[1] - point3[1]);
+            double distance = dir.length();
+            dir.normalize();
+            for (double i = 0; i < distance; i++)
+            {
+                int tx = (point3[0] + (int) (dir.x * i)) - x;
+                int tz = (point3[1] + (int) (dir.z * i)) - z;
+                if (Math.abs(tx) < width && Math.abs(tz) < width) return true;
+            }
+        }
+        if (point2 != null && point4 != null)
+        {
+            Vector3d dir = new Vector3d(point2[0] - point4[0], 0, point2[1] - point4[1]);
+            double distance = dir.length();
+            dir.normalize();
+            for (double i = 0; i < distance; i++)
+            {
+                int tx = (point4[0] + (int) (dir.x * i)) - x;
+                int tz = (point4[1] + (int) (dir.z * i)) - z;
+                if (Math.abs(tx) < width && Math.abs(tz) < width) return true;
+            }
+        }
+        if (point4 != null && point3 != null)
+        {
+            Vector3d dir = new Vector3d(point4[0] - point3[0], 0, point4[1] - point3[1]);
+            double distance = dir.length();
+            dir.normalize();
+            for (double i = 0; i < distance; i++)
+            {
+                int tx = (point3[0] + (int) (dir.x * i)) - x;
+                int tz = (point3[1] + (int) (dir.z * i)) - z;
+                if (Math.abs(tx) < width && Math.abs(tz) < width) return true;
             }
         }
 
         return false;
+    }
+
+    public boolean hasRoad(int xAbs, int h, int zAbs)
+    {
+        HashSet<WorldConstruction> cons = WorldGenerator.instance.dorfs.getConstructionsForCoords(xAbs, zAbs);
+
+        if (cons == null || cons.isEmpty()) return false;
+
+        boolean in = false;
+        for (WorldConstruction con : cons)
+        {
+            if (con.type == DorfMap.ConstructionType.ROAD || con.type == ConstructionType.BRIDGE)
+            {
+                if (con.isInConstruct(xAbs, h, zAbs)) { return true; }
+            }
+        }
+        return in;
     }
 
     public void debugPrint(int x, int z)
@@ -500,12 +458,12 @@ public class WorldConstructionMaker
         int embarkX = roundToEmbark(x);
         int embarkZ = roundToEmbark(z);
 
-        if (isInSite(x, z))
+        if (respectsSites && isInSite(x, z))
         {
             System.out.println("Embark location x: " + embarkX + " z: " + embarkZ + " is in a site");
         }
 
-        if (hasRoad(x, z))
+        if (hasRoad(x, minY, z))
         {
             System.out.println("Embark location x: " + embarkX + " z: " + embarkZ + " has a road");
         }
@@ -514,7 +472,7 @@ public class WorldConstructionMaker
         {
             for (WorldConstruction constr : WorldGenerator.instance.dorfs.getConstructionsForCoords(x, z))
             {
-                if (constr.isInConstruct(x, 0, z))
+                if (constr.isInConstruct(x, minY % 16, z))
                 {
                     System.out.println("Location x: " + x + " z: " + z + " is in a construction");
                     System.out.println("    Construction is " + constr.toString());
@@ -526,7 +484,7 @@ public class WorldConstructionMaker
         {
             for (WorldConstruction constr : WorldGenerator.instance.dorfs.getConstructionsForCoords(embarkX, embarkZ))
             {
-                if (constr.isInConstruct(embarkX, 0, embarkZ))
+                if (constr.isInConstruct(embarkX, minY % 16, embarkZ))
                 {
                     System.out.println("Location x: " + embarkX + " z: " + embarkZ + " is in a construction");
                     System.out.println("    Construction is " + constr.toString());
@@ -553,8 +511,8 @@ public class WorldConstructionMaker
                     x1 = roundToEmbark(roadEndX + (xsearch * scale));
                     z1 = roundToEmbark(roadEndZ + (zsearch * scale));
 
-                    if (isInSite(x1, z1)) continue;
-                    if (!hasRoad(x1, z1)) continue;
+                    if (respectsSites && isInSite(x1, z1)) continue;
+                    if (!hasRoad(x1, minY, z1)) continue;
 
                     dist = (x1 - roadEndX) * (x1 - roadEndX) + (z1 - roadEndZ) * (z1 - roadEndZ);
 
@@ -603,7 +561,7 @@ public class WorldConstructionMaker
         }
     }
 
-    private void genRoadEndConnector(int roadEndX, int roadEndZ, int chunkX, int chunkZ, ChunkPrimer blocks)
+    public void genRoadEndConnector(int roadEndX, int roadEndZ, int chunkX, int chunkZ, ChunkPrimer blocks)
     {
         int minDistSqr = Integer.MAX_VALUE, dist;
         int x1, z1;
@@ -616,8 +574,8 @@ public class WorldConstructionMaker
                 x1 = roundToEmbark(roadEndX + (xsearch * scale));
                 z1 = roundToEmbark(roadEndZ + (zsearch * scale));
 
-                if (isInSite(x1, z1)) continue;
-                if (!hasRoad(x1, z1)) continue;
+                if (respectsSites && isInSite(x1, z1)) continue;
+                if (!hasRoad(x1, minY, z1)) continue;
 
                 dist = (x1 - roadEndX) * (x1 - roadEndX) + (z1 - roadEndZ) * (z1 - roadEndZ);
 
@@ -642,37 +600,103 @@ public class WorldConstructionMaker
 
     public void buildRoads(World world, int chunkX, int chunkZ, ChunkPrimer blocks, Biome[] biomes, int minY, int maxY)
     {
+        this.minY = minY;
+        this.maxY = maxY;
         int x = (chunkX * 16 - WorldGenerator.shift.getX());
         int z = (chunkZ * 16 - WorldGenerator.shift.getZ());
 
-        if (isNearSiteRoadEnd(x, z))
-        {
-            int[] roadEnd = getSiteRoadEnd(x, z);
-            genRoadEndConnector(roadEnd[0], roadEnd[1], x, z, blocks);
-        }
+        int xAbs = chunkX * 16;
+        int zAbs = chunkZ * 16;
+        int h = 0;
+        int hMin = Integer.MAX_VALUE;
+        int hMax = Integer.MIN_VALUE;
+        int dh = 2;
+        int dr = 16;
 
-        if (isInSite(x, z)) return;
-
-        genRoads(x - (x % scale), z - (z % scale), x, z, blocks);
-
-        if ((x + 16) - ((x + 16) % scale) > x - (x % scale))
-        {
-            if ((z + 16) - ((z + 16) % scale) > z - (z % scale))
+        for (int i = 0; i < 16; i++)
+            for (int j = 0; j < 16; j++)
             {
-                genRoads((x + 16) - ((x + 16) % scale), (z + 16) - ((z + 16) % scale), x, z, blocks);
+                int x1 = xAbs + i;
+                int z1 = zAbs + j;
+                int x2 = (x + i + dr);
+                int z2 = (z + j + dr);
+                boolean[] dirs = getRoadDirection(x1, z1);
+                boolean skip = false;
+                if (x2 / scale + x2 % scale >= WorldGenerator.instance.dorfs.waterMap.length
+                        || z2 / scale + z2 % scale >= WorldGenerator.instance.dorfs.waterMap[0].length)
+                {
+                    h = 1;
+                    skip = true;
+                }
+                else
+                {
+                    h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1, scale);
+                    if (x1 - dr > 0 && z1 - dr > 0)
+                    {
+                        if (dirs[0] || dirs[1])
+                        {
+                            EnumFacing side = DIRS[0].rotateY();
+                            for (int r = 1; r <= dr; r++)
+                            {
+                                x2 = x1 + side.getFrontOffsetX() * r;
+                                z2 = z1 + side.getFrontOffsetZ() * r;
+                                if (!hasRoad(x2, h, z2)) break;
+                                int h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x2,
+                                        z2, scale);
+                                hMin = Math.min(hMin, h2);
+                                hMax = Math.max(hMax, h2);
+                            }
+                            side = DIRS[1].rotateY();
+                            for (int r = 1; r <= dr; r++)
+                            {
+                                x2 = x1 + side.getFrontOffsetX() * r;
+                                z2 = z1 + side.getFrontOffsetZ() * r;
+                                if (!hasRoad(x2, h, z2)) break;
+                                int h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x2,
+                                        z2, scale);
+                                hMin = Math.min(hMin, h2);
+                                hMax = Math.max(hMax, h2);
+                            }
+                        }
+                        if (dirs[2] || dirs[3])
+                        {
+                            EnumFacing side = DIRS[2].rotateY();
+                            for (int r = 1; r <= dr; r++)
+                            {
+                                x2 = x1 + side.getFrontOffsetX() * r;
+                                z2 = z1 + side.getFrontOffsetZ() * r;
+                                if (!hasRoad(x2, h, z2)) break;
+                                int h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x2,
+                                        z2, scale);
+                                hMin = Math.min(hMin, h2);
+                                hMax = Math.max(hMax, h2);
+                            }
+                            side = DIRS[3].rotateY();
+                            for (int r = 1; r <= dr; r++)
+                            {
+                                x2 = x1 + side.getFrontOffsetX() * r;
+                                z2 = z1 + side.getFrontOffsetZ() * r;
+                                if (!hasRoad(x2, h, z2)) break;
+                                int h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x2,
+                                        z2, scale);
+                                hMin = Math.min(hMin, h2);
+                                hMax = Math.max(hMax, h2);
+                            }
+                        }
+                    }
+                    if (Math.abs(hMax - hMin) < dh) h = hMin;
+                }
+                if (skip || h > maxY + 32 || h < minY - 32) continue;
+
+                if (respectsSites && isInSite(x1, z1)) continue;
+                if (isInRoad(x1, h, z1))
+                {
+                    safeSetToRoad(i, j, h, chunkX, chunkZ, blocks);
+                }
             }
-            else
-            {
-                genRoads((x + 16) - ((x + 16) % scale), z - (z % scale), x, z, blocks);
-            }
-        }
-        else if ((z + 16) - ((z + 16) % scale) > z - (z % scale))
-        {
-            genRoads(x - (x % scale), (z + 16) - ((z + 16) % scale), x, z, blocks);
-        }
     }
 
-    public static boolean[] getRoadDirection(int xAbs, int zAbs)
+    public boolean[] getRoadDirection(int xAbs, int zAbs)
     {
         boolean[] ret = new boolean[4];
 
@@ -682,21 +706,21 @@ public class WorldConstructionMaker
 
         for (WorldConstruction con : constructs)
         {
-            if (!con.isInConstruct(xAbs, 0, zAbs)) continue;
+            if (!con.isInConstruct(xAbs, minY % 16, zAbs)) continue;
 
-            if (con.isInConstruct(xAbs - scale, 0, zAbs))
+            if (con.isInConstruct(xAbs - scale, minY % 16, zAbs))
             {
                 ret[1] = true;
             }
-            if (con.isInConstruct(xAbs + scale, 0, zAbs))
+            if (con.isInConstruct(xAbs + scale, minY % 16, zAbs))
             {
                 ret[0] = true;
             }
-            if (con.isInConstruct(xAbs, 0, zAbs - scale))
+            if (con.isInConstruct(xAbs, minY % 16, zAbs - scale))
             {
                 ret[2] = true;
             }
-            if (con.isInConstruct(xAbs, 0, zAbs + scale))
+            if (con.isInConstruct(xAbs, minY % 16, zAbs + scale))
             {
                 ret[3] = true;
             }
@@ -704,26 +728,4 @@ public class WorldConstructionMaker
         return ret;
     }
 
-    public static Block getSurfaceBlockForSite(SiteTerrain site, int num)
-    {
-        switch (site)
-        {
-        case BUILDINGS:
-            return num == 0 ? Blocks.BRICK_BLOCK : null;
-        case WALLS:
-            return Blocks.STONEBRICK;
-        case FARMYELLOW:
-            return num == 0 ? Blocks.SAND : null;
-        case FARMORANGE:
-            return num == 0 ? Blocks.DIRT : null;
-        case FARMLIMEGREEN:
-            return num == 0 ? Blocks.CLAY : null;
-        case FARMORANGELIGHT:
-            return num == 0 ? Blocks.HARDENED_CLAY : null;
-        case FARMGREEN:
-            return num == 0 ? Blocks.STAINED_HARDENED_CLAY : null;
-        default:
-            return null;
-        }
-    }
 }
