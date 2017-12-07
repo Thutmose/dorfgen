@@ -2,10 +2,8 @@ package dorfgen.worldgen.common;
 
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Random;
 
-import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.SiteType;
@@ -27,24 +25,21 @@ import net.minecraftforge.common.DungeonHooks;
 
 public class MapGenSites extends MapGenVillage
 {
-    HashSet<Integer>   set       = new HashSet<Integer>();
-    HashSet<Integer>   made      = new HashSet<Integer>();
-    Site               siteToGen = null;
-    private static int scale     = WorldGenerator.scale;
+    HashSet<Integer> set       = new HashSet<Integer>();
+    HashSet<Integer> made      = new HashSet<Integer>();
+    Site             siteToGen = null;
+    private int      scale     = 0;
+    final DorfMap    map;
 
-    public MapGenSites()
+    public MapGenSites(DorfMap map)
     {
         super();
+        this.map = map;
     }
 
     public void setScale(int scale)
     {
-        MapGenSites.scale = scale;
-    }
-
-    public MapGenSites(Map<String, String> p_i2093_1_)
-    {
-        super(p_i2093_1_);
+        this.scale = scale;
     }
 
     @Override
@@ -52,11 +47,10 @@ public class MapGenSites extends MapGenVillage
     {
         x *= 16;
         z *= 16;
-        x -= WorldGenerator.shift.getX();
-        z -= WorldGenerator.shift.getZ();
-        DorfMap dorfs = WorldGenerator.instance.dorfs;
+        x -= map.shift.getX();
+        z -= map.shift.getZ();
 
-        HashSet<Site> sites = dorfs.getSiteForCoords(x, z);
+        HashSet<Site> sites = map.getSiteForCoords(x, z);
 
         if (sites == null) return false;
 
@@ -133,17 +127,17 @@ public class MapGenSites extends MapGenVillage
         }
         else if (site.type == SiteType.HIPPYHUTS)
         {
-            return new Start(world, rand, x, z, 0);
+            return new Start(map, world, rand, x, z, 0);
         }
         else if (site.type == SiteType.SHRINE)
         {
-            return new Start(world, rand, x, z, 2);
+            return new Start(map, world, rand, x, z, 2);
         }
         else if (site.type == SiteType.LAIR)
         {
-            return new Start(world, rand, x, z, 3);
+            return new Start(map, world, rand, x, z, 3);
         }
-        else if (site.type == SiteType.CAVE) { return new Start(world, rand, x, z, 1); }
+        else if (site.type == SiteType.CAVE) { return new Start(map, world, rand, x, z, 1); }
         return super.getStructureStart(x, z);
     }
 
@@ -153,7 +147,7 @@ public class MapGenSites extends MapGenVillage
         {
         }
 
-        public Start(World world_, Random rand, int x, int z, int type)
+        public Start(DorfMap map, World world_, Random rand, int x, int z, int type)
         {
             super(x, z);
             if (type == 0)
@@ -189,8 +183,7 @@ public class MapGenSites extends MapGenVillage
             {
                 System.out.println("Making a lair");
 
-                int h = WorldGenerator.instance.dorfs.biomeInterpolator
-                        .interpolate(WorldGenerator.instance.dorfs.elevationMap, x * 16, z * 16, scale);
+                int h = map.biomeInterpolator.interpolate(map.elevationMap, x * 16, z * 16, map.scale);
 
                 BlockPos pos = new BlockPos(x * 16, h - 5, z * 16);
                 BlockPos blockpos1;
@@ -232,7 +225,7 @@ public class MapGenSites extends MapGenVillage
                                     world_.setBlockToAir(blockpos1);
                                 }
                             }
-                            else if (blockpos1.getY() >= WorldGenerator.yMin
+                            else if (blockpos1.getY() >= map.yMin
                                     && !world_.getBlockState(blockpos1.down()).getMaterial().isSolid())
                             {
                                 world_.setBlockToAir(blockpos1);

@@ -27,6 +27,7 @@ import net.minecraft.util.text.TextComponentString;
 public class Commands extends CommandBase
 {
     private List<String> aliases;
+    private DorfMap      dorfs;
 
     public Commands()
     {
@@ -59,6 +60,7 @@ public class Commands extends CommandBase
     {
 
         int scale = ((BiomeProviderFinite) sender.getEntityWorld().getBiomeProvider()).scale;
+        dorfs = ((BiomeProviderFinite) sender.getEntityWorld().getBiomeProvider()).map;
         // TODO command to say which building player is in in the site.
         if (args.length > 1 && args[0].equalsIgnoreCase("tp") && sender instanceof EntityPlayer)
         {
@@ -77,11 +79,11 @@ public class Commands extends CommandBase
             try
             {
                 int id = Integer.parseInt(name);
-                telesite = DorfMap.sitesById.get(id);
+                telesite = dorfs.sitesById.get(id);
             }
             catch (NumberFormatException e)
             {
-                ArrayList<Site> sites = new ArrayList<Site>(DorfMap.sitesById.values());
+                ArrayList<Site> sites = new ArrayList<Site>(dorfs.sitesById.values());
                 for (Site s : sites)
                 {
                     if (s.name.replace(" ", "").equalsIgnoreCase(name.replace("\"", "").replace(" ", "")))
@@ -95,8 +97,7 @@ public class Commands extends CommandBase
             {
                 int x = telesite.x * scale + scale;
                 int z = telesite.z * scale + scale;
-                int y = WorldGenerator.instance.dorfs.elevationMap[(x - WorldGenerator.shift.getX())
-                        / scale][(z - WorldGenerator.shift.getZ()) / scale];
+                int y = dorfs.elevationMap[(x - dorfs.shift.getX()) / scale][(z - dorfs.shift.getZ()) / scale];
                 entity.sendMessage(new TextComponentString("Teleported to " + telesite));
                 entity.setPositionAndUpdate(x, y, z);
             }
@@ -105,12 +106,11 @@ public class Commands extends CommandBase
             try
             {
                 int id = Integer.parseInt(name);
-                teleConstruct = DorfMap.constructionsById.get(id);
+                teleConstruct = dorfs.constructionsById.get(id);
             }
             catch (NumberFormatException e)
             {
-                ArrayList<WorldConstruction> sites = new ArrayList<WorldConstruction>(
-                        DorfMap.constructionsById.values());
+                ArrayList<WorldConstruction> sites = new ArrayList<WorldConstruction>(dorfs.constructionsById.values());
                 for (WorldConstruction s : sites)
                 {
                     if (s.name.replace(" ", "").equalsIgnoreCase(name.replace("\"", "").replace(" ", "")))
@@ -126,8 +126,7 @@ public class Commands extends CommandBase
                 int i = coords.iterator().next();
                 int x = (i & (2047)) * scale * 16 + scale;
                 int z = (i / (2048)) * scale * 16 + scale;
-                int y = WorldGenerator.instance.dorfs.elevationMap[(x - WorldGenerator.shift.getX())
-                        / scale][(z - WorldGenerator.shift.getZ()) / scale];
+                int y = dorfs.elevationMap[(x - dorfs.shift.getX()) / scale][(z - dorfs.shift.getZ()) / scale];
                 entity.sendMessage(new TextComponentString("Teleported to " + teleConstruct));
                 entity.setPositionAndUpdate(x, y, z);
             }
@@ -136,10 +135,9 @@ public class Commands extends CommandBase
         {
             EntityPlayer entity = (EntityPlayer) sender;
             BlockPos pos = entity.getPosition();
-            Region region = WorldGenerator.instance.dorfs.getRegionForCoords(pos.getX(), pos.getZ());
-            HashSet<Site> sites = WorldGenerator.instance.dorfs.getSiteForCoords(pos.getX(), pos.getZ());
-            HashSet<WorldConstruction> constructs = WorldGenerator.instance.dorfs.getConstructionsForCoords(pos.getX(),
-                    pos.getZ());
+            Region region = dorfs.getRegionForCoords(pos.getX(), pos.getZ());
+            HashSet<Site> sites = dorfs.getSiteForCoords(pos.getX(), pos.getZ());
+            HashSet<WorldConstruction> constructs = dorfs.getConstructionsForCoords(pos.getX(), pos.getZ());
             String message = "Region: " + region.toString();
             if (sites != null) for (Site site : sites)
             {
@@ -160,13 +158,11 @@ public class Commands extends CommandBase
             int h;
             int x = x1 / scale + x1 % scale;
             int z = z1 / scale + z1 % scale;
-            if (x >= WorldGenerator.instance.dorfs.waterMap.length
-                    || z >= WorldGenerator.instance.dorfs.waterMap[0].length)
+            if (x >= dorfs.waterMap.length || z >= dorfs.waterMap[0].length)
             {
                 h = 1;
             }
-            else h = gen.roadMaker.bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1,
-                    scale);
+            else h = gen.roadMaker.bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
 
             System.out.println(gen.riverMaker.isInRiver(x1, z1) + " " + h + " " + x1 + " " + z1 + " " + scale);
         }
@@ -179,15 +175,13 @@ public class Commands extends CommandBase
             int h;
             int x = x1 / scale + x1 % scale;
             int z = z1 / scale + z1 % scale;
-            if (x >= WorldGenerator.instance.dorfs.waterMap.length
-                    || z >= WorldGenerator.instance.dorfs.waterMap[0].length)
+            if (x >= dorfs.waterMap.length || z >= dorfs.waterMap[0].length)
             {
                 h = 1;
             }
-            else h = gen.roadMaker.bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1,
-                    scale);
+            else h = gen.roadMaker.bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
             int dh = -20;
-            HashSet<WorldConstruction> constructs = WorldGenerator.instance.dorfs.getConstructionsForCoords(x1, z1);
+            HashSet<WorldConstruction> constructs = dorfs.getConstructionsForCoords(x1, z1);
             if (constructs != null)
             {
                 int x2 = x1 / (scale * 16);
@@ -204,7 +198,7 @@ public class Commands extends CommandBase
                         z2 = z1 / (scale);
                         key = x2 + 8192 * z2;
                         dh = cons.embarkCoords.get(key);
-                        if (dh != -1) dh = WorldGenerator.instance.dorfs.sigmoid.elevationSigmoid(dh);
+                        if (dh != -1) dh = dorfs.sigmoid.elevationSigmoid(dh);
                         else dh = h;
                         break;
                     }
@@ -223,7 +217,7 @@ public class Commands extends CommandBase
 
         if (args[0].equalsIgnoreCase("tp"))
         {
-            Collection<Site> sites = DorfMap.sitesById.values();
+            Collection<Site> sites = dorfs.sitesById.values();
             ArrayList<String> names = new ArrayList<String>();
             Collections.sort(names);
             for (Site site : sites)

@@ -40,36 +40,35 @@ import net.minecraft.world.biome.Biome;
 
 public class FileLoader
 {
+    public File                            resourceDir            = null;
+    final DorfMap                          map;
 
-    public static String                          biomes                 = "";
+    public String                          elevation              = "";
+    public String                          elevationWater         = "";
+    public String                          biome                  = "";
+    public String                          temperature            = "";
+    public String                          evil                   = "";
+    public String                          rain                   = "";
+    public String                          volcanism              = "";
+    public String                          vegitation             = "";
+    public String                          structs                = "";
+    public String                          legends                = "";
+    public String                          legendsPlus            = "";
+    public String                          constructionFineCoords = "";
+    public String                          siteInfo               = "";
 
-    public static File                            resourceDir            = null;
+    public HashMap<Integer, BufferedImage> sites                  = new HashMap<Integer, BufferedImage>();
 
-    public String                                 elevation              = "";
-    public String                                 elevationWater         = "";
-    public String                                 biome                  = "";
-    public String                                 temperature            = "";
-    public String                                 evil                   = "";
-    public String                                 rain                   = "";
-    public String                                 volcanism              = "";
-    public String                                 vegitation             = "";
-    public String                                 structs                = "";
-    public String                                 legends                = "";
-    public String                                 legendsPlus            = "";
-    public String                                 constructionFineCoords = "";
-    public String                                 siteInfo               = "";
-
-    public static HashMap<Integer, BufferedImage> sites                  = new HashMap<Integer, BufferedImage>();
-
-    public FileLoader()
+    public FileLoader(File folder)
     {
-        File temp = new File(biomes.replace("biomes.csv", ""));
-        if (!temp.exists())
-        {
-            temp.mkdirs();
-        }
-        resourceDir = temp;
-        for (File f : temp.listFiles())
+        resourceDir = folder;
+        String name = folder.getName();
+        if (WorldGenerator.instance.defaultRegion.isEmpty()) WorldGenerator.instance.defaultRegion = name;
+        this.map = new DorfMap(name);
+        this.map.resourceDir = resourceDir;
+        File biomes = new File(folder, "biomes.csv");
+        boolean noRegion = true;
+        for (File f : folder.listFiles())
         {
             String s = f.getName();
             if (f.isDirectory() && s.contains("site_maps"))
@@ -90,6 +89,7 @@ public class FileLoader
             }
             else if (f.isDirectory() && s.contains("region_maps"))
             {
+                noRegion = false;
                 for (File f1 : f.listFiles())
                 {
                     s = f1.getAbsolutePath();
@@ -152,6 +152,12 @@ public class FileLoader
                 }
             }
         }
+        if (noRegion)
+        {
+            System.err.println("No Region maps found for " + name);
+            return;
+        }
+        System.out.println("Loading Region " + name);
 
         if (!legends.contains("trunc"))
         {
@@ -170,14 +176,18 @@ public class FileLoader
         if (!constructionFineCoords.isEmpty()) loadFineConstructLocations(constructionFineCoords);
         if (!siteInfo.isEmpty()) loadSiteInfo(siteInfo);
 
-        WorldGenerator.instance.biomeMap = getImage(biome);
-        WorldGenerator.instance.elevationMap = getImage(elevation);
-        WorldGenerator.instance.elevationWaterMap = getImage(elevationWater);
-        WorldGenerator.instance.temperatureMap = getImage(temperature);
-        WorldGenerator.instance.vegitationMap = getImage(vegitation);
-        WorldGenerator.instance.structuresMap = getImage(structs);
+        map.images.biomeMap = getImage(biome);
+        map.images.elevationMap = getImage(elevation);
+        map.images.elevationWaterMap = getImage(elevationWater);
+        map.images.temperatureMap = getImage(temperature);
+        map.images.vegitationMap = getImage(vegitation);
+        map.images.structuresMap = getImage(structs);
 
         loadBiomes(biomes);
+        map.init();
+        map.structureGen = new SiteStructureGenerator(map);
+        map.structureGen.init();
+        WorldGenerator.setMap(name, map);
     }
 
     BufferedImage getImage(String file)
@@ -196,7 +206,7 @@ public class FileLoader
         return ret;
     }
 
-    public static void loadLegends(String file)
+    public void loadLegends(String file)
     {
         try
         {
@@ -240,7 +250,7 @@ public class FileLoader
                 String[] args = coords.split(",");
                 int x = Integer.parseInt(args[0]);
                 int z = Integer.parseInt(args[1]);
-                Site site = new Site(name, id, type, x, z);
+                Site site = new Site(map, name, id, type, x, z);
                 if (sites.containsKey(id))
                 {
                     BufferedImage image = sites.get(id);
@@ -254,7 +264,7 @@ public class FileLoader
                     }
                     sites.remove(id);
                 }
-                DorfMap.sitesById.put(id, site);
+                map.sitesById.put(id, site);
             }
 
             NodeList regionList = doc.getElementsByTagName("region");
@@ -281,8 +291,8 @@ public class FileLoader
                         typeName = node.getFirstChild().getNodeValue();
                     }
                 }
-                Region region = new Region(id, name, RegionType.valueOf(typeName.toUpperCase()));
-                DorfMap.regionsById.put(id, region);
+                Region region = new Region(map, id, name, RegionType.valueOf(typeName.toUpperCase()));
+                map.regionsById.put(id, region);
             }
 
             regionList = doc.getElementsByTagName("underground_region");
@@ -315,8 +325,8 @@ public class FileLoader
                     }
                 }
 
-                Region region = new Region(id, name, depth, RegionType.valueOf(typeName.toUpperCase()));
-                DorfMap.ugRegionsById.put(id, region);
+                Region region = new Region(map, id, name, depth, RegionType.valueOf(typeName.toUpperCase()));
+                map.ugRegionsById.put(id, region);
             }
         }
         catch (Exception e)
@@ -325,7 +335,7 @@ public class FileLoader
         }
     }
 
-    public static void loadLegendsPlus(String file)
+    public void loadLegendsPlus(String file)
     {
         try
         {
@@ -393,13 +403,13 @@ public class FileLoader
                                     }
                                 }
                                 if (structId == -1) continue;
-                                toAdd.add(new Structure(name, name2, structId, structType));
+                                toAdd.add(new Structure(map, name, name2, structId, structType));
                             }
                         }
                     }
                 }
                 if (id == -1) continue;
-                Site site = DorfMap.sitesById.get(id);
+                Site site = map.sitesById.get(id);
                 if (site != null)
                 {
                     site.structures.addAll(toAdd);
@@ -436,7 +446,7 @@ public class FileLoader
                 // "+coords);
                 if (id != -1 && toAdd != null)
                 {
-                    Region region = DorfMap.regionsById.get(id);
+                    Region region = map.regionsById.get(id);
                     if (region != null)
                     {
                         region.coords.clear();
@@ -479,7 +489,7 @@ public class FileLoader
                 // "+coords);
                 if (id != -1 && toAdd != null)
                 {
-                    Region region = DorfMap.ugRegionsById.get(id);
+                    Region region = map.ugRegionsById.get(id);
                     if (region != null)
                     {
                         region.coords.clear();
@@ -535,7 +545,7 @@ public class FileLoader
                     ConstructionType cType = ConstructionType.valueOf(type.toUpperCase());
                     if (cType != null)
                     {
-                        WorldConstruction construct = new WorldConstruction(id, name, cType);
+                        WorldConstruction construct = new WorldConstruction(map, id, name, cType);
                         construct.worldCoords.clear();
                         for (String s : toAdd)
                         {
@@ -543,15 +553,15 @@ public class FileLoader
                             int z = Integer.parseInt(s.split(",")[1]);
                             int index = x + 2048 * z;
                             construct.worldCoords.add(index);
-                            HashSet<WorldConstruction> constructs = DorfMap.constructionsByCoord.get(index);
+                            HashSet<WorldConstruction> constructs = map.constructionsByCoord.get(index);
                             if (constructs == null)
                             {
                                 constructs = new HashSet<>();
-                                DorfMap.constructionsByCoord.put(index, constructs);
+                                map.constructionsByCoord.put(index, constructs);
                             }
                             constructs.add(construct);
                         }
-                        DorfMap.constructionsById.put(id, construct);
+                        map.constructionsById.put(id, construct);
                     }
                     else
                     {
@@ -566,7 +576,7 @@ public class FileLoader
         }
     }
 
-    public static void loadFineConstructLocations(String file)
+    public void loadFineConstructLocations(String file)
     {
         ArrayList<String> rows = new ArrayList<String>();
         BufferedReader br = null;
@@ -585,7 +595,7 @@ public class FileLoader
             {
                 String[] args = entry.split(":");
                 int id = Integer.parseInt(args[0]);
-                WorldConstruction construct = DorfMap.constructionsById.get(id);
+                WorldConstruction construct = map.constructionsById.get(id);
                 if (construct != null)
                 {
                     for (int i = 1; i < args.length; i++)
@@ -610,7 +620,7 @@ public class FileLoader
         }
     }
 
-    public static void loadSiteInfo(String file)
+    public void loadSiteInfo(String file)
     {
         ArrayList<String> rows = new ArrayList<String>();
         BufferedReader br = null;
@@ -631,7 +641,7 @@ public class FileLoader
                 String[] args = entry.split(":");
                 int id = Integer.parseInt(args[0]);
 
-                Site site = DorfMap.sitesById.get(id);
+                Site site = map.sitesById.get(id);
 
                 if (site != null)
                 {
@@ -658,7 +668,7 @@ public class FileLoader
         }
     }
 
-    private void loadBiomes(String file)
+    private void loadBiomes(File biomes)
     {
         ArrayList<ArrayList<String>> rows = new ArrayList<ArrayList<String>>();
         BufferedReader br = null;
@@ -667,7 +677,7 @@ public class FileLoader
 
         try
         {
-            InputStream res = new FileInputStream(file);
+            InputStream res = new FileInputStream(biomes);
             br = new BufferedReader(new InputStreamReader(res));
             int n = 0;
             while ((line = br.readLine()) != null)
@@ -690,7 +700,7 @@ public class FileLoader
             PrintWriter out;
             try
             {
-                fwriter = new FileWriter(file);
+                fwriter = new FileWriter(biomes);
                 out = new PrintWriter(fwriter);
 
                 String defaultPath = "/assets/dorfgen/biomes.csv";

@@ -2,21 +2,25 @@ package dorfgen.worldgen.common;
 
 import java.util.HashSet;
 
-import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
+import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.conversion.SiteStructureGenerator.SiteStructures;
 
 public class PathMaker
 {
-    public BicubicInterpolator bicubicInterpolator = new BicubicInterpolator();
-    protected int              scale               = WorldGenerator.scale;
-    protected boolean          respectsSites       = true;
+    public final SiteStructureGenerator structureGen;
+    public final DorfMap                dorfs;
+    public BicubicInterpolator          bicubicInterpolator = new BicubicInterpolator();
+    protected int                       scale;
+    protected boolean                   respectsSites       = true;
 
-    public PathMaker()
+    public PathMaker(DorfMap map, SiteStructureGenerator gen)
     {
-        // TODO Auto-generated constructor stub
+        this.dorfs = map;
+        this.structureGen = gen;
+        this.setScale(dorfs.scale);
     }
 
     public PathMaker setRespectsSites(boolean respect)
@@ -39,13 +43,13 @@ public class PathMaker
 
         int key = kx + 8192 * kz;
 
-        HashSet<Site> sites = DorfMap.sitesByCoord.get(key);
+        HashSet<Site> sites = dorfs.sitesByCoord.get(key);
 
         if (sites != null)
         {
             for (Site site : sites)
             {
-                SiteStructures structs = WorldGenerator.instance.structureGen.getStructuresForSite(site);
+                SiteStructures structs = structureGen.getStructuresForSite(site);
                 if (structs != null && !structs.roads.isEmpty()) return true;
             }
         }

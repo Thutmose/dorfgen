@@ -20,11 +20,13 @@ import cubicchunks.worldgen.generator.CubePrimer;
 import cubicchunks.worldgen.generator.ICubePrimer;
 import cubicchunks.worldgen.generator.custom.biome.replacer.IBiomeBlockReplacer;
 import dorfgen.WorldGenerator;
+import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.ISigmoid;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
+import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.worldgen.common.BiomeProviderFinite;
 import dorfgen.worldgen.common.CachedInterpolator;
-import dorfgen.worldgen.common.MapGenSites;
+import dorfgen.worldgen.common.GeneratorInfo;
 import dorfgen.worldgen.common.RiverMaker;
 import dorfgen.worldgen.common.RoadMaker;
 import dorfgen.worldgen.common.SiteMaker;
@@ -41,10 +43,11 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
     public CachedInterpolator                          elevationInterpolator = new CachedInterpolator();
     public CachedInterpolator                          waterInterpolator     = new CachedInterpolator();
     public CachedBicubicInterpolator                   cachedInterpolator    = new CachedBicubicInterpolator();
-    public RiverMaker                                  riverMaker            = new RiverMaker();
-    public RoadMaker                                   roadMaker             = new RoadMaker();
-    public MapGenSites                                 villageGenerator      = new MapGenSites();
-    public SiteMaker                                   constructor           = new SiteMaker();
+    public final RiverMaker                            riverMaker;
+    public final RoadMaker                             roadMaker;
+    public final SiteMaker                             constructor;
+    public final SiteStructureGenerator                structuregen;
+    public final DorfMap                               map;
 
     private int                                        lastX                 = Integer.MIN_VALUE,
             lastZ = Integer.MIN_VALUE;
@@ -53,7 +56,7 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
     private boolean                                    generateSites         = true;
     private boolean                                    generateConstructions = false;
     private boolean                                    generateRivers        = true;
-    private int                                        scale                 = WorldGenerator.scale;
+    private int                                        scale;
 
     private Map<ResourceLocation, IBiomeBlockReplacer> replacerMap           = Maps.newHashMap();
 
@@ -64,7 +67,8 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
         String json = world.getWorldInfo().getGeneratorOptions();
         final GeneratorInfo info = GeneratorInfo.fromJson(json);
 
-        WorldGenerator.instance.dorfs.setElevationSigmoid(new ISigmoid()
+        this.map = WorldGenerator.getDorfMap(info.region);
+        map.setElevationSigmoid(new ISigmoid()
         {
             @Override
             public int elevationSigmoid(int preHeight)
@@ -73,6 +77,11 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
             }
         });
 
+        map.setScale(info.scaleh);
+        this.structuregen = WorldGenerator.getStructureGen(info.region);
+        this.riverMaker = new RiverMaker(map, structuregen);
+        this.roadMaker = new RoadMaker(map, structuregen);
+        this.constructor = new SiteMaker(map, structuregen);
         scale = info.scaleh;
         generateConstructions = info.constructs;
         generateRivers = info.rivers;
@@ -81,10 +90,9 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
         roadMaker.setRespectsSites(generateSites).setScale(scale);
         riverMaker.bicubicInterpolator = elevationInterpolator;
         roadMaker.bicubicInterpolator = elevationInterpolator;
+        constructor.bicubicInterpolator = elevationInterpolator;
         constructor.setScale(scale);
-        villageGenerator.setScale(scale);
-        WorldGenerator.instance.dorfs.setScale(scale);
-        WorldGenerator.instance.structureGen.setScale(scale);
+        structuregen.setScale(scale);
         ((BiomeProviderFinite) world.getBiomeProvider()).scale = scale;
         initGenerator(world.getSeed());
     }
@@ -98,6 +106,7 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
             final IBlockState topBlock = current.topBlock;
             final IBlockState fillerBlock = current.fillerBlock;
             final int depth = 3;
+
             replacerMap.put(current.getRegistryName(), new IBiomeBlockReplacer()
             {
                 @Override
@@ -110,15 +119,13 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
                         int x1 = x / scale;
                         int z1 = z / scale;
                         int h1 = -1;
-                        if (x1 >= WorldGenerator.instance.dorfs.waterMap.length
-                                || z1 >= WorldGenerator.instance.dorfs.waterMap[0].length)
+                        if (x1 >= map.waterMap.length || z1 >= map.waterMap[0].length)
                         {
 
                         }
                         else
                         {
-                            h1 = elevationInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x, z,
-                                    scale);
+                            h1 = elevationInterpolator.interpolate(map.elevationMap, x, z, scale);
                             h1 -= y;
                             // Cube at this point is above ground.
                             if (h1 > depth) return previousBlock;
@@ -153,15 +160,13 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
                 x1 = (x + i1) / scale;
                 z1 = (z + k1) / scale;
                 int h1 = -1;
-                if (x1 >= WorldGenerator.instance.dorfs.waterMap.length
-                        || z1 >= WorldGenerator.instance.dorfs.waterMap[0].length)
+                if (x1 >= map.waterMap.length || z1 >= map.waterMap[0].length)
                 {
 
                 }
                 else
                 {
-                    h1 = elevationInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x + i1, z + k1,
-                            scale);
+                    h1 = elevationInterpolator.interpolate(map.elevationMap, x + i1, z + k1, scale);
                 }
                 h1 -= yMin;
                 // Cube at this point is above ground.
@@ -192,8 +197,7 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
             {
                 x1 = (rx + i) / scale;
                 z1 = (rz + k) / scale;
-                if (rx + i < 0 || rz + k < 0 || x1 >= WorldGenerator.instance.dorfs.waterMap.length
-                        || z1 >= WorldGenerator.instance.dorfs.waterMap[0].length)
+                if (rx + i < 0 || rz + k < 0 || x1 >= map.waterMap.length || z1 >= map.waterMap[0].length)
                 {
 
                 }
@@ -202,13 +206,13 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
                     // TODO fill in lakes here? might need to check rivers or
                     // something for whether it should fill.
                     // w =
-                    // bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap,
+                    // bicubicInterpolator.interpolate(map.elevationMap,
                     // rx + i, rz + k,
                     // scale);
                     // if (w > 0)
                     // {
                     // w =
-                    // WorldGenerator.instance.dorfs.sigmoid.elevationSigmoid(w)
+                    // map.sigmoid.elevationSigmoid(w)
                     // - yMin;
                     // if (w > b0) b0 = w;
                     // }
@@ -228,23 +232,23 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
     {
         this.rand.setSeed((long) cubeX * 341873128712L + (long) cubeZ * 132897987541L);
         CubePrimer primer = new CubePrimer();
-        elevationInterpolator.initImage(WorldGenerator.instance.dorfs.elevationMap, cubeX, cubeZ, 32, scale);
+        elevationInterpolator.initImage(map.elevationMap, cubeX, cubeZ, 32, scale);
         if (lastX != cubeX || lastZ != cubeZ) this.biomesForGeneration = this.world.getBiomeProvider()
                 .getBiomes(this.biomesForGeneration, cubeX * 16, cubeZ * 16, 16, 16);
         lastX = cubeX;
         lastZ = cubeZ;
-        if (WorldGenerator.instance.dorfs.elevationMap.length == 0) WorldGenerator.finite = false;
+        if (map.elevationMap.length == 0) map.finite = false;
 
-        int imgX = cubeX * 16 - WorldGenerator.shift.getX();
-        int imgZ = cubeZ * 16 - WorldGenerator.shift.getZ();
+        int imgX = cubeX * 16 - map.shift.getX();
+        int imgZ = cubeZ * 16 - map.shift.getZ();
         int x = imgX;
         int z = imgZ;
         int yMin = cubeY * 16;
         int yMax = cubeY * 16 + 15;
         boolean imgGen = false;
         PrimerWrapper wrapper = new PrimerWrapper(primer);
-        if (imgX >= 0 && imgZ >= 0 && (imgX + 16) / scale <= WorldGenerator.instance.dorfs.elevationMap.length
-                && (imgZ + 16) / scale <= WorldGenerator.instance.dorfs.elevationMap[0].length)
+        if (imgX >= 0 && imgZ >= 0 && (imgX + 16) / scale <= map.elevationMap.length
+                && (imgZ + 16) / scale <= map.elevationMap[0].length)
         {
             imgGen = true;
             populateBlocksFromImage(scale, cubeX, cubeY, cubeZ, primer);
@@ -273,11 +277,9 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
          * cube populators from registry. **/
         if (!MinecraftForge.EVENT_BUS.post(new CubePopulatorEvent(world, cube)))
         {
-            elevationInterpolator.initImage(WorldGenerator.instance.dorfs.elevationMap, cube.getX(), cube.getZ(), 32,
-                    scale);
+            elevationInterpolator.initImage(map.elevationMap, cube.getX(), cube.getZ(), 32, scale);
             int y = cube.getY();
-            if (generateSites) WorldGenerator.instance.structureGen.generate(cube.getX(), cube.getZ(), (World) world,
-                    y * 16, y * 16 + 15);
+            if (generateSites) structuregen.generate(cube.getX(), cube.getZ(), (World) world, y * 16, y * 16 + 15);
             if (generateRivers) riverMaker.postInitRivers((World) world, cube.getX(), cube.getZ(), y * 16, y * 16 + 15);
 
             CubicBiome biome = CubicBiome.getCubic(cube.getCubicWorld().getBiome(Coords.getCubeCenter(cube)));
@@ -341,12 +343,12 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
         // {
         // x1 = x + i1 / scale;
         // z1 = z + k1 / scale;
-        // if (x1 >= WorldGenerator.instance.dorfs.elevationMap.length
-        // || z1 >= WorldGenerator.instance.dorfs.elevationMap[0].length)
+        // if (x1 >= map.elevationMap.length
+        // || z1 >= map.elevationMap[0].length)
         // {
         // h1 = 10;
         // }
-        // else h1 = WorldGenerator.instance.dorfs.elevationMap[x1][z1];
+        // else h1 = map.elevationMap[x1][z1];
         // Biome b1 = biomesForGeneration[i1 + 16 * k1];
         // boolean beach = false;
         //

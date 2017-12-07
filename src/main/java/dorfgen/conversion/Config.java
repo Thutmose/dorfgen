@@ -18,7 +18,7 @@ public class Config
         Configuration config = new Configuration(e.getSuggestedConfigurationFile());
         config.load();
 
-        WorldGenerator.scale = DorfMap.scale = config.getInt("scale", Configuration.CATEGORY_GENERAL, 51, 1, 256,
+        WorldGenerator.scale = config.getInt("scale", Configuration.CATEGORY_GENERAL, 51, 1, 256,
                 "number of blocks per pixel, for best results, use a multiple of 51");
         WorldGenerator.cubicHeightScale = config.getInt("cubicHeightScale", Configuration.CATEGORY_GENERAL, 8, 1, 256,
                 "Scaling factor for world height when cubic chunks mod is being used.");

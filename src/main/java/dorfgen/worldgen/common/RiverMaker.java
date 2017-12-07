@@ -10,7 +10,6 @@ import java.util.HashSet;
 
 import javax.vecmath.Vector3d;
 
-import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.SiteStructureGenerator;
@@ -26,17 +25,16 @@ import net.minecraft.world.chunk.ChunkPrimer;
 
 public class RiverMaker extends PathMaker
 {
-    public static DorfMap             dorfs;
 
-    public RiverMaker()
+    public RiverMaker(DorfMap map, SiteStructureGenerator gen)
     {
-        dorfs = WorldGenerator.instance.dorfs;
+        super(map, gen);
     }
 
     public void postInitRivers(World world, int chunkX, int chunkZ, int minY, int maxY)
     {
-        int x = (chunkX * 16 - WorldGenerator.shift.getX());
-        int z = (chunkZ * 16 - WorldGenerator.shift.getZ());
+        int x = (chunkX * 16 - dorfs.shift.getX());
+        int z = (chunkZ * 16 - dorfs.shift.getZ());
         int x1, z1;
         MutableBlockPos pos = new MutableBlockPos();
         for (int i1 = 0; i1 < 16; i1++)
@@ -62,8 +60,8 @@ public class RiverMaker extends PathMaker
     public void makeRiversForChunk(World world, int chunkX, int chunkZ, ChunkPrimer primer, Biome[] biomes, int minY,
             int maxY)
     {
-        int x = (chunkX * 16 - WorldGenerator.shift.getX());
-        int z = (chunkZ * 16 - WorldGenerator.shift.getZ());
+        int x = (chunkX * 16 - dorfs.shift.getX());
+        int z = (chunkZ * 16 - dorfs.shift.getZ());
         int x1, z1, x2, z2, h;
         boolean skip = false;
         boolean oob = false;
@@ -76,20 +74,20 @@ public class RiverMaker extends PathMaker
                 x2 = (x + i1 + 1);
                 z2 = (z + k1 + 1);
 
-                if (x2 / scale + x2 % scale >= WorldGenerator.instance.dorfs.waterMap.length
-                        || z2 / scale + z2 % scale >= WorldGenerator.instance.dorfs.waterMap[0].length)
+                if (x2 / scale + x2 % scale >= dorfs.waterMap.length
+                        || z2 / scale + z2 % scale >= dorfs.waterMap[0].length)
                 {
                     h = 1;
                     skip = true;
                 }
                 else
                 {
-                    h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1, scale);
+                    h = bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
                     int minS = h;
                     if (x1 > 0 && z1 > 0) for (EnumFacing side : EnumFacing.HORIZONTALS)
                     {
-                        int h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap,
-                                x1 + side.getFrontOffsetX(), z1 + side.getFrontOffsetZ(), scale);
+                        int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x1 + side.getFrontOffsetX(),
+                                z1 + side.getFrontOffsetZ(), scale);
                         if (h2 > h - 1) minS = Math.min(minS, h2);
                     }
                     h = minS;
@@ -102,12 +100,12 @@ public class RiverMaker extends PathMaker
                 for (int i = 1; i < 4; i++)
                 {
                     y = h - i - minY;
-                    if (y >= WorldGenerator.yMin) primer.setBlockState(i1, y, k1, Blocks.WATER.getDefaultState());
+                    if (y >= dorfs.yMin) primer.setBlockState(i1, y, k1, Blocks.WATER.getDefaultState());
                 }
                 for (int i = 0; i < 4; i++)
                 {
                     y = h + i - minY;
-                    if (y >= WorldGenerator.yMin) primer.setBlockState(i1, y, k1, Blocks.AIR.getDefaultState());
+                    if (y >= dorfs.yMin) primer.setBlockState(i1, y, k1, Blocks.AIR.getDefaultState());
                 }
             }
         }
@@ -145,8 +143,7 @@ public class RiverMaker extends PathMaker
         int kx = x / scale;// Abs/(scale);
         int kz = z / scale;// Abs/(scale);
         int key = kx + 8192 * kz;
-        if (kx >= WorldGenerator.instance.dorfs.waterMap.length
-                || kz >= WorldGenerator.instance.dorfs.waterMap[0].length) { return false; }
+        if (kx >= dorfs.waterMap.length || kz >= dorfs.waterMap[0].length) { return false; }
         if (kx < 0 || kz < 0) return false;
 
         int rgb = dorfs.structureMap[kx][kz];
@@ -161,7 +158,7 @@ public class RiverMaker extends PathMaker
         boolean river = col1.equals(STRMAPRIVER) || (!WHITE.equals(col2) && col2.getBlue() > 0);
         if (river) return river;
 
-        HashSet<Site> ret = DorfMap.sitesByCoord.get(key);
+        HashSet<Site> ret = dorfs.sitesByCoord.get(key);
 
         if (ret != null)
         {
@@ -169,7 +166,7 @@ public class RiverMaker extends PathMaker
             {
                 if (!s.isInSite(x, z)) continue;
 
-                SiteStructures structs = WorldGenerator.instance.structureGen.getStructuresForSite(s);
+                SiteStructures structs = structureGen.getStructuresForSite(s);
                 if (!structs.rivers.isEmpty())
                 {
                     for (RiverExit riv : structs.rivers)
@@ -195,7 +192,7 @@ public class RiverMaker extends PathMaker
         int offset = scale / 2;
         int key = kx + 8192 * kz;
         Site site;
-        HashSet<Site> ret = DorfMap.sitesByCoord.get(key);
+        HashSet<Site> ret = dorfs.sitesByCoord.get(key);
         boolean hasRivers = false;
         if (respectsSites && ret != null)
         {
@@ -203,7 +200,7 @@ public class RiverMaker extends PathMaker
             {
                 if (!s.isInSite(x1, z1)) continue;
 
-                SiteStructures structs = WorldGenerator.instance.structureGen.getStructuresForSite(s);
+                SiteStructures structs = structureGen.getStructuresForSite(s);
                 if (!structs.rivers.isEmpty())
                 {
                     hasRivers = true;
@@ -228,14 +225,14 @@ public class RiverMaker extends PathMaker
             {
                 key = kx + 8192 * (kz + 1);
                 ret = null;
-                if (respectsSites) ret = DorfMap.sitesByCoord.get(key);
+                if (respectsSites) ret = dorfs.sitesByCoord.get(key);
                 int[] nearest = null;
                 if (ret != null)
                 {
                     for (Site s : ret)
                     {
                         site = s;
-                        SiteStructures stuff = WorldGenerator.instance.structureGen.getStructuresForSite(site);
+                        SiteStructures stuff = structureGen.getStructuresForSite(site);
 
                         int[] temp;
                         int dist = Integer.MAX_VALUE;
@@ -261,14 +258,14 @@ public class RiverMaker extends PathMaker
             {
                 key = (kx - 1) + 8192 * (kz);
                 ret = null;
-                if (respectsSites) ret = DorfMap.sitesByCoord.get(key);
+                if (respectsSites) ret = dorfs.sitesByCoord.get(key);
                 int[] nearest = null;
                 if (ret != null)
                 {
                     for (Site s : ret)
                     {
                         site = s;
-                        SiteStructures stuff = WorldGenerator.instance.structureGen.getStructuresForSite(site);
+                        SiteStructures stuff = structureGen.getStructuresForSite(site);
 
                         int[] temp;
                         int dist = Integer.MAX_VALUE;
@@ -294,14 +291,14 @@ public class RiverMaker extends PathMaker
             {
                 key = kx + 8192 * (kz - 1);
                 ret = null;
-                if (respectsSites) ret = DorfMap.sitesByCoord.get(key);
+                if (respectsSites) ret = dorfs.sitesByCoord.get(key);
                 int[] nearest = null;
                 if (ret != null)
                 {
                     for (Site s : ret)
                     {
                         site = s;
-                        SiteStructures stuff = WorldGenerator.instance.structureGen.getStructuresForSite(site);
+                        SiteStructures stuff = structureGen.getStructuresForSite(site);
 
                         int[] temp;
                         int dist = Integer.MAX_VALUE;
@@ -331,13 +328,13 @@ public class RiverMaker extends PathMaker
                 key = (kx + 1) + 8192 * (kz);
                 int[] nearest = null;
                 ret = null;
-                if (respectsSites) ret = DorfMap.sitesByCoord.get(key);
+                if (respectsSites) ret = dorfs.sitesByCoord.get(key);
                 if (ret != null)
                 {
                     for (Site s : ret)
                     {
                         site = s;
-                        SiteStructures stuff = WorldGenerator.instance.structureGen.getStructuresForSite(site);
+                        SiteStructures stuff = structureGen.getStructuresForSite(site);
 
                         int[] temp;
                         int dist = Integer.MAX_VALUE;

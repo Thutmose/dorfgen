@@ -23,16 +23,22 @@ public class BiomeProviderFinite extends BiomeProvider
     public BicubicInterpolator       biomeInterpolator   = new BicubicInterpolator();
     public CachedBicubicInterpolator heightInterpolator  = new CachedBicubicInterpolator();
     public CachedBicubicInterpolator miscInterpolator    = new CachedBicubicInterpolator();
-    public int                       scale               = WorldGenerator.scale;
+    public final DorfMap             map;
+    public int                       scale;
 
     public BiomeProviderFinite()
     {
         super();
+        map = null;
     }
 
     public BiomeProviderFinite(World world)
     {
         super(world.getWorldInfo());
+        String var = world.getWorldInfo().getGeneratorOptions();
+        GeneratorInfo info = GeneratorInfo.fromJson(var);
+        map = WorldGenerator.getDorfMap(info.region);
+        this.scale = map.scale;
     }
 
     @Override
@@ -56,8 +62,7 @@ public class BiomeProviderFinite extends BiomeProvider
     public Biome[] getBiomesForGeneration(Biome[] biomes, int x, int z, int width, int length)
     {
         biomes = super.getBiomesForGeneration(biomes, x, z, width, length);
-        if (x >= 0 && z >= 0 && (x + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap.length
-                && (z + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap[0].length)
+        if (x >= 0 && z >= 0 && (x + 16) / scale <= map.biomeMap.length && (z + 16) / scale <= map.biomeMap[0].length)
         {
             makeBiomes(biomes, scale, x, z);
         }
@@ -72,15 +77,14 @@ public class BiomeProviderFinite extends BiomeProvider
     public Biome[] getBiomes(Biome[] biomes, int x, int z, int width, int depth)
     {
         biomes = super.getBiomesForGeneration(biomes, x, z, width, depth);
-        x -= WorldGenerator.shift.getX();
-        z -= WorldGenerator.shift.getZ();
+        x -= map.shift.getX();
+        z -= map.shift.getZ();
 
-        if (x >= 0 && z >= 0 && (x + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap.length
-                && (z + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap[0].length)
+        if (x >= 0 && z >= 0 && (x + 16) / scale <= map.biomeMap.length && (z + 16) / scale <= map.biomeMap[0].length)
         {
 
-            x += WorldGenerator.shift.getX();
-            z += WorldGenerator.shift.getZ();
+            x += map.shift.getX();
+            z += map.shift.getZ();
 
             return biomes = makeBiomes(biomes, scale, x, z);
         }
@@ -104,8 +108,7 @@ public class BiomeProviderFinite extends BiomeProvider
             for (int k1 = 0; k1 < 16; k1++)
             {
                 index = (i1) + (k1) * 16;
-                int biome = getBiomeFromMaps(x + i1 - WorldGenerator.shift.getX(),
-                        z + k1 - WorldGenerator.shift.getZ());
+                int biome = getBiomeFromMaps(x + i1 - map.shift.getX(), z + k1 - map.shift.getZ());
 
                 biomes[index] = Biome.getBiome(biome);
             }
@@ -115,7 +118,7 @@ public class BiomeProviderFinite extends BiomeProvider
 
     private int getBiomeFromMaps(int x, int z)
     {
-        DorfMap dorfs = WorldGenerator.instance.dorfs;
+        DorfMap dorfs = map;
 
         int b1 = biomeInterpolator.interpolateBiome(dorfs.biomeMap, x, z, scale);
         Biome temp = Biome.getBiome(b1);

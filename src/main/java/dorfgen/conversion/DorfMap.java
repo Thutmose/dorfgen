@@ -1,6 +1,7 @@
 package dorfgen.conversion;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -9,47 +10,70 @@ import dorfgen.WorldGenerator;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import net.minecraft.init.Biomes;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.biome.Biome;
 
 public class DorfMap
 {
+    public static class ImgHolder
+    {
+        public BufferedImage elevationMap;
+        public BufferedImage elevationWaterMap;
+        public BufferedImage biomeMap;
+        public BufferedImage evilMap;
+        public BufferedImage temperatureMap;
+        public BufferedImage rainMap;
+        public BufferedImage drainageMap;
+        public BufferedImage vegitationMap;
+        public BufferedImage structuresMap;
+    }
 
-    public int[][]                                             biomeMap             = new int[0][0];
-    public int[][]                                             elevationMap         = new int[0][0];
-    public int[][]                                             waterMap             = new int[0][0];
-    public int[][]                                             riverMap             = new int[0][0];
-    public int[][]                                             evilMap              = new int[0][0];
-    public int[][]                                             rainMap              = new int[0][0];
-    public int[][]                                             drainageMap          = new int[0][0];
-    public int[][]                                             temperatureMap       = new int[0][0];
-    public int[][]                                             volcanismMap         = new int[0][0];
-    public int[][]                                             vegitationMap        = new int[0][0];
-    public int[][]                                             structureMap         = new int[0][0];
+    public int[][]                                      biomeMap             = new int[0][0];
+    public int[][]                                      elevationMap         = new int[0][0];
+    public int[][]                                      waterMap             = new int[0][0];
+    public int[][]                                      riverMap             = new int[0][0];
+    public int[][]                                      evilMap              = new int[0][0];
+    public int[][]                                      rainMap              = new int[0][0];
+    public int[][]                                      drainageMap          = new int[0][0];
+    public int[][]                                      temperatureMap       = new int[0][0];
+    public int[][]                                      volcanismMap         = new int[0][0];
+    public int[][]                                      vegitationMap        = new int[0][0];
+    public int[][]                                      structureMap         = new int[0][0];
     /** Coords are embark tile resolution and are x + 8192 * z */
-    public static HashMap<Integer, HashSet<Site>>              sitesByCoord         = new HashMap<Integer, HashSet<Site>>();
-    public static HashMap<Integer, Site>                       sitesById            = new HashMap<Integer, Site>();
-    public static HashMap<Integer, Region>                     regionsById          = new HashMap<Integer, Region>();
+    public HashMap<Integer, HashSet<Site>>              sitesByCoord         = new HashMap<Integer, HashSet<Site>>();
+    public HashMap<Integer, Site>                       sitesById            = new HashMap<Integer, Site>();
+    public HashMap<Integer, Region>                     regionsById          = new HashMap<Integer, Region>();
     /** Coords are world tile resolution and are x + 2048 * z */
-    public static HashMap<Integer, Region>                     regionsByCoord       = new HashMap<Integer, Region>();
-    public static HashMap<Integer, Region>                     ugRegionsById        = new HashMap<Integer, Region>();
+    public HashMap<Integer, Region>                     regionsByCoord       = new HashMap<Integer, Region>();
+    public HashMap<Integer, Region>                     ugRegionsById        = new HashMap<Integer, Region>();
     /** Coords are world tile resolution and are x + 2048 * z */
-    public static HashMap<Integer, Region>                     ugRegionsByCoord     = new HashMap<Integer, Region>();
-    public static HashMap<Integer, WorldConstruction>          constructionsById    = new HashMap<Integer, WorldConstruction>();
+    public HashMap<Integer, Region>                     ugRegionsByCoord     = new HashMap<Integer, Region>();
+    public HashMap<Integer, WorldConstruction>          constructionsById    = new HashMap<Integer, WorldConstruction>();
     /** Coords are world tile resolution and are x + 2048 * z */
-    public static HashMap<Integer, HashSet<WorldConstruction>> constructionsByCoord = new HashMap<Integer, HashSet<WorldConstruction>>();
-    static int                                                 waterShift           = -35;
+    public HashMap<Integer, HashSet<WorldConstruction>> constructionsByCoord = new HashMap<Integer, HashSet<WorldConstruction>>();
+    static int                                          waterShift           = -35;
 
-    public BicubicInterpolator                                 biomeInterpolator    = new BicubicInterpolator();
-    public CachedBicubicInterpolator                           heightInterpolator   = new CachedBicubicInterpolator();
-    public CachedBicubicInterpolator                           miscInterpolator     = new CachedBicubicInterpolator();
+    public BicubicInterpolator                          biomeInterpolator    = new BicubicInterpolator();
+    public CachedBicubicInterpolator                    heightInterpolator   = new CachedBicubicInterpolator();
+    public CachedBicubicInterpolator                    miscInterpolator     = new CachedBicubicInterpolator();
+    public ImgHolder                                    images               = new ImgHolder();
+    public SiteStructureGenerator                       structureGen;
+    public int                                          scale                = WorldGenerator.scale;
+    public int                                          cubicHeightScale     = WorldGenerator.cubicHeightScale;
+    public boolean                                      finite               = WorldGenerator.finite;
+    public int                                          yMin                 = 0;
+    public BlockPos                                     spawn                = WorldGenerator.spawn;
+    public BlockPos                                     shift                = WorldGenerator.shift;
+    public String                                       spawnSite            = WorldGenerator.spawnSite;
+    public final String                                 name;
+    public boolean                                      randomSpawn;
 
-    public ISigmoid                                            sigmoid              = new ISigmoid()
-                                                                                    {
-                                                                                    };
+    public ISigmoid                                     sigmoid              = new ISigmoid()
+                                                                             {
+                                                                             };
+    public File                                         resourceDir;
 
-    static int                                                 scale                = WorldGenerator.scale;
-
-    static void addSiteByCoord(int x, int z, Site site)
+    void addSiteByCoord(int x, int z, Site site)
     {
         int coord = x + 8192 * z;
         HashSet<Site> sites = sitesByCoord.get(coord);
@@ -61,13 +85,14 @@ public class DorfMap
         sites.add(site);
     }
 
-    public DorfMap()
+    public DorfMap(String name)
     {
+        this.name = name;
     }
 
     public void setScale(int scale)
     {
-        DorfMap.scale = scale;
+        this.scale = scale;
     }
 
     public void init()
@@ -90,18 +115,18 @@ public class DorfMap
 
     public void populateBiomeMap()
     {
-        BufferedImage img = WorldGenerator.instance.biomeMap;
+        BufferedImage img = images.biomeMap;
         if (img == null) return;
         biomeMap = new int[img.getWidth()][img.getHeight()];
         for (int y = 0; y < img.getHeight(); y++)
         {
             for (int x = 0; x < img.getWidth(); x++)
             {
-                int rgb = WorldGenerator.instance.biomeMap.getRGB(x, y);
+                int rgb = images.biomeMap.getRGB(x, y);
                 biomeMap[x][y] = BiomeList.GetBiomeIndex(rgb);
             }
         }
-        WorldGenerator.instance.biomeMap = null;
+        images.biomeMap = null;
     }
 
     public void setElevationSigmoid(ISigmoid sigmoid)
@@ -117,7 +142,7 @@ public class DorfMap
 
     public void populateElevationMap()
     {
-        BufferedImage img = WorldGenerator.instance.elevationMap;
+        BufferedImage img = images.elevationMap;
         if (img == null) return;
         int shift = 10;
         elevationMap = new int[img.getWidth()][img.getHeight()];
@@ -127,7 +152,7 @@ public class DorfMap
         {
             for (int x = 0; x < img.getWidth(); x++)
             {
-                int rgb = WorldGenerator.instance.elevationMap.getRGB(x, y);
+                int rgb = images.elevationMap.getRGB(x, y);
 
                 int r = (rgb >> 16) & 0xFF, b = (rgb >> 0) & 0xFF;
                 int h = b - shift;
@@ -149,12 +174,12 @@ public class DorfMap
         }
         System.out.println(max + " " + min);
         // Don't clear the elevation map, it is needed again if sigmoid changes.
-        // WorldGenerator.instance.elevationMap = null;
+        // images.elevationMap = null;
     }
 
     public void populateWaterMap()
     {
-        BufferedImage img = WorldGenerator.instance.elevationWaterMap;
+        BufferedImage img = images.elevationWaterMap;
         if (img == null) return;
         waterMap = new int[img.getWidth()][img.getHeight()];
         riverMap = new int[img.getWidth()][img.getHeight()];
@@ -162,7 +187,7 @@ public class DorfMap
         {
             for (int x = 0; x < img.getWidth(); x++)
             {
-                int rgb = WorldGenerator.instance.elevationWaterMap.getRGB(x, y);
+                int rgb = images.elevationWaterMap.getRGB(x, y);
 
                 int r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = (rgb >> 0) & 0xFF;
                 int biome = biomeMap[x][y];
@@ -197,12 +222,12 @@ public class DorfMap
             }
         }
         joinRivers();
-        WorldGenerator.instance.elevationWaterMap = null;
+        images.elevationWaterMap = null;
     }
 
     public void populateTemperatureMap()
     {
-        BufferedImage img = WorldGenerator.instance.temperatureMap;
+        BufferedImage img = images.temperatureMap;
         if (img == null) return;
         temperatureMap = new int[img.getWidth()][img.getHeight()];
         for (int y = 0; y < img.getHeight(); y++)
@@ -213,12 +238,12 @@ public class DorfMap
                 temperatureMap[x][y] = rgb & 255;
             }
         }
-        WorldGenerator.instance.temperatureMap = null;
+        images.temperatureMap = null;
     }
 
     public void populateVegitationMap()
     {
-        BufferedImage img = WorldGenerator.instance.vegitationMap;
+        BufferedImage img = images.vegitationMap;
         if (img == null) return;
         vegitationMap = new int[img.getWidth()][img.getHeight()];
         for (int y = 0; y < img.getHeight(); y++)
@@ -229,12 +254,12 @@ public class DorfMap
                 vegitationMap[x][y] = rgb & 255;
             }
         }
-        WorldGenerator.instance.vegitationMap = null;
+        images.vegitationMap = null;
     }
 
     public void populateDrainageMap()
     {
-        BufferedImage img = WorldGenerator.instance.drainageMap;
+        BufferedImage img = images.drainageMap;
         if (img == null) return;
         drainageMap = new int[img.getWidth()][img.getHeight()];
         for (int y = 0; y < img.getHeight(); y++)
@@ -245,12 +270,12 @@ public class DorfMap
                 drainageMap[x][y] = rgb & 255;
             }
         }
-        WorldGenerator.instance.drainageMap = null;
+        images.drainageMap = null;
     }
 
     public void populateRainMap()
     {
-        BufferedImage img = WorldGenerator.instance.rainMap;
+        BufferedImage img = images.rainMap;
         if (img == null) return;
         rainMap = new int[img.getWidth()][img.getHeight()];
         for (int y = 0; y < img.getHeight(); y++)
@@ -261,12 +286,12 @@ public class DorfMap
                 rainMap[x][y] = rgb & 255;
             }
         }
-        WorldGenerator.instance.rainMap = null;
+        images.rainMap = null;
     }
 
     public void populateStructureMap()
     {
-        BufferedImage img = WorldGenerator.instance.structuresMap;
+        BufferedImage img = images.structuresMap;
         if (img == null) return;
         structureMap = new int[img.getWidth()][img.getHeight()];
         for (int y = 0; y < img.getHeight(); y++)
@@ -277,7 +302,7 @@ public class DorfMap
                 structureMap[x][y] = rgb;
             }
         }
-        WorldGenerator.instance.structuresMap = null;
+        images.structuresMap = null;
     }
 
     private void joinRivers()
@@ -486,6 +511,7 @@ public class DorfMap
         public final String         name;
         public final int            id;
         public final SiteType       type;
+        public final DorfMap        map;
         public int                  x;
         public int                  z;
         /** Corners in embark tile coordinates */
@@ -494,8 +520,9 @@ public class DorfMap
         public final Set<Structure> structures = new HashSet<DorfMap.Structure>();
         // public BufferedImage map;
 
-        public Site(String name_, int id_, SiteType type_, int x_, int z_)
+        public Site(DorfMap map, String name_, int id_, SiteType type_, int x_, int z_)
         {
+            this.map = map;
             name = name_;
             id = id_;
             type = type_;
@@ -514,14 +541,14 @@ public class DorfMap
             z = (z1 + z2) / 2;
             for (int x = x1; x <= x2; x++)
                 for (int z = z1; z <= z2; z++)
-                    addSiteByCoord(x, z, this);
+                    map.addSiteByCoord(x, z, this);
         }
 
         @Override
         public String toString()
         {
-            return name + " " + type + " " + id + " " + (corners[0][0] * scale) + "," + (corners[0][1] * scale) + "->"
-                    + (corners[1][0] * scale) + "," + (corners[1][1] * scale);
+            return name + " " + type + " " + id + " " + (corners[0][0] * map.scale) + "," + (corners[0][1] * map.scale)
+                    + "->" + (corners[1][0] * map.scale) + "," + (corners[1][1] * map.scale);
         }
 
         @Override
@@ -539,16 +566,16 @@ public class DorfMap
 
         public boolean isInSite(int x, int z)
         {
-            int width = rgbmap != null ? scale / 2 : 0;
-            if (x < corners[0][0] * scale + width || z < corners[0][1] * scale + width) { return false; }
+            int width = rgbmap != null ? map.scale / 2 : 0;
+            if (x < corners[0][0] * map.scale + width || z < corners[0][1] * map.scale + width) { return false; }
             if (rgbmap != null)
             {
                 // System.out.println("test");
                 // Equals as it starts at 0
-                if (x >= (corners[0][0] * scale + rgbmap.length * scale / SiteStructureGenerator.SITETOBLOCK
-                        + scale / 2)
-                        || z >= (corners[0][1] * scale + rgbmap[0].length * scale / SiteStructureGenerator.SITETOBLOCK
-                                + scale / 2))
+                if (x >= (corners[0][0] * map.scale + rgbmap.length * map.scale / SiteStructureGenerator.SITETOBLOCK
+                        + map.scale / 2)
+                        || z >= (corners[0][1] * map.scale
+                                + rgbmap[0].length * map.scale / SiteStructureGenerator.SITETOBLOCK + map.scale / 2))
                     return false;
             }
             return true;
@@ -569,12 +596,13 @@ public class DorfMap
 
     public static class Structure
     {
+        final DorfMap       map;
         final String        name;
         final String        name2;
         final int           id;
         final StructureType type;
 
-        public Structure(String name_, String name2_, int id_, StructureType type_)
+        public Structure(DorfMap map, String name_, String name2_, int id_, StructureType type_)
         {
             if (name_ == null)
             {
@@ -584,6 +612,7 @@ public class DorfMap
             {
                 name2_ = "";
             }
+            this.map = map;
             name = name_;
             name2 = name2_;
             id = id_;
@@ -605,6 +634,7 @@ public class DorfMap
 
     public static class Region
     {
+        final DorfMap                          map;
         public final int                       id;
         public final String                    name;
         public final RegionType                type;
@@ -612,16 +642,18 @@ public class DorfMap
         public final HashSet<Integer>          coords   = new HashSet<Integer>();
         public final HashMap<Integer, Integer> biomeMap = new HashMap<Integer, Integer>();
 
-        public Region(int id_, String name_, RegionType type_)
+        public Region(DorfMap map, int id_, String name_, RegionType type_)
         {
             id = id_;
             name = name_;
             type = type_;
             depth = 0;
+            this.map = map;
         }
 
-        public Region(int id_, String name_, int depth_, RegionType type_)
+        public Region(DorfMap map, int id_, String name_, int depth_, RegionType type_)
         {
+            this.map = map;
             id = id_;
             name = name_;
             type = type_;
@@ -630,8 +662,8 @@ public class DorfMap
 
         public boolean isInRegion(int x, int z)
         {
-            x = x / (scale * 16);
-            z = z / (scale * 16);
+            x = x / (map.scale * 16);
+            z = z / (map.scale * 16);
             int key = x + 2048 * z + depth * 4194304;
             return coords.contains(key);
         }
@@ -657,6 +689,7 @@ public class DorfMap
 
     public static class WorldConstruction
     {
+        final DorfMap                          map;
         public final int                       id;
         public final String                    name;
         public final ConstructionType          type;
@@ -664,8 +697,9 @@ public class DorfMap
         /** Key: x,z coordinate, Value: depth, -1 for surface */
         public final HashMap<Integer, Integer> embarkCoords = new HashMap<Integer, Integer>();
 
-        public WorldConstruction(int id_, String name_, ConstructionType type_)
+        public WorldConstruction(DorfMap map, int id_, String name_, ConstructionType type_)
         {
+            this.map = map;
             id = id_;
             name = name_;
             type = type_;
@@ -673,28 +707,28 @@ public class DorfMap
 
         public boolean isInRegion(int x, int z)
         {
-            x = x / (scale * 16);
-            z = z / (scale * 16);
+            x = x / (map.scale * 16);
+            z = z / (map.scale * 16);
             int key = x + 2048 * z;
             return worldCoords.contains(key);
         }
 
         public int getYValue(int x, int surfaceY, int z)
         {
-            x = x / (scale);
-            z = z / (scale);
+            x = x / (map.scale);
+            z = z / (map.scale);
             int key = x + 8192 * z;
             if (!embarkCoords.containsKey(key)) return Integer.MIN_VALUE;
             Integer i = embarkCoords.get(key);
             if (i == -1) return surfaceY;
-            return WorldGenerator.instance.dorfs.sigmoid.elevationSigmoid(i);
+            return map.sigmoid.elevationSigmoid(i);
 
         }
 
         public boolean isInConstruct(int x, int y, int z)
         {
-            x = x / (scale);
-            z = z / (scale);
+            x = x / (map.scale);
+            z = z / (map.scale);
             int key = x + 8192 * z;
             return embarkCoords.containsKey(key);
         }

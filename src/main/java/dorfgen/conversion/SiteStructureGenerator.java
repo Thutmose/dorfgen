@@ -13,7 +13,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 
-import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap.Site;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockDoor;
@@ -31,17 +30,18 @@ import net.minecraft.world.World;
 
 public class SiteStructureGenerator
 {
-    static DorfMap                   dorfs;
+    final DorfMap                    dorfs;
     public static int                SITETOBLOCK  = 51;
     HashMap<Integer, SiteStructures> structureMap = new HashMap<Integer, SiteStructures>();
 
     private int                      minY         = 0;
     private int                      maxY         = 255;
-    private int                      scale        = WorldGenerator.scale;
+    private int                      scale        = 0;
 
     public SiteStructureGenerator(DorfMap dorfs_)
     {
         dorfs = dorfs_;
+        setScale(dorfs.scale);
     }
 
     public void setScale(int scale)
@@ -52,9 +52,9 @@ public class SiteStructureGenerator
     public void init()
     {
         System.out.println("Processing Site Maps for structures");
-        for (Integer i : DorfMap.sitesById.keySet())
+        for (Integer i : dorfs.sitesById.keySet())
         {
-            structureMap.put(i, new SiteStructures(DorfMap.sitesById.get(i)));
+            structureMap.put(i, new SiteStructures(dorfs, dorfs.sitesById.get(i)));
         }
     }
 
@@ -180,13 +180,15 @@ public class SiteStructureGenerator
      * @param world */
     public void generate(int chunkX, int chunkZ, World world, int minY, int maxY)
     {
+        int width = (scale / SiteStructureGenerator.SITETOBLOCK);
+        if (width == 0) return;
         this.maxY = maxY;
         this.minY = minY;
         int x = chunkX, z = chunkZ, x1, x2, z1, z2;
         x *= 16;
         z *= 16;
-        x -= WorldGenerator.shift.getX();
-        z -= WorldGenerator.shift.getZ();
+        x -= dorfs.shift.getX();
+        z -= dorfs.shift.getZ();
         int h;
         for (int i = 0; i < 16; i++)
         {
@@ -195,10 +197,10 @@ public class SiteStructureGenerator
                 x1 = x + i;
                 z1 = z + j;
 
-                x2 = x1 + WorldGenerator.shift.getX();
-                z2 = z1 + WorldGenerator.shift.getZ();
+                x2 = x1 + dorfs.shift.getX();
+                z2 = z1 + dorfs.shift.getZ();
 
-                HashSet<Site> sites = WorldGenerator.instance.dorfs.getSiteForCoords(x2, z2);
+                HashSet<Site> sites = dorfs.getSiteForCoords(x2, z2);
                 Site site = null;
                 if (sites == null) continue;
                 // Loop Over sites and do the structures
@@ -366,10 +368,10 @@ public class SiteStructureGenerator
                 x1 = x + i;
                 z1 = z + j;
 
-                x2 = x1 + WorldGenerator.shift.getX();
-                z2 = z1 + WorldGenerator.shift.getZ();
+                x2 = x1 + dorfs.shift.getX();
+                z2 = z1 + dorfs.shift.getZ();
 
-                HashSet<Site> sites = WorldGenerator.instance.dorfs.getSiteForCoords(x2, z2);
+                HashSet<Site> sites = dorfs.getSiteForCoords(x2, z2);
                 Site site = null;
                 if (sites == null) continue;
                 // Loop Over sites and do the structures
@@ -518,14 +520,16 @@ public class SiteStructureGenerator
 
     public static class SiteStructures
     {
+        final DorfMap                        dorfs;
         public final Site                    site;
         public final HashSet<StructureSpace> structures = new HashSet<StructureSpace>();
         public final HashSet<WallSegment>    walls      = new HashSet<WallSegment>();
         public final HashSet<RoadExit>       roads      = new HashSet<RoadExit>();
         public final HashSet<RiverExit>      rivers     = new HashSet<RiverExit>();
 
-        public SiteStructures(Site site_)
+        public SiteStructures(DorfMap dorfs, Site site_)
         {
+            this.dorfs = dorfs;
             site = site_;
             initStructures();
             initRoadsAndRivers();
@@ -744,11 +748,11 @@ public class SiteStructureGenerator
                         StructureSpace structure;
                         if (roof == SiteMapColours.TOWERROOF)
                         {
-                            structure = new WallTowerSpace(corner1, corner2);
+                            structure = new WallTowerSpace(dorfs, corner1, corner2);
                         }
                         else
                         {
-                            structure = new StructureSpace(corner1, corner2, roof);
+                            structure = new StructureSpace(dorfs, corner1, corner2, roof);
                         }
                         structures.add(structure);
                     }
@@ -760,7 +764,7 @@ public class SiteStructureGenerator
 
         private boolean readFromFile()
         {
-            File sites = new File(FileLoader.resourceDir.getAbsolutePath() + File.separator + "sitescaches");
+            File sites = new File(dorfs.resourceDir.getAbsolutePath() + File.separator + "sitescaches");
             if (!sites.exists())
             {
                 sites.mkdirs();
@@ -797,11 +801,11 @@ public class SiteStructureGenerator
                                 StructureSpace structure;
                                 if (colour == SiteMapColours.TOWERROOF)
                                 {
-                                    structure = new WallTowerSpace(min, max);
+                                    structure = new WallTowerSpace(dorfs, min, max);
                                 }
                                 else
                                 {
-                                    structure = new StructureSpace(min, max, colour);
+                                    structure = new StructureSpace(dorfs, min, max, colour);
                                 }
                                 structures.add(structure);
                             }
@@ -829,7 +833,7 @@ public class SiteStructureGenerator
 
         private void writeToFile()
         {
-            File sites = new File(FileLoader.resourceDir.getAbsolutePath() + File.separator + "sitescaches");
+            File sites = new File(dorfs.resourceDir.getAbsolutePath() + File.separator + "sitescaches");
             String file = sites.getAbsolutePath() + File.separator + "sitecache" + site.id;
 
             FileWriter fwriter;
@@ -946,6 +950,7 @@ public class SiteStructureGenerator
 
     public static class StructureSpace
     {
+        final DorfMap               dorfs;
         public final SiteMapColours roofType;
         /** Pixel Coordinates in the site map image */
         public final int[]          min;
@@ -955,11 +960,12 @@ public class SiteStructureGenerator
         protected int[][]           bounds;
         protected int[]             mid;
 
-        public StructureSpace(int[] minCoords, int[] maxCoords, SiteMapColours roof)
+        public StructureSpace(DorfMap dorfs, int[] minCoords, int[] maxCoords, SiteMapColours roof)
         {
             min = minCoords;
             max = maxCoords;
             roofType = roof;
+            this.dorfs = dorfs;
         }
 
         public int[][] getBounds(Site site, int scale)
@@ -1001,7 +1007,7 @@ public class SiteStructureGenerator
             if ((x == midx && (z == bounds[0][1] || z == bounds[1][1]))
                     || (z == midz && (x == bounds[0][0] || x == bounds[1][0])))
             {
-                SiteStructures structs = WorldGenerator.instance.structureGen.getStructuresForSite(site);
+                SiteStructures structs = dorfs.structureGen.getStructuresForSite(site);
                 EnumFacing dir = getDoorDirection(site, x, z, scale, structs).getOpposite();
                 StructureSpace other = structs.getStructure(x + dir.getFrontOffsetX(), z + dir.getFrontOffsetZ(),
                         scale);
@@ -1076,9 +1082,9 @@ public class SiteStructureGenerator
          * are closest to the center of the faces of the connected towers */
         int[][]                 wallConnects = new int[2][2];
 
-        public WallTowerSpace(int[] minCoords, int[] maxCoords)
+        public WallTowerSpace(DorfMap dorfs, int[] minCoords, int[] maxCoords)
         {
-            super(minCoords, maxCoords, SiteMapColours.TOWERROOF);
+            super(dorfs, minCoords, maxCoords, SiteMapColours.TOWERROOF);
         }
 
         public int countConnects()

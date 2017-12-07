@@ -2,7 +2,6 @@ package dorfgen.worldgen.common;
 
 import java.util.HashSet;
 
-import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
@@ -22,14 +21,16 @@ import net.minecraft.world.chunk.ChunkPrimer;
 public class SiteMaker
 {
 
-    public static BicubicInterpolator bicubicInterpolator = new BicubicInterpolator();
-    final DorfMap                     dorfs;
-    private int                       scale               = 0;
+    public BicubicInterpolator   bicubicInterpolator = new BicubicInterpolator();
+    final DorfMap                dorfs;
+    final SiteStructureGenerator structureGen;
+    private int                  scale               = 0;
 
-    public SiteMaker()
+    public SiteMaker(DorfMap map, SiteStructureGenerator gen)
     {
-        dorfs = WorldGenerator.instance.dorfs;
-        setScale(dorfgen.WorldGenerator.scale);
+        dorfs = map;
+        this.structureGen = gen;
+        setScale(map.scale);
     }
 
     public void setScale(int scale)
@@ -55,10 +56,10 @@ public class SiteMaker
 
     public void buildSites(World world, int chunkX, int chunkZ, ChunkPrimer blocks, Biome[] biomes, int minY, int maxY)
     {
-        if (dorfs.structureMap.length == 0) return;
-        SiteStructureGenerator structureGen = WorldGenerator.instance.structureGen;
-        int x = (chunkX * 16 - WorldGenerator.shift.getX());
-        int z = (chunkZ * 16 - WorldGenerator.shift.getZ());
+        int width = (scale / SiteStructureGenerator.SITETOBLOCK);
+        if (dorfs.structureMap.length == 0 || width == 0) return;
+        int x = (chunkX * 16 - dorfs.shift.getX());
+        int z = (chunkZ * 16 - dorfs.shift.getZ());
         int x1, z1, h;
 
         for (int i1 = 0; i1 < 16; i1++)
@@ -76,7 +77,7 @@ public class SiteMaker
                     SiteMapColours siteCol = getSiteMapColour(s, x1, z1);
                     if (siteCol == null) continue;
 
-                    h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1, scale);
+                    h = bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
                     int j = h - 1;
 
                     if (Math.abs(j - minY) > 8) return;
@@ -133,8 +134,7 @@ public class SiteMaker
                     {
                         if (i1 > 0 && i1 < 15 && k1 > 0 && k1 < 15)
                         {
-                            h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1,
-                                    scale);
+                            h = bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
                             int h2;
 
                             SiteMapColours px, nx, pz, nz;
@@ -145,29 +145,25 @@ public class SiteMaker
 
                             if (px != null && !px.toString().contains("ROAD") && z1 % 8 == 0)
                             {
-                                h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1 + 1,
-                                        z1, scale);
+                                h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x1 + 1, z1, scale);
                                 blocks.setBlockState(i1, h2 - minY, k1, Blocks.TORCH.getDefaultState());
                             }
 
                             if (nx != null && !nx.toString().contains("ROAD") && z1 % 8 == 0)
                             {
-                                h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1 - 1,
-                                        z1, scale);
+                                h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x1 - 1, z1, scale);
                                 blocks.setBlockState(i1, h2 - minY, k1, Blocks.TORCH.getDefaultState());
                             }
 
                             if (pz != null && !pz.toString().contains("ROAD") && x1 % 8 == 0)
                             {
-                                h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1,
-                                        z1 + 1, scale);
+                                h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1 + 1, scale);
                                 blocks.setBlockState(i1, h2 - minY, k1, Blocks.TORCH.getDefaultState());
                             }
 
                             if (nz != null && !nz.toString().contains("ROAD") && x1 % 8 == 0)
                             {
-                                h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1,
-                                        z1 - 1, scale);
+                                h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1 - 1, scale);
                                 blocks.setBlockState(i1, h2 - minY, k1, Blocks.TORCH.getDefaultState());
                             }
                         }

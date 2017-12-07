@@ -2,7 +2,7 @@ package dorfgen.client;
 
 import java.io.IOException;
 
-import dorfgen.worldgen.cubic.GeneratorInfo;
+import dorfgen.worldgen.common.GeneratorInfo;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiCreateWorld;
 import net.minecraft.client.gui.GuiScreen;
@@ -36,10 +36,9 @@ public class GuiCustomizeWorld extends GuiScreen
 
         region.setText(generatorInfo.region);
         scaleh.setText(generatorInfo.scaleh + "");
-        scalev.setVisible(hasSigmoid);
-        scalev.setText(generatorInfo.scalev + "");
+        scalev.setText(hasSigmoid ? generatorInfo.scalev + "" : generatorInfo.scalev != 1 ? "" : 1 + "");
 
-        com.google.common.base.Predicate<String> intValid = new com.google.common.base.Predicate<String>()
+        final com.google.common.base.Predicate<String> intValid = new com.google.common.base.Predicate<String>()
         {
             @Override
             public boolean apply(String input)
@@ -55,8 +54,25 @@ public class GuiCustomizeWorld extends GuiScreen
                 }
             }
         };
+        com.google.common.base.Predicate<String> sigMoidValid = new com.google.common.base.Predicate<String>()
+        {
+            @Override
+            public boolean apply(String input)
+            {
+                try
+                {
+                    int num = Integer.parseInt(input);
+                    return hasSigmoid ? true : num == 1;
+                }
+                catch (NumberFormatException e)
+                {
+                    return input.isEmpty();
+                }
+            }
+        };
+
         scaleh.setValidator(intValid);
-        scalev.setValidator(intValid);
+        scalev.setValidator(sigMoidValid);
         addButton(new GuiButton(0, x, y + 00, "Rivers: " + generatorInfo.rivers));
         addButton(new GuiButton(1, x, y + 25, "Sites: " + generatorInfo.sites));
         addButton(new GuiButton(2, x, y + 50, "Constructs: " + generatorInfo.constructs));

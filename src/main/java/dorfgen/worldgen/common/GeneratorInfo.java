@@ -1,4 +1,4 @@
-package dorfgen.worldgen.cubic;
+package dorfgen.worldgen.common;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -21,9 +21,9 @@ public class GeneratorInfo
         return info;
     }
 
-    public String  region     = "";
-    public int     scaleh     = WorldGenerator.scale;
-    public int     scalev     = WorldGenerator.cubicHeightScale;
+    public String  region     = WorldGenerator.instance.defaultRegion;
+    public int     scaleh     = 51;
+    public int     scalev     = 8;
     public boolean rivers     = true;
     public boolean sites      = true;
     public boolean constructs = true;

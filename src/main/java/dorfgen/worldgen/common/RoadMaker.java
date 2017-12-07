@@ -5,7 +5,6 @@ import static net.minecraft.util.EnumFacing.NORTH;
 import static net.minecraft.util.EnumFacing.SOUTH;
 import static net.minecraft.util.EnumFacing.WEST;
 
-import java.util.Arrays;
 import java.util.HashSet;
 
 import javax.vecmath.Vector3d;
@@ -35,9 +34,9 @@ public class RoadMaker extends PathMaker
     public boolean                   respectsSites = true;
     public static final EnumFacing[] DIRS          = { EAST, WEST, NORTH, SOUTH };
 
-    public RoadMaker()
+    public RoadMaker(DorfMap map, SiteStructureGenerator gen)
     {
-        // TODO Auto-generated constructor stub
+        super(map, gen);
     }
 
     public PathMaker setScale(int scale)
@@ -52,19 +51,19 @@ public class RoadMaker extends PathMaker
     {
         int x = chunkX * 16;
         int z = chunkZ * 16;
-        x -= WorldGenerator.shift.getX();
-        z -= WorldGenerator.shift.getZ();
+        x -= dorfs.shift.getX();
+        z -= dorfs.shift.getZ();
 
-        if (x >= 0 && z >= 0 && (x + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap.length
-                && (z + 16) / scale <= WorldGenerator.instance.dorfs.biomeMap[0].length)
+        if (x >= 0 && z >= 0 && (x + 16) / scale <= dorfs.biomeMap.length
+                && (z + 16) / scale <= dorfs.biomeMap[0].length)
         {
             int x1 = (x / scale) / 16;
             int z1 = (z / scale) / 16;
             int key = (x1) + 2048 * (z1);
 
-            if (DorfMap.constructionsByCoord.containsKey(key))
+            if (dorfs.constructionsByCoord.containsKey(key))
             {
-                for (WorldConstruction construct : DorfMap.constructionsByCoord.get(key))
+                for (WorldConstruction construct : dorfs.constructionsByCoord.get(key))
                 {
                     if (construct.type == type && construct.isInConstruct(x, minY % 16, z)) return true;
                 }
@@ -133,8 +132,8 @@ public class RoadMaker extends PathMaker
             {
                 for (int w2 = -ROADWIDTH; w2 <= ROADWIDTH; w2++)
                 {
-                    h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap,
-                            nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, scale);
+                    h = bicubicInterpolator.interpolate(dorfs.elevationMap, nearestX + nearestEmbarkX + w,
+                            nearestZ + nearestEmbarkZ + w2, scale);
                     safeSetToRoad(nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, h, chunkX, chunkZ,
                             blocks);
                 }
@@ -193,8 +192,8 @@ public class RoadMaker extends PathMaker
                 {
                     if ((w < 1 - ROADWIDTH || w > ROADWIDTH - 1) && (w2 < 1 - ROADWIDTH || w2 > ROADWIDTH - 1))
                         continue; // take the corners off
-                    h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap,
-                            nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, scale);
+                    h = bicubicInterpolator.interpolate(dorfs.elevationMap, nearestX + nearestEmbarkX + w,
+                            nearestZ + nearestEmbarkZ + w2, scale);
                     safeSetToRoad(nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, h, chunkX, chunkZ,
                             blocks);
                 }
@@ -209,7 +208,7 @@ public class RoadMaker extends PathMaker
 
         int minDistanceSqr = Integer.MAX_VALUE;
 
-        SiteStructures structures = WorldGenerator.instance.structureGen.getStructuresForSite(site);
+        SiteStructures structures = structureGen.getStructuresForSite(site);
         for (RoadExit exit : structures.roads)
         {
             edge = exit.getEdgeMid(site, scale);
@@ -242,7 +241,7 @@ public class RoadMaker extends PathMaker
         {
             for (int zsearch = -ROAD_SEARCH_AREA; zsearch <= ROAD_SEARCH_AREA; zsearch++)
             {
-                subSites = DorfMap.sitesByCoord.get((kx + xsearch) + 8192 * (kz + zsearch));
+                subSites = dorfs.sitesByCoord.get((kx + xsearch) + 8192 * (kz + zsearch));
                 if (subSites != null) sites.addAll(subSites);
             }
         }
@@ -276,7 +275,7 @@ public class RoadMaker extends PathMaker
         {
             for (int zsearch = -ROAD_SEARCH_AREA; zsearch <= ROAD_SEARCH_AREA; zsearch++)
             {
-                subSites = DorfMap.sitesByCoord.get((kx + xsearch) + 8192 * (kz + zsearch));
+                subSites = dorfs.sitesByCoord.get((kx + xsearch) + 8192 * (kz + zsearch));
                 if (subSites != null) sites.addAll(subSites);
             }
         }
@@ -355,7 +354,7 @@ public class RoadMaker extends PathMaker
 
         if (dirs[3])
         {
-            int[] nearest = new int[]  { kx * scale + offset, (kz + 1) * scale };
+            int[] nearest = new int[] { kx * scale + offset, (kz + 1) * scale };
             point4 = nearest;
         }
         if (point1 != null || point2 != null || point3 != null || point4 != null)
@@ -451,7 +450,7 @@ public class RoadMaker extends PathMaker
 
     public boolean hasRoad(int xAbs, int h, int zAbs)
     {
-        HashSet<WorldConstruction> cons = WorldGenerator.instance.dorfs.getConstructionsForCoords(xAbs, zAbs);
+        HashSet<WorldConstruction> cons = dorfs.getConstructionsForCoords(xAbs, zAbs);
 
         if (cons == null || cons.isEmpty()) return false;
 
@@ -481,9 +480,9 @@ public class RoadMaker extends PathMaker
             System.out.println("Embark location x: " + embarkX + " z: " + embarkZ + " has a road");
         }
 
-        if (WorldGenerator.instance.dorfs.getConstructionsForCoords(x, z) != null)
+        if (dorfs.getConstructionsForCoords(x, z) != null)
         {
-            for (WorldConstruction constr : WorldGenerator.instance.dorfs.getConstructionsForCoords(x, z))
+            for (WorldConstruction constr : dorfs.getConstructionsForCoords(x, z))
             {
                 if (constr.isInConstruct(x, minY % 16, z))
                 {
@@ -493,9 +492,9 @@ public class RoadMaker extends PathMaker
             }
         }
 
-        if (WorldGenerator.instance.dorfs.getConstructionsForCoords(embarkX, embarkZ) != null)
+        if (dorfs.getConstructionsForCoords(embarkX, embarkZ) != null)
         {
-            for (WorldConstruction constr : WorldGenerator.instance.dorfs.getConstructionsForCoords(embarkX, embarkZ))
+            for (WorldConstruction constr : dorfs.getConstructionsForCoords(embarkX, embarkZ))
             {
                 if (constr.isInConstruct(embarkX, minY % 16, embarkZ))
                 {
@@ -615,8 +614,8 @@ public class RoadMaker extends PathMaker
     {
         this.minY = minY;
         this.maxY = maxY;
-        int x = (chunkX * 16 - WorldGenerator.shift.getX());
-        int z = (chunkZ * 16 - WorldGenerator.shift.getZ());
+        int x = (chunkX * 16 - dorfs.shift.getX());
+        int z = (chunkZ * 16 - dorfs.shift.getZ());
 
         int xAbs = chunkX * 16;
         int zAbs = chunkZ * 16;
@@ -635,15 +634,15 @@ public class RoadMaker extends PathMaker
                 int z2 = (z + j + dr);
                 boolean[] dirs = getRoadDirection(x1, z1);
                 boolean skip = false;
-                if (x2 / scale + x2 % scale >= WorldGenerator.instance.dorfs.waterMap.length
-                        || z2 / scale + z2 % scale >= WorldGenerator.instance.dorfs.waterMap[0].length)
+                if (x2 / scale + x2 % scale >= dorfs.waterMap.length
+                        || z2 / scale + z2 % scale >= dorfs.waterMap[0].length)
                 {
                     h = 1;
                     skip = true;
                 }
                 else
                 {
-                    h = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x1, z1, scale);
+                    h = bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
                     if (x1 - dr > 0 && z1 - dr > 0)
                     {
                         if (dirs[0] || dirs[1])
@@ -654,8 +653,7 @@ public class RoadMaker extends PathMaker
                                 x2 = x1 + side.getFrontOffsetX() * r;
                                 z2 = z1 + side.getFrontOffsetZ() * r;
                                 if (!hasRoad(x2, h, z2)) break;
-                                int h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x2,
-                                        z2, scale);
+                                int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
                                 hMin = Math.min(hMin, h2);
                                 hMax = Math.max(hMax, h2);
                             }
@@ -665,8 +663,7 @@ public class RoadMaker extends PathMaker
                                 x2 = x1 + side.getFrontOffsetX() * r;
                                 z2 = z1 + side.getFrontOffsetZ() * r;
                                 if (!hasRoad(x2, h, z2)) break;
-                                int h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x2,
-                                        z2, scale);
+                                int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
                                 hMin = Math.min(hMin, h2);
                                 hMax = Math.max(hMax, h2);
                             }
@@ -679,8 +676,7 @@ public class RoadMaker extends PathMaker
                                 x2 = x1 + side.getFrontOffsetX() * r;
                                 z2 = z1 + side.getFrontOffsetZ() * r;
                                 if (!hasRoad(x2, h, z2)) break;
-                                int h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x2,
-                                        z2, scale);
+                                int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
                                 hMin = Math.min(hMin, h2);
                                 hMax = Math.max(hMax, h2);
                             }
@@ -690,8 +686,7 @@ public class RoadMaker extends PathMaker
                                 x2 = x1 + side.getFrontOffsetX() * r;
                                 z2 = z1 + side.getFrontOffsetZ() * r;
                                 if (!hasRoad(x2, h, z2)) break;
-                                int h2 = bicubicInterpolator.interpolate(WorldGenerator.instance.dorfs.elevationMap, x2,
-                                        z2, scale);
+                                int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
                                 hMin = Math.min(hMin, h2);
                                 hMax = Math.max(hMax, h2);
                             }
@@ -713,7 +708,7 @@ public class RoadMaker extends PathMaker
     {
         boolean[] ret = new boolean[4];
 
-        HashSet<WorldConstruction> constructs = WorldGenerator.instance.dorfs.getConstructionsForCoords(xAbs, zAbs);
+        HashSet<WorldConstruction> constructs = dorfs.getConstructionsForCoords(xAbs, zAbs);
 
         if (constructs == null) return ret;
 

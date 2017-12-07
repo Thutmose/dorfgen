@@ -1,10 +1,14 @@
 package dorfgen;
 
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import dorfgen.conversion.Config;
 import dorfgen.conversion.DorfMap;
@@ -42,52 +46,68 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.eventhandler.Event.Result;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
 @Mod(modid = WorldGenerator.MODID, name = WorldGenerator.NAME, version = "1.8", acceptableRemoteVersions = "*")
 public class WorldGenerator
 {
 
-    public static final String          MODID            = "dorfgen";
-    public static final String          NAME             = "DF World Generator";
+    public static final String   MODID         = "dorfgen";
+    public static final String   NAME          = "DF World Generator";
 
     @Mod.Instance(MODID)
-    public static WorldGenerator        instance;
+    public static WorldGenerator instance;
 
-    public BufferedImage                elevationMap;
-    public BufferedImage                elevationWaterMap;
-    public BufferedImage                biomeMap;
-    public BufferedImage                evilMap;
-    public BufferedImage                temperatureMap;
-    public BufferedImage                rainMap;
-    public BufferedImage                drainageMap;
-    public BufferedImage                vegitationMap;
-    public BufferedImage                structuresMap;
+    private Map<String, DorfMap> regionMaps    = Maps.newConcurrentMap();
+    public String                defaultRegion = "";
 
-    public final DorfMap                dorfs            = new DorfMap();
-    public final SiteStructureGenerator structureGen     = new SiteStructureGenerator(dorfs);
+    public static boolean        roadBlock     = true;
 
-    public static int                   scale;
-    public static int                   cubicHeightScale = 8;
-    public static boolean               finite;
-    public static int                   yMin             = 0;
-    public static BlockPos              spawn;
-    public static BlockPos              shift;
-    public static String                spawnSite        = "";
-    public static boolean               randomSpawn;
-    public static boolean               roadBlock        = true;
+    public WorldType             finiteWorldType;
 
-    public WorldType                    finiteWorldType;
+    public static String         configLocation;
+    public static String         biomes;
 
-    public static String                configLocation;
-    public static String                biomes;
-
-    public static Block                 roadSurface      = new BlockRoadSurface()
+    public static Block          roadSurface   = new BlockRoadSurface()
             .setRegistryName(new ResourceLocation(MODID, "road"));
+    public static int            scale;
+    public static int            cubicHeightScale;
+    public static boolean        finite;
+    public static boolean        randomSpawn;
+    public static BlockPos       spawn;
+    public static String         spawnSite;
+    public static BlockPos       shift;
 
-    private final boolean[]             done             = { false };
+    public static DorfMap getDorfMap(String key)
+    {
+        DorfMap map = instance.regionMaps.get(key);
+        if (map == null)
+        {
+            map = instance.regionMaps.get(instance.defaultRegion);
+            instance.regionMaps.put(key, map);
+            if (map.structureGen == null) map.structureGen = new SiteStructureGenerator(map);
+        }
+        return map;
+    }
+
+    public static SiteStructureGenerator getStructureGen(String key)
+    {
+        return getDorfMap(key).structureGen;
+    }
+
+    public static void setMap(String key, DorfMap map)
+    {
+        if (instance.regionMaps.isEmpty())
+        {
+            instance.defaultRegion = key;
+        }
+        instance.regionMaps.put(key, map);
+
+    }
+
+    List<Thread> mapThreads = Lists.newArrayList();
 
     public WorldGenerator()
     {
@@ -135,24 +155,28 @@ public class WorldGenerator
 
         String folder = file.getAbsolutePath();
         String name = file.getName();
-        FileLoader.biomes = folder.replace(name, MODID + seperator + "biomes.csv");
+        File dorfgenFolder = new File(folder.replace(name, MODID + seperator));
+        dorfgenFolder.mkdirs();
+
         //
         MapGenStructureIO.registerStructure(Start.class, "dorfsitestart");
 
-        Thread dorfProcess = new Thread(new Runnable()
+        for (File subDir : dorfgenFolder.listFiles())
         {
-
-            @Override
-            public void run()
+            if (!subDir.isDirectory()) continue;
+            Thread dorfProcess = new Thread(new Runnable()
             {
-                new FileLoader();
-                dorfs.init();
-                structureGen.init();
-                done[0] = true;
-            }
-        });
-        dorfProcess.setName("dorfgen image processor");
-        dorfProcess.start();
+                @Override
+                public void run()
+                {
+                    new FileLoader(subDir);
+                }
+            });
+            dorfProcess.setName("dorfgen image processor");
+            dorfProcess.start();
+            mapThreads.add(dorfProcess);
+        }
+
         //
     }
 
@@ -190,19 +214,20 @@ public class WorldGenerator
         if (evt.getWorld().getBiomeProvider() instanceof BiomeProviderFinite)
         {
             int scale = ((BiomeProviderFinite) evt.getWorld().getBiomeProvider()).scale;
-            if (!spawnSite.isEmpty())
+            DorfMap dorfs = ((BiomeProviderFinite) evt.getWorld().getBiomeProvider()).map;
+            if (!dorfs.spawnSite.isEmpty())
             {
-                ArrayList<Site> sites = new ArrayList<Site>(DorfMap.sitesById.values());
+                ArrayList<Site> sites = new ArrayList<Site>(dorfs.sitesById.values());
                 for (Site s : sites)
                 {
-                    if (s.name.equalsIgnoreCase(spawnSite))
+                    if (s.name.equalsIgnoreCase(dorfs.spawnSite))
                     {
                         int x = s.x * scale;
                         int y = 0;
                         int z = s.z * scale;
                         try
                         {
-                            y = dorfs.elevationMap[(x - shift.getX()) / scale][(z - shift.getZ()) / scale];
+                            y = dorfs.elevationMap[(x - dorfs.shift.getX()) / scale][(z - dorfs.shift.getZ()) / scale];
                         }
                         catch (Exception e)
                         {
@@ -214,9 +239,9 @@ public class WorldGenerator
                     }
                 }
             }
-            if (randomSpawn)
+            if (dorfs.randomSpawn)
             {
-                ArrayList<Site> sites = new ArrayList<Site>(DorfMap.sitesById.values());
+                ArrayList<Site> sites = new ArrayList<Site>(dorfs.sitesById.values());
 
                 Collections.shuffle(sites, evt.getWorld().rand);
 
@@ -229,7 +254,7 @@ public class WorldGenerator
                         int z = s.z * scale;
                         try
                         {
-                            y = dorfs.elevationMap[(x - shift.getX()) / scale][(z - shift.getZ()) / scale];
+                            y = dorfs.elevationMap[(x - dorfs.shift.getX()) / scale][(z - dorfs.shift.getZ()) / scale];
                         }
                         catch (Exception e)
                         {
@@ -243,7 +268,7 @@ public class WorldGenerator
             }
             else
             {
-                evt.getWorld().setSpawnPoint(spawn);
+                evt.getWorld().setSpawnPoint(dorfs.spawn);
             }
         }
     }
@@ -251,8 +276,15 @@ public class WorldGenerator
     @EventHandler
     public void LoadComplete(FMLLoadCompleteEvent event)
     {
-        while (!done[0])
+        boolean done = false;
+        while (!done)
         {
+            done = true;
+            for (Thread t : mapThreads)
+            {
+                done = done && !t.isAlive();
+            }
+            if (done) break;
             try
             {
                 Thread.sleep(100);
@@ -262,6 +294,7 @@ public class WorldGenerator
                 e.printStackTrace();
             }
         }
+        mapThreads.clear();
     }
 
     @SubscribeEvent
@@ -270,6 +303,9 @@ public class WorldGenerator
         if (event.getWorld().getBiomeProvider() instanceof BiomeProviderFinite)
         {
             int scale = ((BiomeProviderFinite) event.getWorld().getBiomeProvider()).scale;
+            DorfMap dorfs = ((BiomeProviderFinite) event.getWorld().getBiomeProvider()).map;
+            int width = (scale / SiteStructureGenerator.SITETOBLOCK);
+            if (width == 0) return;
             Collection<Site> sites = dorfs.getSiteForCoords(event.getPos().getX(), event.getPos().getZ());
             if (sites != null && event.getType() == EventType.TREE)
             {
@@ -280,7 +316,6 @@ public class WorldGenerator
                         for (int x = event.getPos().getX(); x < event.getPos().getX() + 16; x++)
                             for (int z = event.getPos().getZ(); z < event.getPos().getZ() + 16; z++)
                             {
-                                int width = (scale / SiteStructureGenerator.SITETOBLOCK);
                                 int pixelX = (x - site.corners[0][0] * scale - scale / 2 - width / 2) / width;
                                 int pixelY = (z - site.corners[0][1] * scale - scale / 2 - width / 2) / width;
                                 if (pixelX >= site.rgbmap.length || pixelY >= site.rgbmap[0].length)
