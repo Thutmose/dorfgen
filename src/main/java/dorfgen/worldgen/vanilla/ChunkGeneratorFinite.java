@@ -16,6 +16,7 @@ import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.worldgen.common.BiomeProviderFinite;
 import dorfgen.worldgen.common.CachedInterpolator;
 import dorfgen.worldgen.common.GeneratorInfo;
+import dorfgen.worldgen.common.IDorfgenProvider;
 import dorfgen.worldgen.common.MapGenSites;
 import dorfgen.worldgen.common.RiverMaker;
 import dorfgen.worldgen.common.RoadMaker;
@@ -39,7 +40,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.terraingen.PopulateChunkEvent;
 import net.minecraftforge.event.terraingen.TerrainGen;
 
-public class ChunkGeneratorFinite extends ChunkGeneratorOverworld
+public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDorfgenProvider
 {
     /** RNG. */
     private Random                      rand;
@@ -411,5 +412,29 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld
     public String makeString()
     {
         return "FiniteLevelSource";
+    }
+
+    @Override
+    public RiverMaker getRiverMaker()
+    {
+        return riverMaker;
+    }
+
+    @Override
+    public RoadMaker getRoadMaker()
+    {
+        return roadMaker;
+    }
+
+    @Override
+    public SiteMaker getSiteMaker()
+    {
+        return constructor;
+    }
+
+    @Override
+    public DorfMap getDorfMap()
+    {
+        return map;
     }
 }

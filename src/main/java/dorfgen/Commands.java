@@ -9,13 +9,12 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-import cubicchunks.server.CubeProviderServer;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Region;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.WorldConstruction;
 import dorfgen.worldgen.common.BiomeProviderFinite;
-import dorfgen.worldgen.cubic.CubeGeneratorFinite;
+import dorfgen.worldgen.common.IDorfgenProvider;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
@@ -58,7 +57,8 @@ public class Commands extends CommandBase
     @Override
     public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException
     {
-
+        IDorfgenProvider gen = WorldGenerator.getProvider(sender.getEntityWorld());
+        if (gen == null) { throw new CommandException("This command only works on Dorfgen Worlds!"); }
         int scale = ((BiomeProviderFinite) sender.getEntityWorld().getBiomeProvider()).scale;
         dorfs = ((BiomeProviderFinite) sender.getEntityWorld().getBiomeProvider()).map;
         // TODO command to say which building player is in in the site.
@@ -151,8 +151,6 @@ public class Commands extends CommandBase
         }
         else if (args.length > 0 && args[0].equalsIgnoreCase("river"))
         {
-            CubeGeneratorFinite gen = (CubeGeneratorFinite) ((CubeProviderServer) sender.getEntityWorld()
-                    .getChunkProvider()).getCubeGenerator();
             int x1 = sender.getPosition().getX();
             int z1 = sender.getPosition().getZ();
             int h;
@@ -162,14 +160,12 @@ public class Commands extends CommandBase
             {
                 h = 1;
             }
-            else h = gen.roadMaker.bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
+            else h = gen.getRiverMaker().bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
 
-            System.out.println(gen.riverMaker.isInRiver(x1, z1) + " " + h + " " + x1 + " " + z1 + " " + scale);
+            System.out.println(gen.getRiverMaker().isInRiver(x1, z1) + " " + h + " " + x1 + " " + z1 + " " + scale);
         }
         else if (args.length > 0 && args[0].equalsIgnoreCase("road"))
         {
-            CubeGeneratorFinite gen = (CubeGeneratorFinite) ((CubeProviderServer) sender.getEntityWorld()
-                    .getChunkProvider()).getCubeGenerator();
             int x1 = sender.getPosition().getX();
             int z1 = sender.getPosition().getZ();
             int h;
@@ -179,7 +175,7 @@ public class Commands extends CommandBase
             {
                 h = 1;
             }
-            else h = gen.roadMaker.bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
+            else h = gen.getRoadMaker().bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
             int dh = -20;
             HashSet<WorldConstruction> constructs = dorfs.getConstructionsForCoords(x1, z1);
             if (constructs != null)
@@ -205,7 +201,7 @@ public class Commands extends CommandBase
                 }
             }
 
-            System.out.println(gen.roadMaker.hasRoad(x1, h, z1) + " " + h + " " + x1 + " " + z1 + " " + dh);
+            System.out.println(gen.getRoadMaker().hasRoad(x1, h, z1) + " " + h + " " + x1 + " " + z1 + " " + dh);
         }
     }
 

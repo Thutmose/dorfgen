@@ -18,8 +18,8 @@ import dorfgen.conversion.FileLoader;
 import dorfgen.conversion.SiteMapColours;
 import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.worldgen.common.BiomeProviderFinite;
+import dorfgen.worldgen.common.IDorfgenProvider;
 import dorfgen.worldgen.common.MapGenSites.Start;
-import dorfgen.worldgen.cubic.WorldTypeCubic;
 import dorfgen.worldgen.vanilla.WorldTypeFinite;
 import net.minecraft.block.Block;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
@@ -28,6 +28,8 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 import net.minecraft.world.WorldType;
 import net.minecraft.world.gen.structure.MapGenStructureIO;
 import net.minecraftforge.client.model.ModelLoader;
@@ -79,6 +81,25 @@ public class WorldGenerator
     public static BlockPos       spawn;
     public static String         spawnSite;
     public static BlockPos       shift;
+    public static IGenGetter     getter        = new IGenGetter()
+                                               {
+                                               };
+
+    public static interface IGenGetter
+    {
+        default IDorfgenProvider getProvider(World entityWorld)
+        {
+            if (entityWorld instanceof WorldServer && ((WorldServer) entityWorld)
+                    .getChunkProvider().chunkGenerator instanceof IDorfgenProvider) { return (IDorfgenProvider) ((WorldServer) entityWorld)
+                            .getChunkProvider().chunkGenerator; }
+            return null;
+        }
+    }
+
+    public static IDorfgenProvider getProvider(World entityWorld)
+    {
+        return getter.getProvider(entityWorld);
+    }
 
     public static DorfMap getDorfMap(String key)
     {
@@ -190,7 +211,22 @@ public class WorldGenerator
     @EventHandler
     public void loadCC(FMLInitializationEvent evt)
     {
-        new WorldTypeCubic("cubic_finite");
+        new dorfgen.worldgen.cubic.WorldTypeCubic("cubic_finite");
+        getter = new IGenGetter()
+        {
+            @Override
+            public IDorfgenProvider getProvider(World entityWorld)
+            {
+                if (entityWorld instanceof cubicchunks.world.ICubicWorldServer)
+                {
+                    cubicchunks.world.ICubicWorldServer world = (cubicchunks.world.ICubicWorldServer) entityWorld;
+                    if (world.getCubeCache()
+                            .getCubeGenerator() instanceof IDorfgenProvider) { return (IDorfgenProvider) world
+                                    .getCubeCache().getCubeGenerator(); }
+                }
+                return IGenGetter.super.getProvider(entityWorld);
+            }
+        };
     }
 
     @EventHandler

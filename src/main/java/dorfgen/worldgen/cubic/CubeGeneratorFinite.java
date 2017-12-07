@@ -27,6 +27,7 @@ import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.worldgen.common.BiomeProviderFinite;
 import dorfgen.worldgen.common.CachedInterpolator;
 import dorfgen.worldgen.common.GeneratorInfo;
+import dorfgen.worldgen.common.IDorfgenProvider;
 import dorfgen.worldgen.common.RiverMaker;
 import dorfgen.worldgen.common.RoadMaker;
 import dorfgen.worldgen.common.SiteMaker;
@@ -38,7 +39,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraftforge.common.MinecraftForge;
 
-public class CubeGeneratorFinite extends BasicCubeGenerator
+public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenProvider
 {
     public CachedInterpolator                          elevationInterpolator = new CachedInterpolator();
     public CachedInterpolator                          waterInterpolator     = new CachedInterpolator();
@@ -387,6 +388,30 @@ public class CubeGeneratorFinite extends BasicCubeGenerator
     {
         IBlockState state = primer.getBlockState(x, y, z);
         return state == null || state.getBlock() == Blocks.AIR;
+    }
+
+    @Override
+    public RiverMaker getRiverMaker()
+    {
+        return riverMaker;
+    }
+
+    @Override
+    public RoadMaker getRoadMaker()
+    {
+        return roadMaker;
+    }
+
+    @Override
+    public SiteMaker getSiteMaker()
+    {
+        return constructor;
+    }
+
+    @Override
+    public DorfMap getDorfMap()
+    {
+        return map;
     }
 
 }
