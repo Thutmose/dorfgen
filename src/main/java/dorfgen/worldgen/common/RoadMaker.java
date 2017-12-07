@@ -5,6 +5,7 @@ import static net.minecraft.util.EnumFacing.NORTH;
 import static net.minecraft.util.EnumFacing.SOUTH;
 import static net.minecraft.util.EnumFacing.WEST;
 
+import java.util.Arrays;
 import java.util.HashSet;
 
 import javax.vecmath.Vector3d;
@@ -328,7 +329,7 @@ public class RoadMaker extends PathMaker
         width = Math.max(3, width);
         boolean road = dirs[0] || dirs[1] || dirs[2] || dirs[3];
         if (!road) return false;
-        else if (road) return true;
+        // else if (road) return true;
         int[] point1 = null;
         int[] point2 = null;
         int[] point3 = null;
@@ -336,32 +337,44 @@ public class RoadMaker extends PathMaker
 
         if (dirs[0])
         {
-            int[] nearest = new int[] { kx * scale + offset, (kz + 1) * scale };
-            if (hasRoad(nearest[0], h, nearest[1])) point1 = nearest;
+            int[] nearest = new int[] { (kx + 1) * scale, (kz) * scale + offset };
+            point1 = nearest;
         }
 
         if (dirs[1])
         {
             int[] nearest = new int[] { (kx - 1) * scale + scale, (kz) * scale + offset };
-            if (hasRoad(nearest[0], h, nearest[1])) point2 = nearest;
+            point2 = nearest;
         }
 
         if (dirs[2])
         {
             int[] nearest = new int[] { kx * scale + offset, (kz - 1) * scale + scale };
-            if (hasRoad(nearest[0], h, nearest[1])) point3 = nearest;
+            point3 = nearest;
         }
 
         if (dirs[3])
         {
-            int[] nearest = new int[] { (kx + 1) * scale, (kz) * scale + offset };
-            if (hasRoad(nearest[0], h, nearest[1])) point4 = nearest;
+            int[] nearest = new int[]  { kx * scale + offset, (kz + 1) * scale };
+            point4 = nearest;
         }
-
+        if (point1 != null || point2 != null || point3 != null || point4 != null)
+        {
+           //@formatter:off
+//            int num = 0;
+//            for(int i = 0; i<dirs.length; i++) if(dirs[i]) num++;
+//            if(num==1)
+//                System.out.println(Arrays.toString(point1) + 
+//                  "  " + Arrays.toString(point2) + 
+//                  "  " + Arrays.toString(point3)+ 
+//                  "  " + Arrays.toString(point4));
+          //@formatter:on
+        }
+        int dr = 2;
         if (point1 != null && point2 != null)
         {
             Vector3d dir = new Vector3d(point1[0] - point2[0], 0, point1[1] - point2[1]);
-            double distance = dir.length();
+            double distance = dir.length() + dr;
             dir.normalize();
             for (double i = 0; i < distance; i++)
             {
@@ -373,7 +386,7 @@ public class RoadMaker extends PathMaker
         if (point1 != null && point3 != null)
         {
             Vector3d dir = new Vector3d(point1[0] - point3[0], 0, point1[1] - point3[1]);
-            double distance = dir.length();
+            double distance = dir.length() + dr;
             dir.normalize();
             for (double i = 0; i < distance; i++)
             {
@@ -387,7 +400,7 @@ public class RoadMaker extends PathMaker
         if (point1 != null && point4 != null)
         {
             Vector3d dir = new Vector3d(point1[0] - point4[0], 0, point1[1] - point4[1]);
-            double distance = dir.length();
+            double distance = dir.length() + dr;
             dir.normalize();
             for (double i = 0; i < distance; i++)
             {
@@ -399,7 +412,7 @@ public class RoadMaker extends PathMaker
         if (point2 != null && point3 != null)
         {
             Vector3d dir = new Vector3d(point2[0] - point3[0], 0, point2[1] - point3[1]);
-            double distance = dir.length();
+            double distance = dir.length() + dr;
             dir.normalize();
             for (double i = 0; i < distance; i++)
             {
@@ -411,7 +424,7 @@ public class RoadMaker extends PathMaker
         if (point2 != null && point4 != null)
         {
             Vector3d dir = new Vector3d(point2[0] - point4[0], 0, point2[1] - point4[1]);
-            double distance = dir.length();
+            double distance = dir.length() + dr;
             dir.normalize();
             for (double i = 0; i < distance; i++)
             {
@@ -423,7 +436,7 @@ public class RoadMaker extends PathMaker
         if (point4 != null && point3 != null)
         {
             Vector3d dir = new Vector3d(point4[0] - point3[0], 0, point4[1] - point3[1]);
-            double distance = dir.length();
+            double distance = dir.length() + dr;
             dir.normalize();
             for (double i = 0; i < distance; i++)
             {
