@@ -21,7 +21,6 @@ import cubicchunks.worldgen.generator.ICubePrimer;
 import cubicchunks.worldgen.generator.custom.biome.replacer.IBiomeBlockReplacer;
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
-import dorfgen.conversion.ISigmoid;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.worldgen.common.BiomeProviderFinite;
@@ -57,6 +56,7 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
     private boolean                                    generateSites         = true;
     private boolean                                    generateConstructions = false;
     private boolean                                    generateRivers        = true;
+    final GeneratorInfo                                info;
     private int                                        scale;
 
     private Map<ResourceLocation, IBiomeBlockReplacer> replacerMap           = Maps.newHashMap();
@@ -66,19 +66,8 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
         super(world);
         this.rand = new Random();
         String json = world.getWorldInfo().getGeneratorOptions();
-        final GeneratorInfo info = GeneratorInfo.fromJson(json);
-
-        this.map = WorldGenerator.getDorfMap(info.region);
-        map.setElevationSigmoid(new ISigmoid()
-        {
-            @Override
-            public int elevationSigmoid(int preHeight)
-            {
-                return (preHeight) * info.scalev;
-            }
-        });
-
-        map.setScale(info.scaleh);
+        info = GeneratorInfo.fromJson(json);
+        this.map = info.create(false);
         this.structuregen = WorldGenerator.getStructureGen(info.region);
         this.riverMaker = new RiverMaker(map, structuregen);
         this.roadMaker = new RoadMaker(map, structuregen);
@@ -240,8 +229,8 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
         lastZ = cubeZ;
         if (map.elevationMap.length == 0) map.finite = false;
 
-        int imgX = cubeX * 16 - map.shift.getX();
-        int imgZ = cubeZ * 16 - map.shift.getZ();
+        int imgX = map.shiftX(cubeX * 16);
+        int imgZ = map.shiftZ(cubeZ * 16);
         int x = imgX;
         int z = imgZ;
         int yMin = cubeY * 16;

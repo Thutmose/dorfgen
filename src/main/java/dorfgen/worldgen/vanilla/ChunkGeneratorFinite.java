@@ -10,7 +10,6 @@ import java.util.Random;
 
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
-import dorfgen.conversion.ISigmoid;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.worldgen.common.BiomeProviderFinite;
@@ -70,6 +69,7 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
     private boolean                     generateConstructions = false;
     private boolean                     generateRivers        = true;
     private int                         scale;
+    final GeneratorInfo                 info;
     public CachedInterpolator           elevationInterpolator = new CachedInterpolator();
     public CachedInterpolator           waterInterpolator     = new CachedInterpolator();
     public CachedBicubicInterpolator    cachedInterpolator    = new CachedBicubicInterpolator();
@@ -86,26 +86,8 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
         this.mapFeaturesEnabled = features;
         this.rand = new Random(seed);
         String json = world.getWorldInfo().getGeneratorOptions();
-        final GeneratorInfo info = GeneratorInfo.fromJson(json);
-        this.map = WorldGenerator.getDorfMap(info.region);
-        if (info.scalev == 1)
-        {
-            map.setElevationSigmoid(new ISigmoid()
-            {
-                @Override
-                public int elevationSigmoid(int preHeight)
-                {
-                    return (preHeight) * info.scalev;
-                }
-            });
-        }
-        else
-        {
-            map.setElevationSigmoid(new ISigmoid()
-            {
-            });
-        }
-        map.setScale(info.scaleh);
+        info = GeneratorInfo.fromJson(json);
+        this.map = info.create(true);
         this.structuregen = WorldGenerator.getStructureGen(info.region);
         this.riverMaker = new RiverMaker(map, structuregen);
         this.roadMaker = new RoadMaker(map, structuregen);
@@ -130,8 +112,8 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
     public void populateBlocksFromImage(int scale, int chunkX, int chunkZ, ChunkPrimer primer)
     {
         int x1, z1, w = 0;
-        int x = chunkX * 16;
-        int z = chunkZ * 16;
+        int x = map.shiftX(chunkX * 16);
+        int z = map.shiftZ(chunkZ * 16);
         boolean water = false;
 
         for (int i1 = 0; i1 < 16; i1++)
@@ -212,8 +194,8 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
                 chunkZ * 16, 16, 16);
         if (map.elevationMap.length == 0) map.finite = false;
 
-        int imgX = chunkX * 16 - map.shift.getX();
-        int imgZ = chunkZ * 16 - map.shift.getZ();
+        int imgX = map.shiftX(chunkX * 16);
+        int imgZ = map.shiftZ(chunkZ * 16);
         int x = imgX;
         int z = imgZ;
 

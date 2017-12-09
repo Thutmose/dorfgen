@@ -14,6 +14,7 @@ import dorfgen.conversion.DorfMap.Region;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.WorldConstruction;
 import dorfgen.worldgen.common.BiomeProviderFinite;
+import dorfgen.worldgen.common.CachedInterpolator;
 import dorfgen.worldgen.common.IDorfgenProvider;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
@@ -97,9 +98,9 @@ public class Commands extends CommandBase
             {
                 int x = telesite.x * scale + scale;
                 int z = telesite.z * scale + scale;
-                int y = dorfs.elevationMap[(x - dorfs.shift.getX()) / scale][(z - dorfs.shift.getZ()) / scale];
+                int y = new CachedInterpolator().interpolate(dorfs.elevationMap, x, z, scale);
                 entity.sendMessage(new TextComponentString("Teleported to " + telesite));
-                entity.setPositionAndUpdate(x, y, z);
+                entity.setPositionAndUpdate(dorfs.shiftX(x), y, dorfs.shiftX(z));
             }
 
             WorldConstruction teleConstruct = null;
@@ -126,9 +127,9 @@ public class Commands extends CommandBase
                 int i = coords.iterator().next();
                 int x = (i & (2047)) * scale * 16 + scale;
                 int z = (i / (2048)) * scale * 16 + scale;
-                int y = dorfs.elevationMap[(x - dorfs.shift.getX()) / scale][(z - dorfs.shift.getZ()) / scale];
+                int y = dorfs.elevationMap[x / scale][z / scale];
                 entity.sendMessage(new TextComponentString("Teleported to " + teleConstruct));
-                entity.setPositionAndUpdate(x, y, z);
+                entity.setPositionAndUpdate(dorfs.shiftX(x), y, dorfs.shiftZ(z));
             }
         }
         else if (args.length > 0 && args[0].equalsIgnoreCase("info") && sender instanceof EntityPlayer)
@@ -138,7 +139,7 @@ public class Commands extends CommandBase
             Region region = dorfs.getRegionForCoords(pos.getX(), pos.getZ());
             HashSet<Site> sites = dorfs.getSiteForCoords(pos.getX(), pos.getZ());
             HashSet<WorldConstruction> constructs = dorfs.getConstructionsForCoords(pos.getX(), pos.getZ());
-            String message = "Region: " + region.toString();
+            String message = "Region: " + region;
             if (sites != null) for (Site site : sites)
             {
                 message += ", Site: " + site;
@@ -209,7 +210,12 @@ public class Commands extends CommandBase
     public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args,
             @Nullable BlockPos targetPos)
     {
-        // TODO Auto-generated method stub
+        IDorfgenProvider gen = WorldGenerator.getProvider(sender.getEntityWorld());
+        if (gen == null)
+        {
+            super.getTabCompletions(server, sender, args, targetPos);
+        }
+        dorfs = ((BiomeProviderFinite) sender.getEntityWorld().getBiomeProvider()).map;
 
         if (args[0].equalsIgnoreCase("tp"))
         {

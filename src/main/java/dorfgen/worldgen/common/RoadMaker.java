@@ -51,8 +51,8 @@ public class RoadMaker extends PathMaker
     {
         int x = chunkX * 16;
         int z = chunkZ * 16;
-        x -= dorfs.shift.getX();
-        z -= dorfs.shift.getZ();
+        x = dorfs.shiftX(x);
+        z = dorfs.shiftZ(z);
 
         if (x >= 0 && z >= 0 && (x + 16) / scale <= dorfs.biomeMap.length
                 && (z + 16) / scale <= dorfs.biomeMap[0].length)
@@ -614,11 +614,9 @@ public class RoadMaker extends PathMaker
     {
         this.minY = minY;
         this.maxY = maxY;
-        int x = (chunkX * 16 - dorfs.shift.getX());
-        int z = (chunkZ * 16 - dorfs.shift.getZ());
+        int x = dorfs.shiftX(chunkX * 16);
+        int z = dorfs.shiftZ(chunkZ * 16);
 
-        int xAbs = chunkX * 16;
-        int zAbs = chunkZ * 16;
         int h = 0;
         int hMin = Integer.MAX_VALUE;
         int hMax = Integer.MIN_VALUE;
@@ -628,8 +626,8 @@ public class RoadMaker extends PathMaker
         for (int i = 0; i < 16; i++)
             for (int j = 0; j < 16; j++)
             {
-                int x1 = xAbs + i;
-                int z1 = zAbs + j;
+                int x1 = x + i;
+                int z1 = z + j;
                 int x2 = (x + i + dr);
                 int z2 = (z + j + dr);
                 boolean[] dirs = getRoadDirection(x1, z1);

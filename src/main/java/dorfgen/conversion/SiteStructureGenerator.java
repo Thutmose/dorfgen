@@ -187,8 +187,8 @@ public class SiteStructureGenerator
         int x = chunkX, z = chunkZ, x1, x2, z1, z2;
         x *= 16;
         z *= 16;
-        x -= dorfs.shift.getX();
-        z -= dorfs.shift.getZ();
+        x = dorfs.shiftX(x);
+        z = dorfs.shiftZ(z);
         int h;
         for (int i = 0; i < 16; i++)
         {

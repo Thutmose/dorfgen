@@ -95,6 +95,16 @@ public class DorfMap
         this.scale = scale;
     }
 
+    public int shiftX(int xAbs)
+    {
+        return xAbs + shift.getX();
+    }
+
+    public int shiftZ(int zAbs)
+    {
+        return zAbs + shift.getZ();
+    }
+
     public void init()
     {
         populateBiomeMap();
@@ -404,24 +414,24 @@ public class DorfMap
 
     public Region getRegionForCoords(int x, int z)
     {
-        x = x / (scale * 16);
-        z = z / (scale * 16);
+        x = shiftX(x) / (scale * 16);
+        z = shiftZ(z) / (scale * 16);
         int key = x + 2048 * z;
         return regionsByCoord.get(key);
     }
 
     public Region getUgRegionForCoords(int x, int depth, int z)
     {
-        x = x / (scale * 16);
-        z = z / (scale * 16);
+        x = shiftX(x) / (scale * 16);
+        z = shiftZ(z) / (scale * 16);
         int key = x + 2048 * z + depth * 4194304;
         return ugRegionsByCoord.get(key);
     }
 
     public HashSet<Site> getSiteForCoords(int x, int z)
     {
-        int kx = x / (scale);
-        int kz = z / (scale);
+        int kx = shiftX(x) / (scale);
+        int kz = shiftZ(z) / (scale);
         int key = kx + 8192 * kz;
 
         HashSet<Site> ret = sitesByCoord.get(key);
@@ -439,8 +449,8 @@ public class DorfMap
 
     public HashSet<WorldConstruction> getConstructionsForCoords(int x, int z)
     {
-        x = x / (scale * 16);
-        z = z / (scale * 16);
+        x = shiftX(x) / (scale * 16);
+        z = shiftZ(z) / (scale * 16);
         int key = x + 2048 * z;
         return constructionsByCoord.get(key);
     }
@@ -662,8 +672,8 @@ public class DorfMap
 
         public boolean isInRegion(int x, int z)
         {
-            x = x / (map.scale * 16);
-            z = z / (map.scale * 16);
+            x = map.shiftX(x) / (map.scale * 16);
+            z = map.shiftZ(z) / (map.scale * 16);
             int key = x + 2048 * z + depth * 4194304;
             return coords.contains(key);
         }
@@ -707,16 +717,16 @@ public class DorfMap
 
         public boolean isInRegion(int x, int z)
         {
-            x = x / (map.scale * 16);
-            z = z / (map.scale * 16);
+            x = map.shiftX(x) / (map.scale * 16);
+            z = map.shiftZ(z) / (map.scale * 16);
             int key = x + 2048 * z;
             return worldCoords.contains(key);
         }
 
         public int getYValue(int x, int surfaceY, int z)
         {
-            x = x / (map.scale);
-            z = z / (map.scale);
+            x = map.shiftX(x) / (map.scale);
+            z = map.shiftZ(z) / (map.scale);
             int key = x + 8192 * z;
             if (!embarkCoords.containsKey(key)) return Integer.MIN_VALUE;
             Integer i = embarkCoords.get(key);
@@ -727,8 +737,8 @@ public class DorfMap
 
         public boolean isInConstruct(int x, int y, int z)
         {
-            x = x / (map.scale);
-            z = z / (map.scale);
+            x = map.shiftX(x) / (map.scale);
+            z = map.shiftZ(z) / (map.scale);
             int key = x + 8192 * z;
             return embarkCoords.containsKey(key);
         }

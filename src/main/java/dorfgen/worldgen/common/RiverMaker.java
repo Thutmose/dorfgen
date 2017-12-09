@@ -33,8 +33,8 @@ public class RiverMaker extends PathMaker
 
     public void postInitRivers(World world, int chunkX, int chunkZ, int minY, int maxY)
     {
-        int x = (chunkX * 16 - dorfs.shift.getX());
-        int z = (chunkZ * 16 - dorfs.shift.getZ());
+        int x = dorfs.shiftX(chunkX * 16);
+        int z = dorfs.shiftZ(chunkZ * 16);
         int x1, z1;
         MutableBlockPos pos = new MutableBlockPos();
         for (int i1 = 0; i1 < 16; i1++)
@@ -60,8 +60,8 @@ public class RiverMaker extends PathMaker
     public void makeRiversForChunk(World world, int chunkX, int chunkZ, ChunkPrimer primer, Biome[] biomes, int minY,
             int maxY)
     {
-        int x = (chunkX * 16 - dorfs.shift.getX());
-        int z = (chunkZ * 16 - dorfs.shift.getZ());
+        int x = dorfs.shiftX(chunkX * 16);
+        int z = dorfs.shiftZ(chunkZ * 16);
         int x1, z1, x2, z2, h;
         boolean skip = false;
         boolean oob = false;

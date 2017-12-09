@@ -58,8 +58,8 @@ public class SiteMaker
     {
         int width = (scale / SiteStructureGenerator.SITETOBLOCK);
         if (dorfs.structureMap.length == 0 || width == 0) return;
-        int x = (chunkX * 16 - dorfs.shift.getX());
-        int z = (chunkZ * 16 - dorfs.shift.getZ());
+        int x = dorfs.shiftX(chunkX * 16);
+        int z = dorfs.shiftZ(chunkZ * 16);
         int x1, z1, h;
 
         for (int i1 = 0; i1 < 16; i1++)
@@ -69,7 +69,7 @@ public class SiteMaker
                 x1 = (x + i1);// / scale;
                 z1 = (z + k1);// / scale;
 
-                HashSet<Site> sites = dorfs.getSiteForCoords(x1, z1);
+                HashSet<Site> sites = dorfs.getSiteForCoords(x1 + dorfs.shift.getX(), z1 + dorfs.shift.getZ());
 
                 if (sites == null) continue;
                 for (Site s : sites)

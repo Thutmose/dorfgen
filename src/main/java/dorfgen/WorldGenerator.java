@@ -80,7 +80,7 @@ public class WorldGenerator
     public static boolean        randomSpawn;
     public static BlockPos       spawn;
     public static String         spawnSite;
-    public static BlockPos       shift;
+    public static BlockPos       shift         = BlockPos.ORIGIN;
     public static IGenGetter     getter        = new IGenGetter()
                                                {
                                                };
@@ -124,6 +124,7 @@ public class WorldGenerator
         {
             instance.defaultRegion = key;
         }
+        System.out.println("Set Map for " + key);
         instance.regionMaps.put(key, map);
 
     }
@@ -220,7 +221,7 @@ public class WorldGenerator
                 if (entityWorld instanceof cubicchunks.world.ICubicWorldServer)
                 {
                     cubicchunks.world.ICubicWorldServer world = (cubicchunks.world.ICubicWorldServer) entityWorld;
-                    if (world.getCubeCache()
+                    if (world.isCubicWorld()) if (world.getCubeCache()
                             .getCubeGenerator() instanceof IDorfgenProvider) { return (IDorfgenProvider) world
                                     .getCubeCache().getCubeGenerator(); }
                 }
@@ -251,12 +252,15 @@ public class WorldGenerator
         {
             int scale = ((BiomeProviderFinite) evt.getWorld().getBiomeProvider()).scale;
             DorfMap dorfs = ((BiomeProviderFinite) evt.getWorld().getBiomeProvider()).map;
-            if (!dorfs.spawnSite.isEmpty())
+            if (dorfs.randomSpawn)
             {
                 ArrayList<Site> sites = new ArrayList<Site>(dorfs.sitesById.values());
+
+                Collections.shuffle(sites, evt.getWorld().rand);
+
                 for (Site s : sites)
                 {
-                    if (s.name.equalsIgnoreCase(dorfs.spawnSite))
+                    if (s.type.isVillage() && s.type != SiteType.HIPPYHUTS)
                     {
                         int x = s.x * scale;
                         int y = 0;
@@ -275,15 +279,12 @@ public class WorldGenerator
                     }
                 }
             }
-            if (dorfs.randomSpawn)
+            else if (!dorfs.spawnSite.isEmpty())
             {
                 ArrayList<Site> sites = new ArrayList<Site>(dorfs.sitesById.values());
-
-                Collections.shuffle(sites, evt.getWorld().rand);
-
                 for (Site s : sites)
                 {
-                    if (s.type.isVillage() && s.type != SiteType.HIPPYHUTS)
+                    if (s.name.equalsIgnoreCase(dorfs.spawnSite))
                     {
                         int x = s.x * scale;
                         int y = 0;

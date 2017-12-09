@@ -47,10 +47,10 @@ public class MapGenSites extends MapGenVillage
     {
         x *= 16;
         z *= 16;
-        x -= map.shift.getX();
-        z -= map.shift.getZ();
+        x = map.shiftX(x);
+        z = map.shiftZ(z);
 
-        HashSet<Site> sites = map.getSiteForCoords(x, z);
+        HashSet<Site> sites = map.getSiteForCoords(x - map.shift.getX(), z - map.shift.getZ());
 
         if (sites == null) return false;
 

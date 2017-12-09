@@ -77,15 +77,13 @@ public class BiomeProviderFinite extends BiomeProvider
     public Biome[] getBiomes(Biome[] biomes, int x, int z, int width, int depth)
     {
         biomes = super.getBiomesForGeneration(biomes, x, z, width, depth);
-        x -= map.shift.getX();
-        z -= map.shift.getZ();
+        x = map.shiftX(x);
+        z = map.shiftZ(z);
 
         if (x >= 0 && z >= 0 && (x + 16) / scale <= map.biomeMap.length && (z + 16) / scale <= map.biomeMap[0].length)
         {
-
-            x += map.shift.getX();
-            z += map.shift.getZ();
-
+            x -= map.shift.getX();
+            z -= map.shift.getZ();
             return biomes = makeBiomes(biomes, scale, x, z);
         }
         return biomes;
@@ -108,7 +106,7 @@ public class BiomeProviderFinite extends BiomeProvider
             for (int k1 = 0; k1 < 16; k1++)
             {
                 index = (i1) + (k1) * 16;
-                int biome = getBiomeFromMaps(x + i1 - map.shift.getX(), z + k1 - map.shift.getZ());
+                int biome = getBiomeFromMaps(map.shiftX(x + i1), map.shiftZ(z + k1));
 
                 biomes[index] = Biome.getBiome(biome);
             }
