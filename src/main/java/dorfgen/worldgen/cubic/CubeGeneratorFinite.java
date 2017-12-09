@@ -140,9 +140,9 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
     public void populateBlocksFromImage(int scale, int cubeX, int cubeY, int cubeZ, CubePrimer primer)
     {
         int x1, z1;
-        int x = cubeX * 16;
+        int x =  map.shiftX(cubeX * 16);
         int yMin = cubeY * 16;
-        int z = cubeZ * 16;
+        int z = map.shiftZ(cubeZ * 16);
         for (int i1 = 0; i1 < 16; i1++)
         {
             for (int k1 = 0; k1 < 16; k1++)

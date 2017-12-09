@@ -205,14 +205,14 @@ public class WorldGenerator
     @EventHandler
     public void load(FMLInitializationEvent evt)
     {
-        finiteWorldType = new WorldTypeFinite("finite");
+        finiteWorldType = new WorldTypeFinite("dorfgen");
     }
 
     @Optional.Method(modid = "cubicchunks")
     @EventHandler
     public void loadCC(FMLInitializationEvent evt)
     {
-        new dorfgen.worldgen.cubic.WorldTypeCubic("cubic_finite");
+        new dorfgen.worldgen.cubic.WorldTypeCubic("dorfgen_cubic");
         getter = new IGenGetter()
         {
             @Override
@@ -244,10 +244,6 @@ public class WorldGenerator
     @SubscribeEvent
     public void genEvent(Load evt)
     {
-        System.out.println("load");
-
-        // TODO replace sigmoid accordingly here.
-        // if (true) return;
         if (evt.getWorld().getBiomeProvider() instanceof BiomeProviderFinite)
         {
             int scale = ((BiomeProviderFinite) evt.getWorld().getBiomeProvider()).scale;
@@ -267,7 +263,7 @@ public class WorldGenerator
                         int z = s.z * scale;
                         try
                         {
-                            y = dorfs.elevationMap[(x - dorfs.shift.getX()) / scale][(z - dorfs.shift.getZ()) / scale];
+                            y = dorfs.elevationMap[x / scale][z / scale];
                         }
                         catch (Exception e)
                         {

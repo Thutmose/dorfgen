@@ -33,26 +33,30 @@ public class RiverMaker extends PathMaker
 
     public void postInitRivers(World world, int chunkX, int chunkZ, int minY, int maxY)
     {
-        int x = dorfs.shiftX(chunkX * 16);
-        int z = dorfs.shiftZ(chunkZ * 16);
+        int x0 = chunkX * 16;
+        int z0 = chunkZ * 16;
+        int x = dorfs.shiftX(x0);
+        int z = dorfs.shiftZ(z0);
         int x1, z1;
         MutableBlockPos pos = new MutableBlockPos();
-        for (int i1 = 0; i1 < 16; i1++)
+        MutableBlockPos pos2 = new MutableBlockPos();
+        for (int i1 = 1; i1 < 15; i1++)
         {
-            for (int k1 = 0; k1 < 16; k1++)
+            for (int k1 = 1; k1 < 15; k1++)
             {
                 x1 = (x + i1);
                 z1 = (z + k1);
                 if (isInRiver(x1, z1)) for (int y = minY; y <= maxY; y++)
                 {
-                    pos.setPos(x1, y, z1);
+                    pos.setPos(x0 + i1, y, z0 + k1);
+                    pos2.setPos(x0 + i1, y == minY ? y + 1 : y - 1, z0 + k1);
                     IBlockState state = world.getBlockState(pos);
+                    IBlockState state2 = world.getBlockState(pos);
                     if (state.getMaterial().isLiquid())
                     {
-                        world.notifyNeighborsOfStateChange(pos, state.getBlock(), true);
+                        world.neighborChanged(pos, state2.getBlock(), pos2);
                     }
                 }
-
             }
         }
     }

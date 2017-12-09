@@ -209,6 +209,7 @@ public class GuiCustomizeWorld extends GuiScreen
                 generatorInfo.spawn = spawn.getText();
             }
             this.createWorldGui.chunkProviderSettingsJson = this.getPreset();
+            System.out.println(this.getPreset());
             this.mc.displayGuiScreen(this.createWorldGui);
         }
 
