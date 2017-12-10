@@ -287,14 +287,15 @@ public class WorldGenerator
                         int z = s.z * scale;
                         try
                         {
-                            y = dorfs.elevationMap[(x - dorfs.shift.getX()) / scale][(z - dorfs.shift.getZ()) / scale];
+                            y = dorfs.elevationMap[x / scale][z / scale];
                         }
                         catch (Exception e)
                         {
                             System.out.println(s + " " + dorfs.elevationMap.length);
                             e.printStackTrace();
                         }
-                        evt.getWorld().setSpawnPoint(new BlockPos(x + scale / 2, y, z + scale / 2));
+                        evt.getWorld().setSpawnPoint(
+                                new BlockPos(dorfs.shiftX(x) + scale / 2, y, dorfs.shiftZ(z) + scale / 2));
                         return;
                     }
                 }

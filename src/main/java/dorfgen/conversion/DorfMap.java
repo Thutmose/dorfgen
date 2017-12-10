@@ -10,6 +10,7 @@ import dorfgen.WorldGenerator;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import net.minecraft.init.Biomes;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.biome.Biome;
 
@@ -26,6 +27,13 @@ public class DorfMap
         public BufferedImage drainageMap;
         public BufferedImage vegitationMap;
         public BufferedImage structuresMap;
+        public BufferedImage volcanismMap;
+    }
+
+    public static boolean inBounds(int x, int z, int[][] map)
+    {
+        if (x < 0 || z < 0 || x >= map.length || z >= map[0].length) return false;
+        return true;
     }
 
     public int[][]                                      biomeMap             = new int[0][0];
@@ -51,7 +59,7 @@ public class DorfMap
     public HashMap<Integer, WorldConstruction>          constructionsById    = new HashMap<Integer, WorldConstruction>();
     /** Coords are world tile resolution and are x + 2048 * z */
     public HashMap<Integer, HashSet<WorldConstruction>> constructionsByCoord = new HashMap<Integer, HashSet<WorldConstruction>>();
-    static int                                          waterShift           = -35;
+    static int                                          waterShift           = -24;
 
     public BicubicInterpolator                          biomeInterpolator    = new BicubicInterpolator();
     public CachedBicubicInterpolator                    heightInterpolator   = new CachedBicubicInterpolator();
@@ -65,6 +73,7 @@ public class DorfMap
     public BlockPos                                     spawn                = WorldGenerator.spawn;
     public BlockPos                                     shift                = WorldGenerator.shift;
     public String                                       spawnSite            = WorldGenerator.spawnSite;
+    public int                                          seaLevel             = 73;
     public final String                                 name;
     public boolean                                      randomSpawn;
 
@@ -103,6 +112,16 @@ public class DorfMap
     public int shiftZ(int zAbs)
     {
         return zAbs + shift.getZ();
+    }
+
+    public int unShiftX(int xAbs)
+    {
+        return xAbs - shift.getX();
+    }
+
+    public int unShiftZ(int zAbs)
+    {
+        return zAbs - shift.getZ();
     }
 
     public void init()
@@ -154,7 +173,6 @@ public class DorfMap
     {
         BufferedImage img = images.elevationMap;
         if (img == null) return;
-        int shift = 10;
         elevationMap = new int[img.getWidth()][img.getHeight()];
         int max = Integer.MIN_VALUE;
         int min = Integer.MAX_VALUE;
@@ -163,9 +181,8 @@ public class DorfMap
             for (int x = 0; x < img.getWidth(); x++)
             {
                 int rgb = images.elevationMap.getRGB(x, y);
-
                 int r = (rgb >> 16) & 0xFF, b = (rgb >> 0) & 0xFF;
-                int h = b - shift;
+                int h = b;
                 if (r == 0)
                 {
                     h = b + waterShift;
@@ -198,37 +215,9 @@ public class DorfMap
             for (int x = 0; x < img.getWidth(); x++)
             {
                 int rgb = images.elevationWaterMap.getRGB(x, y);
-
                 int r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = (rgb >> 0) & 0xFF;
-                int biome = biomeMap[x][y];
-                Biome temp = Biome.getBiome(biome);
-
-                if (r == 0 && g == 0 && temp != Biomes.RIVER)
-                {
-                    waterMap[x][y] = b + 25 + waterShift;
-                    if (biomeMap.length > 0)
-                    {
-                        if (waterMap[x][y] < 50)
-                        {
-                            biomeMap[x][y] = Biome.getIdForBiome(Biomes.DEEP_OCEAN);
-                        }
-                        else
-                        {
-                            biomeMap[x][y] = Biome.getIdForBiome(Biomes.OCEAN);
-                        }
-                        riverMap[x][y] = -1;
-                    }
-                }
-                else if (r == 0 || temp == Biomes.RIVER)
-                {
-                    waterMap[x][y] = -1;
-                    riverMap[x][y] = temp == Biomes.RIVER ? b - waterShift : b;
-                }
-                else
-                {
-                    waterMap[x][y] = -1;
-                    riverMap[x][y] = -1;
-                }
+                riverMap[x][y] = r != 0 || g != b ? -1 : b;
+                waterMap[x][y] = r != 0 || g != 0 ? -1 : b;
             }
         }
         joinRivers();
@@ -331,11 +320,31 @@ public class DorfMap
                         int[] dir = getDirToWater(x, y);
                         riverMap[x + dir[0]][y + dir[1]] = r;
                         riverMap[x + 2 * dir[0]][y + 2 * dir[1]] = r;
-
                     }
                 }
             }
         }
+        for (int y = 0; y < waterMap[0].length; y++)
+        {
+            for (int x = 0; x < waterMap.length; x++)
+            {
+                int b = waterMap[x][y];
+                if (b > 0)
+                {
+                    int num = countLarger(0, waterMap, x, y, 1);
+                    int num2 = countLarger(0, waterMap, x, y, 2);
+                    if (num == 0 && num2 > 0)
+                    {
+                        for (int i = 1; i < 3; i++)
+                            for (EnumFacing dir : EnumFacing.HORIZONTALS)
+                            {
+                                waterMap[x + dir.getFrontOffsetX() * i][y + dir.getFrontOffsetZ() * i] = b;
+                            }
+                    }
+                }
+            }
+        }
+
     }
 
     private int[] getDirToWater(int x, int y)
@@ -394,21 +403,18 @@ public class DorfMap
     public void postProcessBiomeMap()
     {
         boolean hasThermalMap = temperatureMap.length > 0;
-
         for (int x = 0; x < biomeMap.length; x++)
             for (int z = 0; z < biomeMap[0].length; z++)
             {
                 int biome = biomeMap[x][z];
+                if (biome == Biome.getIdForBiome(Biomes.RIVER)) continue;
                 int temperature = hasThermalMap ? temperatureMap[x][z] : 128;
                 int drainage = drainageMap.length > 0 ? drainageMap[x][z] : 100;
                 int rain = rainMap.length > 0 ? rainMap[x][z] : 100;
                 int evil = evilMap.length > 0 ? evilMap[x][z] : 100;
                 Region region = getRegionForCoords(x * scale, z * scale);
-                if (biome != Biome.getIdForBiome(Biomes.RIVER))
-                {
-                    int newBiome = BiomeList.getBiomeFromValues(biome, temperature, drainage, rain, evil, region);
-                    biomeMap[x][z] = newBiome;
-                }
+                int newBiome = BiomeList.getBiomeFromValues(biome, temperature, drainage, rain, evil, region);
+                biomeMap[x][z] = newBiome;
             }
     }
 
@@ -430,8 +436,10 @@ public class DorfMap
 
     public HashSet<Site> getSiteForCoords(int x, int z)
     {
-        int kx = shiftX(x) / (scale);
-        int kz = shiftZ(z) / (scale);
+        x = shiftX(x);
+        z = shiftZ(z);
+        int kx = x / (scale);
+        int kz = z / (scale);
         int key = kx + 8192 * kz;
 
         HashSet<Site> ret = sitesByCoord.get(key);
@@ -541,6 +549,14 @@ public class DorfMap
             if (type == null) { throw new NullPointerException(); }
         }
 
+        public int[] getSiteMid()
+        {
+            int[] mid = new int[2];
+            mid[0] = (map.unShiftX(corners[1][0] * map.scale) + map.unShiftX(corners[0][0] * map.scale)) / 2;
+            mid[1] = (map.unShiftZ(corners[0][1] * map.scale) + map.unShiftZ(corners[1][1] * map.scale)) / 2;
+            return mid;
+        }
+
         public void setSiteLocation(int x1, int z1, int x2, int z2)
         {
             corners[0][0] = x1;
@@ -557,8 +573,9 @@ public class DorfMap
         @Override
         public String toString()
         {
-            return name + " " + type + " " + id + " " + (corners[0][0] * map.scale) + "," + (corners[0][1] * map.scale)
-                    + "->" + (corners[1][0] * map.scale) + "," + (corners[1][1] * map.scale);
+            return name + " " + type + " " + id + " " + map.unShiftX(corners[0][0] * map.scale) + ","
+                    + map.unShiftZ(corners[0][1] * map.scale) + "->" + map.unShiftX(corners[1][0] * map.scale) + ","
+                    + map.unShiftZ(corners[1][1] * map.scale);
         }
 
         @Override

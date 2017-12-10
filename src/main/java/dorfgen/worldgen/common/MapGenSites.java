@@ -28,7 +28,8 @@ public class MapGenSites extends MapGenVillage
     HashSet<Integer> set       = new HashSet<Integer>();
     HashSet<Integer> made      = new HashSet<Integer>();
     Site             siteToGen = null;
-    private int      scale     = 0;
+    private boolean  villages  = false;
+    private boolean  sites     = true;
     final DorfMap    map;
 
     public MapGenSites(DorfMap map)
@@ -37,9 +38,16 @@ public class MapGenSites extends MapGenVillage
         this.map = map;
     }
 
-    public void setScale(int scale)
+    public MapGenSites genVillages(boolean villages)
     {
-        this.scale = scale;
+        this.villages = villages;
+        return this;
+    }
+
+    public MapGenSites genSites(boolean sites)
+    {
+        this.sites = sites;
+        return this;
     }
 
     @Override
@@ -47,13 +55,10 @@ public class MapGenSites extends MapGenVillage
     {
         x *= 16;
         z *= 16;
+        HashSet<Site> sites = map.getSiteForCoords(x, z);
+        if (sites == null) return false;
         x = map.shiftX(x);
         z = map.shiftZ(z);
-
-        HashSet<Site> sites = map.getSiteForCoords(x - map.shift.getX(), z - map.shift.getZ());
-
-        if (sites == null) return false;
-
         for (Site site : sites)
         {
             if (!set.contains(site.id) && shouldSiteSpawn(x, z, site))
@@ -70,28 +75,61 @@ public class MapGenSites extends MapGenVillage
 
     public boolean shouldSiteSpawn(int x, int z, Site site)
     {
-        if (site.type == SiteType.LAIR)
+        boolean inSite = site.isInSite(x, z);
+        if (!inSite) return false;
+        boolean middle = false;
+        int[] mid = site.getSiteMid();
+        x = site.map.unShiftX(x);
+        z = site.map.unShiftX(z);
+        outer:
+        for (int i = 0; i < 16; i++)
         {
-            int embarkX = (x / scale) * scale;
-            int embarkZ = (z / scale) * scale;
-
-            if (embarkX / scale != site.x || embarkZ / scale != site.z) return false;
-            for (int i = 0; i < 16; i++)
+            for (int j = 0; j < 16; j++)
             {
-                for (int j = 0; j < 16; j++)
+                middle = x + i == mid[0] && z + j == mid[1];
+                if (middle)
                 {
-                    int relX = (x + i) % scale + 8;
-                    int relZ = (z + j) % scale + 8;
-                    boolean middle = relX / 16 == scale / 32 && relZ / 16 == scale / 32;
-                    if (middle)
-                    {
-                        System.out.println(site);
-                        return true;
-                    }
+                    break outer;
                 }
             }
-            return false;
-
+        }
+        if (!middle) return false;
+        switch (site.type)
+        {
+        case CAMP:
+            return villages;
+        case CAVE:
+            return sites || villages;
+        case DARKFORTRESS:
+            return villages;
+        case DARKPITS:
+            return villages;
+        case FORTRESS:
+            return villages;
+        case HAMLET:
+            return villages;
+        case HILLOCKS:
+            return villages;
+        case HIPPYHUTS:
+            return sites || villages;
+        case LABYRINTH:
+            return villages;
+        case LAIR:
+            return sites || villages;
+        case MOUNTAINHALLS:
+            return villages;
+        case SHRINE:
+            return sites || villages;
+        case TOMB:
+            return villages;
+        case TOWER:
+            return villages;
+        case TOWN:
+            return villages;
+        case VAULT:
+            return villages;
+        default:
+            break;
         }
         return false;
     }
@@ -104,6 +142,7 @@ public class MapGenSites extends MapGenVillage
         if (site == null) { return super.getStructureStart(x, z); }
         System.out.println("Generating Site " + site);
         made.add(site.id);
+
         if (site.type == SiteType.FORTRESS)
         {
             MapGenStronghold.Start start;
@@ -117,28 +156,33 @@ public class MapGenSites extends MapGenVillage
             }
             return start;
         }
-        else if (site.type == SiteType.DARKFORTRESS)
+        if (sites)
         {
+            if (site.type == SiteType.DARKFORTRESS)
+            {
 
-        }
-        else if (site.type == SiteType.DARKPITS)
-        {
+            }
+            else if (site.type == SiteType.DARKPITS)
+            {
 
+            }
+            else if (site.type == SiteType.HIPPYHUTS)
+            {
+                return new Start(map, world, rand, x, z, 0);
+            }
+            else if (site.type == SiteType.SHRINE)
+            {
+                return new Start(map, world, rand, x, z, 2);
+            }
+            else if (site.type == SiteType.LAIR)
+            {
+                return new Start(map, world, rand, x, z, 3);
+            }
+            else if (site.type == SiteType.CAVE) { return new Start(map, world, rand, x, z, 1); }
         }
-        else if (site.type == SiteType.HIPPYHUTS)
-        {
-            return new Start(map, world, rand, x, z, 0);
-        }
-        else if (site.type == SiteType.SHRINE)
-        {
-            return new Start(map, world, rand, x, z, 2);
-        }
-        else if (site.type == SiteType.LAIR)
-        {
-            return new Start(map, world, rand, x, z, 3);
-        }
-        else if (site.type == SiteType.CAVE) { return new Start(map, world, rand, x, z, 1); }
-        return super.getStructureStart(x, z);
+        StructureStart start = super.getStructureStart(x, z);
+        System.out.println(start + " " + x + " " + z);
+        return start;
     }
 
     public static class Start extends StructureStart

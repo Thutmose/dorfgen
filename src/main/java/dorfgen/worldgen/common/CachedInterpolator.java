@@ -77,11 +77,50 @@ public class CachedInterpolator extends BicubicInterpolator
     @Override
     public int interpolate(int[][] image, int xAbs, int yAbs, int scale)
     {
+        if (image != lastMap) map0.clear();
         long key = xAbs + ((long) yAbs) * ZOFFSET;
         if (map0.containsKey(key)) return map0.get(key);
-        int value = super.interpolate(image, xAbs, yAbs, scale);
+        int value = interpolate2(image, xAbs, yAbs, scale);
         map0.put(key, value);
         return value;
+    }
+
+    private int interpolate2(int[][] image, int xAbs, int yAbs, int scale)
+    {
+        int pixelX = xAbs / scale;
+        int pixelY = yAbs / scale;
+        double x = (xAbs - scale * pixelX) / (double) scale, y = (yAbs - scale * pixelY) / (double) scale;
+        double[][] arr = new double[4][4];
+        int num = 0;
+        double sum = 0;
+        for (int i = -1; i <= 2; i++)
+            for (int k = -1; k <= 2; k++)
+            {
+                int locX = pixelX + i;
+                int locY = pixelY + k;
+                int value;
+                if (locX >= 0 && locX < image.length && locY >= 0 && locY < image[0].length)
+                {
+                    value = image[locX][locY];
+                }
+                else
+                {
+                    value = image[pixelX][pixelY];
+                }
+                if (value != -1)
+                {
+                    num++;
+                    sum += value;
+                }
+                arr[i + 1][k + 1] = value;
+            }
+        int avg = (int) Math.round(sum / num);
+        for (int i = -1; i <= 2; i++)
+            for (int k = -1; k <= 2; k++)
+            {
+                if (arr[i + 1][k + 1] == -1) arr[i + 1][k + 1] = avg;
+            }
+        return (int) Math.round(getValue(arr, x, y));
     }
 
     @Override

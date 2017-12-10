@@ -1,10 +1,15 @@
 package dorfgen.conversion;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
+
+import com.google.common.collect.Lists;
 
 import dorfgen.conversion.DorfMap.Region;
 import net.minecraft.init.Biomes;
@@ -32,6 +37,74 @@ public class BiomeList
     {
         if (biomes.containsKey(rgb)) return biomes.get(rgb).mineCraftBiome;
         return 0;
+    }
+
+    // Takes relative map coordinates.
+    public static Biome mutateBiome(Biome input, int x, int z, DorfMap dorfs)
+    {
+        int scale = dorfs.scale;
+        if (input == null)
+        {
+            int b1 = dorfs.biomeInterpolator.interpolateBiome(dorfs.biomeMap, x, z, scale);
+            input = Biome.getBiome(b1);
+        }
+        boolean hasHeightmap = dorfs.elevationMap.length > 0;
+        boolean hasThermalMap = dorfs.temperatureMap.length > 0;
+        int seaLevel = dorfs.sigmoid.elevationSigmoid(dorfs.seaLevel);
+        Region region = dorfs.getRegionForCoords(dorfs.unShiftX(x), dorfs.unShiftZ(z));
+        long key = region.name.hashCode();
+        Random rand = new Random(key);
+        int deepSea = (int) (seaLevel * 0.7);
+        int h1 = hasHeightmap ? dorfs.heightInterpolator.interpolateHeight(scale, x, z, dorfs.elevationMap) : seaLevel;
+        int t1 = hasThermalMap ? dorfs.miscInterpolator.interpolateHeight(scale, x, z, dorfs.temperatureMap) : 128;
+        if (BiomeDictionary.hasType(input, Type.BEACH))
+        {
+            List<Biome> beaches = Lists.newArrayList(BiomeDictionary.getBiomes(Type.BEACH));
+            beaches.sort(new Comparator<Biome>()
+            {
+                @Override
+                public int compare(Biome o1, Biome o2)
+                {
+                    return o1.getRegistryName().compareTo(o2.getRegistryName());
+                }
+            });
+            Collections.shuffle(beaches, rand);
+            if (t1 < 80)
+            {
+                for (Biome b : beaches)
+                {
+                    if (BiomeDictionary.hasType(b, Type.COLD))
+                    {
+                        input = b;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for (Biome b : beaches)
+                {
+                    if (!BiomeDictionary.hasType(b, Type.COLD))
+                    {
+                        input = b;
+                        break;
+                    }
+                }
+            }
+        }
+        if (h1 > deepSea && (input == Biomes.DEEP_OCEAN || input == Biomes.OCEAN))
+        {
+            input = Biomes.OCEAN;
+            if (t1 < 65)
+            {
+                input = Biomes.FROZEN_OCEAN;
+            }
+        }
+        if (h1 <= deepSea && (input == Biomes.OCEAN))
+        {
+            input = Biomes.DEEP_OCEAN;
+        }
+        return input;
     }
 
     public static int getBiomeFromValues(int biome, int temperature, int drainage, int rainfall, int evil,

@@ -197,8 +197,8 @@ public class SiteStructureGenerator
                 x1 = x + i;
                 z1 = z + j;
 
-                x2 = x1 + dorfs.shift.getX();
-                z2 = z1 + dorfs.shift.getZ();
+                x2 = dorfs.unShiftX(x1);
+                z2 = dorfs.unShiftZ(z1);
 
                 HashSet<Site> sites = dorfs.getSiteForCoords(x2, z2);
                 Site site = null;
@@ -368,8 +368,8 @@ public class SiteStructureGenerator
                 x1 = x + i;
                 z1 = z + j;
 
-                x2 = x1 + dorfs.shift.getX();
-                z2 = z1 + dorfs.shift.getZ();
+                x2 = dorfs.unShiftX(x1);
+                z2 = dorfs.unShiftZ(z1);
 
                 HashSet<Site> sites = dorfs.getSiteForCoords(x2, z2);
                 Site site = null;

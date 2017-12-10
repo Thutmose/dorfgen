@@ -49,6 +49,7 @@ public class FileLoader
     public String                          temperature            = "";
     public String                          evil                   = "";
     public String                          rain                   = "";
+    public String                          drainage               = "";
     public String                          volcanism              = "";
     public String                          vegitation             = "";
     public String                          structs                = "";
@@ -106,6 +107,10 @@ public class FileLoader
                         biome = s;
                     }
                     else if (s.contains("-rain."))
+                    {
+                        rain = s;
+                    }
+                    else if (s.contains("-drn."))
                     {
                         rain = s;
                     }
@@ -182,6 +187,9 @@ public class FileLoader
         map.images.temperatureMap = getImage(temperature);
         map.images.vegitationMap = getImage(vegitation);
         map.images.structuresMap = getImage(structs);
+        map.images.drainageMap = getImage(drainage);
+        map.images.rainMap = getImage(rain);
+        map.images.volcanismMap = getImage(volcanism);
 
         loadBiomes(biomes);
         map.init();

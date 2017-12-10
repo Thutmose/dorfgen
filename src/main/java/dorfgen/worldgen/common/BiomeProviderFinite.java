@@ -3,6 +3,7 @@ package dorfgen.worldgen.common;
 import java.util.List;
 
 import dorfgen.WorldGenerator;
+import dorfgen.conversion.BiomeList;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
@@ -82,8 +83,8 @@ public class BiomeProviderFinite extends BiomeProvider
 
         if (x >= 0 && z >= 0 && (x + 16) / scale <= map.biomeMap.length && (z + 16) / scale <= map.biomeMap[0].length)
         {
-            x -= map.shift.getX();
-            z -= map.shift.getZ();
+            x = map.unShiftX(x);
+            z = map.unShiftZ(z);
             return biomes = makeBiomes(biomes, scale, x, z);
         }
         return biomes;
@@ -116,48 +117,7 @@ public class BiomeProviderFinite extends BiomeProvider
 
     private int getBiomeFromMaps(int x, int z)
     {
-        DorfMap dorfs = map;
-
-        int b1 = biomeInterpolator.interpolateBiome(dorfs.biomeMap, x, z, scale);
-        Biome temp = Biome.getBiome(b1);
-        if (dorfs.riverMap.length > 0)
-        {
-            int r1 = miscInterpolator.interpolateHeight(scale, x, z, dorfs.riverMap);
-            if (r1 > 0)
-            {
-                temp = Biomes.RIVER;
-            }
-        }
-
-        boolean hasHeightmap = dorfs.elevationMap.length > 0;
-        boolean hasThermalMap = dorfs.temperatureMap.length > 0;
-
-        int h1 = hasHeightmap ? heightInterpolator.interpolateHeight(scale, x, z, dorfs.elevationMap) : 64;
-        int t1 = hasThermalMap ? miscInterpolator.interpolateHeight(scale, x, z, dorfs.temperatureMap) : 128;
-
-        // TODO here define high/deep based on some better method.
-        if (h1 > 60 && (temp == Biomes.DEEP_OCEAN || temp == Biomes.OCEAN))
-        {
-            temp = Biomes.BEACH;
-            if (t1 < 80)
-            {
-                temp = Biomes.COLD_BEACH;
-            }
-        }
-        else if (h1 > 45 && (temp == Biomes.DEEP_OCEAN || temp == Biomes.OCEAN))
-        {
-            temp = Biomes.OCEAN;
-            if (t1 < 65)
-            {
-                temp = Biomes.FROZEN_OCEAN;
-            }
-        }
-        else if (h1 <= 45 && (temp == Biomes.OCEAN))
-        {
-            temp = Biomes.DEEP_OCEAN;
-        }
-
-        return Biome.getIdForBiome(temp);
+        return Biome.getIdForBiome(BiomeList.mutateBiome(null, x, z, map));
     }
 
     @Override

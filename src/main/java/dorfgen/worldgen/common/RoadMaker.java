@@ -47,33 +47,6 @@ public class RoadMaker extends PathMaker
         return this;
     }
 
-    public boolean shouldConstruct(int chunkX, int chunkZ, ConstructionType type)
-    {
-        int x = chunkX * 16;
-        int z = chunkZ * 16;
-        x = dorfs.shiftX(x);
-        z = dorfs.shiftZ(z);
-
-        if (x >= 0 && z >= 0 && (x + 16) / scale <= dorfs.biomeMap.length
-                && (z + 16) / scale <= dorfs.biomeMap[0].length)
-        {
-            int x1 = (x / scale) / 16;
-            int z1 = (z / scale) / 16;
-            int key = (x1) + 2048 * (z1);
-
-            if (dorfs.constructionsByCoord.containsKey(key))
-            {
-                for (WorldConstruction construct : dorfs.constructionsByCoord.get(key))
-                {
-                    if (construct.type == type && construct.isInConstruct(x, minY % 16, z)) return true;
-                }
-                return false;
-            }
-            return false;
-        }
-        return false;
-    }
-
     public int dirToIndex(EnumFacing dir)
     {
         if (dir == EAST) return 0;
@@ -100,105 +73,6 @@ public class RoadMaker extends PathMaker
     public void safeSetToRoad(int x, int z, int h, int chunkX, int chunkZ, ChunkPrimer blocks)
     {
         safeSetToRoad(x, z, h, chunkX, chunkZ, blocks, WorldGenerator.roadSurface);
-    }
-
-    public static final int ROADWIDTH = 3;
-
-    public void genSingleRoad(EnumFacing begin, EnumFacing end, int x, int z, int chunkX, int chunkZ,
-            ChunkPrimer blocks)
-    {
-        int nearestEmbarkX = x - (x % scale);
-        int nearestEmbarkZ = z - (z % scale);
-        double interX, interZ;
-        int nearestX, nearestZ;
-        int h;
-        double startX = DIR_TO_RELX[dirToIndex(begin)];
-        double startZ = DIR_TO_RELZ[dirToIndex(begin)];
-        double endX = DIR_TO_RELX[dirToIndex(end)];
-        double endZ = DIR_TO_RELZ[dirToIndex(end)];
-
-        double c = ((double) scale) / 2.;
-
-        for (double i = -0.2; i <= 1.2; i += 0.02)
-        {
-            interX = (1. - i) * (1. - i) * startX + 2. * (1. - i) * i * c + i * i * endX;
-            interZ = (1. - i) * (1. - i) * startZ + 2. * (1. - i) * i * c + i * i * endZ;
-
-            nearestX = (int) interX;
-            nearestZ = (int) interZ;
-            // TODO Check what section of road is highest, and build all at that
-            // lvl.
-            for (int w = -ROADWIDTH; w <= ROADWIDTH; w++)
-            {
-                for (int w2 = -ROADWIDTH; w2 <= ROADWIDTH; w2++)
-                {
-                    h = bicubicInterpolator.interpolate(dorfs.elevationMap, nearestX + nearestEmbarkX + w,
-                            nearestZ + nearestEmbarkZ + w2, scale);
-                    safeSetToRoad(nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, h, chunkX, chunkZ,
-                            blocks);
-                }
-            }
-        }
-    }
-
-    public void genSingleRoadToPos(int x, int z, int chunkX, int chunkZ, int toRoadX, int toRoadZ, ChunkPrimer blocks)
-    {
-        int nearestEmbarkX = x - (x % scale);
-        int nearestEmbarkZ = z - (z % scale);
-        double interX, interZ;
-        int nearestX, nearestZ;
-        int h;
-
-        double c = ((double) scale) / 2.;
-
-        double startX = c, startZ = c, distSqr;
-        double minDistSqr = Integer.MAX_VALUE;
-
-        double endX = toRoadX - nearestEmbarkX;
-        double endZ = toRoadZ - nearestEmbarkZ;
-
-        boolean[] dirs = getRoadDirection(nearestEmbarkX, nearestEmbarkZ);
-
-        for (EnumFacing dir : DIRS)
-        {
-            if (!dirs[dirToIndex(dir)]) continue;
-            distSqr = (DIR_TO_RELX[dirToIndex(dir)] - ((double) endX))
-                    * (DIR_TO_RELX[dirToIndex(dir)] - ((double) endX))
-                    + (DIR_TO_RELZ[dirToIndex(dir)] - ((double) endZ))
-                            * (DIR_TO_RELZ[dirToIndex(dir)] - ((double) endZ));
-            if (distSqr < minDistSqr)
-            {
-                minDistSqr = distSqr;
-                startX = DIR_TO_RELX[dirToIndex(dir)];
-                startZ = DIR_TO_RELZ[dirToIndex(dir)];
-            }
-
-        }
-
-        for (double i = -0.05; i <= 1.05; i += 0.01)
-        {
-            // interX = (1.-i)*(1.-i)*startX + 2.*(1.-i)*i*c + i*i*endX;
-            // interZ = (1.-i)*(1.-i)*startZ + 2.*(1.-i)*i*c + i*i*endZ;
-
-            interX = startX * (1.0 - i) + endX * i;
-            interZ = startZ * (1.0 - i) + endZ * i;
-
-            nearestX = (int) interX;
-            nearestZ = (int) interZ;
-
-            for (int w = -ROADWIDTH; w <= ROADWIDTH; w++)
-            {
-                for (int w2 = -ROADWIDTH; w2 <= ROADWIDTH; w2++)
-                {
-                    if ((w < 1 - ROADWIDTH || w > ROADWIDTH - 1) && (w2 < 1 - ROADWIDTH || w2 > ROADWIDTH - 1))
-                        continue; // take the corners off
-                    h = bicubicInterpolator.interpolate(dorfs.elevationMap, nearestX + nearestEmbarkX + w,
-                            nearestZ + nearestEmbarkZ + w2, scale);
-                    safeSetToRoad(nearestX + nearestEmbarkX + w, nearestZ + nearestEmbarkZ + w2, h, chunkX, chunkZ,
-                            blocks);
-                }
-            }
-        }
     }
 
     public int[] getClosestRoadEnd(int x, int z, Site site)
@@ -295,25 +169,6 @@ public class RoadMaker extends PathMaker
         }
 
         return null;
-    }
-
-    public void genRoads(int x, int z, int chunkX, int chunkZ, ChunkPrimer blocks)
-    {
-        int nearestEmbarkX = x - (x % scale);
-        int nearestEmbarkZ = z - (z % scale);
-
-        boolean dirs[] = getRoadDirection(nearestEmbarkX, nearestEmbarkZ);
-
-        for (int i = 0; i < 3; i++)
-        {
-            for (int j = i + 1; j < 4; j++)
-            {
-                if (dirs[i] && dirs[j])
-                {
-                    genSingleRoad(DIRS[i], DIRS[j], x, z, chunkX, chunkZ, blocks);
-                }
-            }
-        }
     }
 
     public boolean isInRoad(int xAbs, int h, int zAbs)
@@ -573,43 +428,6 @@ public class RoadMaker extends PathMaker
         }
     }
 
-    public void genRoadEndConnector(int roadEndX, int roadEndZ, int chunkX, int chunkZ, ChunkPrimer blocks)
-    {
-        int minDistSqr = Integer.MAX_VALUE, dist;
-        int x1, z1;
-        int embarkX = 0, embarkZ = 0;
-
-        for (int xsearch = -ROAD_SEARCH_AREA; xsearch <= ROAD_SEARCH_AREA; xsearch++)
-        {
-            for (int zsearch = -ROAD_SEARCH_AREA; zsearch <= ROAD_SEARCH_AREA; zsearch++)
-            {
-                x1 = roundToEmbark(roadEndX + (xsearch * scale));
-                z1 = roundToEmbark(roadEndZ + (zsearch * scale));
-
-                if (respectsSites && isInSite(x1, z1)) continue;
-                if (!hasRoad(x1, minY, z1)) continue;
-
-                dist = (x1 - roadEndX) * (x1 - roadEndX) + (z1 - roadEndZ) * (z1 - roadEndZ);
-
-                if (dist < minDistSqr)
-                {
-                    minDistSqr = dist;
-                    embarkX = x1;
-                    embarkZ = z1;
-                }
-            }
-        }
-
-        if (minDistSqr != Integer.MAX_VALUE)
-        {
-            genSingleRoadToPos(embarkX, embarkZ, chunkX, chunkZ, roadEndX, roadEndZ, blocks);
-        }
-        else
-        {
-            System.out.println("Search failed to generate attachment road at x: " + roadEndX + " z: " + roadEndZ);
-        }
-    }
-
     public void buildRoads(World world, int chunkX, int chunkZ, ChunkPrimer blocks, Biome[] biomes, int minY, int maxY)
     {
         this.minY = minY;
@@ -630,7 +448,7 @@ public class RoadMaker extends PathMaker
                 int z1 = z + j;
                 int x2 = (x + i + dr);
                 int z2 = (z + j + dr);
-                boolean[] dirs = getRoadDirection(x1, z1);
+                boolean[] dirs = getRoadDirection(dorfs.unShiftX(x1), dorfs.unShiftZ(z1));
                 boolean skip = false;
                 if (x2 / scale + x2 % scale >= dorfs.waterMap.length
                         || z2 / scale + z2 % scale >= dorfs.waterMap[0].length)
@@ -650,7 +468,7 @@ public class RoadMaker extends PathMaker
                             {
                                 x2 = x1 + side.getFrontOffsetX() * r;
                                 z2 = z1 + side.getFrontOffsetZ() * r;
-                                if (!hasRoad(x2, h, z2)) break;
+                                if (!hasRoad(dorfs.unShiftX(x2), h, dorfs.unShiftZ(z2))) break;
                                 int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
                                 hMin = Math.min(hMin, h2);
                                 hMax = Math.max(hMax, h2);
@@ -660,7 +478,7 @@ public class RoadMaker extends PathMaker
                             {
                                 x2 = x1 + side.getFrontOffsetX() * r;
                                 z2 = z1 + side.getFrontOffsetZ() * r;
-                                if (!hasRoad(x2, h, z2)) break;
+                                if (!hasRoad(dorfs.unShiftX(x2), h, dorfs.unShiftZ(z2))) break;
                                 int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
                                 hMin = Math.min(hMin, h2);
                                 hMax = Math.max(hMax, h2);
@@ -673,7 +491,7 @@ public class RoadMaker extends PathMaker
                             {
                                 x2 = x1 + side.getFrontOffsetX() * r;
                                 z2 = z1 + side.getFrontOffsetZ() * r;
-                                if (!hasRoad(x2, h, z2)) break;
+                                if (!hasRoad(dorfs.unShiftX(x2), h, dorfs.unShiftZ(z2))) break;
                                 int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
                                 hMin = Math.min(hMin, h2);
                                 hMax = Math.max(hMax, h2);
@@ -683,7 +501,7 @@ public class RoadMaker extends PathMaker
                             {
                                 x2 = x1 + side.getFrontOffsetX() * r;
                                 z2 = z1 + side.getFrontOffsetZ() * r;
-                                if (!hasRoad(x2, h, z2)) break;
+                                if (!hasRoad(dorfs.unShiftX(x2), h, dorfs.unShiftZ(z2))) break;
                                 int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
                                 hMin = Math.min(hMin, h2);
                                 hMax = Math.max(hMax, h2);
@@ -694,8 +512,8 @@ public class RoadMaker extends PathMaker
                 }
                 if (skip || h > maxY + 32 || h < minY - 32) continue;
 
-                if (respectsSites && isInSite(x1, z1)) continue;
-                if (isInRoad(x1, h, z1))
+                if (respectsSites && isInSite(dorfs.unShiftX(x1), dorfs.unShiftZ(z1))) continue;
+                if (isInRoad(dorfs.unShiftX(x1), h, dorfs.unShiftZ(z1)))
                 {
                     safeSetToRoad(i, j, h, chunkX, chunkZ, blocks);
                 }

@@ -27,11 +27,14 @@ import dorfgen.worldgen.common.BiomeProviderFinite;
 import dorfgen.worldgen.common.CachedInterpolator;
 import dorfgen.worldgen.common.GeneratorInfo;
 import dorfgen.worldgen.common.IDorfgenProvider;
+import dorfgen.worldgen.common.MapGenSites;
 import dorfgen.worldgen.common.RiverMaker;
 import dorfgen.worldgen.common.RoadMaker;
 import dorfgen.worldgen.common.SiteMaker;
 import net.minecraft.block.Block;
+import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.init.Biomes;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
@@ -48,6 +51,7 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
     public final SiteMaker                             constructor;
     public final SiteStructureGenerator                structuregen;
     public final DorfMap                               map;
+    private MapGenSites                                villageGenerator;
 
     private int                                        lastX                 = Integer.MIN_VALUE,
             lastZ = Integer.MIN_VALUE;
@@ -76,6 +80,8 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
         generateConstructions = info.constructs;
         generateRivers = info.rivers;
         generateSites = info.sites;
+        this.villageGenerator = new MapGenSites(map);
+        villageGenerator.genSites(info.sites).genVillages(info.villages);
         riverMaker.setRespectsSites(generateSites).setScale(scale);
         roadMaker.setRespectsSites(generateSites).setScale(scale);
         riverMaker.bicubicInterpolator = elevationInterpolator;
@@ -140,7 +146,7 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
     public void populateBlocksFromImage(int scale, int cubeX, int cubeY, int cubeZ, CubePrimer primer)
     {
         int x1, z1;
-        int x =  map.shiftX(cubeX * 16);
+        int x = map.shiftX(cubeX * 16);
         int yMin = cubeY * 16;
         int z = map.shiftZ(cubeZ * 16);
         for (int i1 = 0; i1 < 16; i1++)
@@ -172,49 +178,58 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
         }
     }
 
-    public void fillOceans(int x, int y, int z, CubePrimer primer)
+    public void fillOceans(int cubeX, int y, int cubeZ, CubePrimer primer, Biome[] biomes, boolean oob)
     {
-        int b0 = (int) (world.getProvider().getHorizon());
         int yMin = y * 16;
+        int rx = cubeX * 16;
+        int rz = cubeZ * 16;
+        int x = map.shiftX(rx);
+        int z = map.shiftZ(rz);
+        int b0 = ((World) world).getSeaLevel() - 1;
         b0 -= yMin;
-        int x1, z1;
-        // int w = 0;
-        int rx = x * 16;
-        int rz = z * 16;
-
         for (int i = 0; i < 16; i++)
             for (int k = 0; k < 16; k++)
             {
-                x1 = (rx + i) / scale;
-                z1 = (rz + k) / scale;
-                if (rx + i < 0 || rz + k < 0 || x1 >= map.waterMap.length || z1 >= map.waterMap[0].length)
+                if (oob)
                 {
-
+                    b0 = Math.min(b0, 16);
+                    for (int j = 0; j <= b0; j++)
+                    {
+                        if (j < 10)
+                        {
+                            primer.setBlockState(i, j, k, Blocks.STONE.getDefaultState());
+                        }
+                        else
+                        {
+                            primer.setBlockState(i, j, k, Blocks.WATER.getDefaultState());
+                        }
+                    }
+                    int index = i + k * 16;
+                    biomes[index] = Biomes.DEEP_OCEAN;
                 }
                 else
                 {
-                    // TODO fill in lakes here? might need to check rivers or
-                    // something for whether it should fill.
-                    // w =
-                    // bicubicInterpolator.interpolate(map.elevationMap,
-                    // rx + i, rz + k,
-                    // scale);
-                    // if (w > 0)
-                    // {
-                    // w =
-                    // map.sigmoid.elevationSigmoid(w)
-                    // - yMin;
-                    // if (w > b0) b0 = w;
-                    // }
-                }
-                b0 = Math.min(b0, 16);
-                for (int j = 0; j < b0; j++)
-                {
-                    if (primer.getBlockState(i, j, k) == ICubePrimer.DEFAULT_STATE)
-                        primer.setBlockState(i, j, k, Blocks.WATER.getDefaultState());
+                    int x1 = (x + i) / scale;
+                    int z1 = (z + k) / scale;
+                    int h = 0;
+                    if (x1 >= map.elevationMap.length || z1 >= map.elevationMap[0].length)
+                    {
+                        h = b0;
+                    }
+                    else h = waterInterpolator.interpolate(map.waterMap, (x + i), (z + k), scale) - 1;
+                    h -= yMin;
+                    h = Math.max(h, b0);
+                    h = Math.min(h, 16);
+                    if (h > 0)
+                    {
+                        for (int j = h; j > map.yMin; j--)
+                        {
+                            if (primer.getBlockState(i, j, k).getMaterial() != Material.AIR) break;
+                            primer.setBlockState(i, j, k, Blocks.WATER.getDefaultState());
+                        }
+                    }
                 }
             }
-
     }
 
     @Override
@@ -243,11 +258,11 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
             imgGen = true;
             populateBlocksFromImage(scale, cubeX, cubeY, cubeZ, primer);
             makeBeaches(scale, x / scale, cubeY, z / scale, primer);
+            fillOceans(cubeX, cubeY, cubeZ, primer, biomesForGeneration, imgGen);
         }
         this.replaceBiomeBlocks(world, cubeX, cubeY, cubeZ, primer, biomesForGeneration);
 
-        // this.villageGenerator.generate((World) world, cubeX, cubeZ, wrapper);
-        fillOceans(cubeX, cubeY, cubeZ, primer);
+        if (!imgGen) fillOceans(cubeX, cubeY, cubeZ, primer, biomesForGeneration, false);
         if (imgGen)
         {
             if (generateRivers)

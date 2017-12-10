@@ -44,7 +44,7 @@ public class WorldTypeFinite extends WorldType
     @Override
     public double getHorizon(World world)
     {
-        return provider.map.sigmoid.elevationSigmoid(63);
+        return provider.map.sigmoid.elevationSigmoid(provider.map.seaLevel);
     }
 
     @Override

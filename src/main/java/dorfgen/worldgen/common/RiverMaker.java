@@ -10,12 +10,14 @@ import java.util.HashSet;
 
 import javax.vecmath.Vector3d;
 
+import dorfgen.conversion.BiomeList;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.conversion.SiteStructureGenerator.RiverExit;
 import dorfgen.conversion.SiteStructureGenerator.SiteStructures;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.init.Biomes;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos.MutableBlockPos;
@@ -40,13 +42,14 @@ public class RiverMaker extends PathMaker
         int x1, z1;
         MutableBlockPos pos = new MutableBlockPos();
         MutableBlockPos pos2 = new MutableBlockPos();
+        int width = getWidth();
         for (int i1 = 1; i1 < 15; i1++)
         {
             for (int k1 = 1; k1 < 15; k1++)
             {
                 x1 = (x + i1);
                 z1 = (z + k1);
-                if (isInRiver(x1, z1)) for (int y = minY; y <= maxY; y++)
+                if (isInRiver(x1, z1, width)) for (int y = minY; y <= maxY; y++)
                 {
                     pos.setPos(x0 + i1, y, z0 + k1);
                     pos2.setPos(x0 + i1, y == minY ? y + 1 : y - 1, z0 + k1);
@@ -69,6 +72,7 @@ public class RiverMaker extends PathMaker
         int x1, z1, x2, z2, h;
         boolean skip = false;
         boolean oob = false;
+        int width = getWidth();
         for (int i1 = 0; i1 < 16; i1++)
         {
             for (int k1 = 0; k1 < 16; k1++)
@@ -98,8 +102,10 @@ public class RiverMaker extends PathMaker
                 }
                 oob = (h < minY - 4) || (h > maxY + 4);
                 if (oob || skip) continue;
-                boolean river = isInRiver(x1, z1);
+                boolean river = isInRiver(x1, z1, 2 * width);
                 if (!river) continue;
+                biomes[i1 + k1 * 16] = BiomeList.mutateBiome(Biomes.RIVER, x1, z1, dorfs);
+                if (!isInRiver(x1, z1, width)) continue;
                 int y = h;
                 for (int i = 1; i < 4; i++)
                 {
@@ -122,48 +128,38 @@ public class RiverMaker extends PathMaker
     {
         boolean[] ret = new boolean[4];
 
-        if (!isRiver(xAbs, zAbs)) { return ret; }
-        if (isRiver(xAbs - scale, zAbs))
+        if (!isRiver(xAbs, zAbs, true)) { return ret; }
+        if (isRiver(xAbs - scale, zAbs, false))
         {
             ret[1] = true;
         }
-        if (isRiver(xAbs + scale, zAbs))
+        if (isRiver(xAbs + scale, zAbs, false))
         {
             ret[0] = true;
         }
-        if (isRiver(xAbs, zAbs - scale))
+        if (isRiver(xAbs, zAbs - scale, false))
         {
             ret[2] = true;
         }
-        if (isRiver(xAbs, zAbs + scale))
+        if (isRiver(xAbs, zAbs + scale, false))
         {
             ret[3] = true;
         }
         return ret;
     }
 
-    private boolean isRiver(int x, int z)
+    public boolean isRiver(int x, int z, boolean strict)
     {
         int kx = x / scale;// Abs/(scale);
         int kz = z / scale;// Abs/(scale);
         int key = kx + 8192 * kz;
         if (kx >= dorfs.waterMap.length || kz >= dorfs.waterMap[0].length) { return false; }
         if (kx < 0 || kz < 0) return false;
-
-        int rgb = dorfs.structureMap[kx][kz];
-        Color col1 = new Color(rgb);
-
-        rgb = dorfs.riverMap[kx][kz];
-
-        Color col2 = new Color(rgb);
-
-        Color WHITE = new Color(255, 255, 255);
-
-        boolean river = col1.equals(STRMAPRIVER) || (!WHITE.equals(col2) && col2.getBlue() > 0);
-        if (river) return river;
-
+        int r = dorfs.riverMap[kx][kz];
+        boolean river = r > 0;
+        if (!river && !strict) river = dorfs.waterMap[kx][kz] > 0;
+        if (river || respectsSites) return river;
         HashSet<Site> ret = dorfs.sitesByCoord.get(key);
-
         if (ret != null)
         {
             for (Site s : ret)
@@ -183,11 +179,10 @@ public class RiverMaker extends PathMaker
                 }
             }
         }
-
         return river;
     }
 
-    public boolean isInRiver(int x1, int z1)
+    public boolean isInRiver(int x1, int z1, int width)
     {
         int x = x1, z = z1;
         boolean river = false;
@@ -213,8 +208,6 @@ public class RiverMaker extends PathMaker
             }
         }
         boolean[] dirs = getRiverDirection(x1, z1);
-        int width = 3 * scale / SiteStructureGenerator.SITETOBLOCK;
-        width = Math.max(3, width);
         river = dirs[0] || dirs[1] || dirs[2] || dirs[3];
         int[] point1 = null;
         int[] point2 = null;
@@ -256,7 +249,7 @@ public class RiverMaker extends PathMaker
                 {
                     nearest = new int[] { kx * scale + offset, (kz + 1) * scale };
                 }
-                if (ret == null || isRiver(nearest[0], nearest[1])) point1 = nearest;
+                if (ret == null || isRiver(nearest[0], nearest[1], false)) point1 = nearest;
             }
             if (dirs[1])
             {
@@ -289,7 +282,7 @@ public class RiverMaker extends PathMaker
                 {
                     nearest = new int[] { (kx - 1) * scale + scale, (kz) * scale + offset };
                 }
-                if (ret == null || isRiver(nearest[0], nearest[1])) point2 = nearest;
+                if (ret == null || isRiver(nearest[0], nearest[1], false)) point2 = nearest;
             }
             if (dirs[2])
             {
@@ -322,7 +315,7 @@ public class RiverMaker extends PathMaker
                 {
                     nearest = new int[] { kx * scale + offset, (kz - 1) * scale + scale };
                 }
-                if (ret == null || isRiver(nearest[0], nearest[1]))
+                if (ret == null || isRiver(nearest[0], nearest[1], false))
                 {
                     point3 = nearest;
                 }
@@ -359,7 +352,7 @@ public class RiverMaker extends PathMaker
                     nearest = new int[] { (kx + 1) * scale, (kz) * scale + offset };
                 }
 
-                if (ret == null || isRiver(nearest[0], nearest[1])) point4 = nearest;
+                if (ret == null || isRiver(nearest[0], nearest[1], false)) point4 = nearest;
 
             }
         }
@@ -454,7 +447,13 @@ public class RiverMaker extends PathMaker
                 if (Math.abs(tx) < width && Math.abs(tz) < width) return true;
             }
         }
-
         return false;
+    }
+
+    public int getWidth()
+    {
+        int width = 3 * scale / SiteStructureGenerator.SITETOBLOCK;
+        width = Math.max(width, 3);
+        return width;
     }
 }

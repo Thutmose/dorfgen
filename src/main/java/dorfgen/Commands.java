@@ -9,6 +9,8 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.Lists;
+
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Region;
 import dorfgen.conversion.DorfMap.Site;
@@ -22,6 +24,7 @@ import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
 
 public class Commands extends CommandBase
@@ -96,11 +99,12 @@ public class Commands extends CommandBase
             }
             if (telesite != null)
             {
-                int x = telesite.x * scale + scale;
-                int z = telesite.z * scale + scale;
+                int[] mid = telesite.getSiteMid();
+                int x = dorfs.shiftX(mid[0]);
+                int z = dorfs.shiftZ(mid[1]);
                 int y = new CachedInterpolator().interpolate(dorfs.elevationMap, x, z, scale);
                 entity.sendMessage(new TextComponentString("Teleported to " + telesite));
-                entity.setPositionAndUpdate(dorfs.shiftX(x), y, dorfs.shiftX(z));
+                entity.setPositionAndUpdate(mid[0], y, mid[1]);
             }
 
             WorldConstruction teleConstruct = null;
@@ -139,44 +143,88 @@ public class Commands extends CommandBase
             Region region = dorfs.getRegionForCoords(pos.getX(), pos.getZ());
             HashSet<Site> sites = dorfs.getSiteForCoords(pos.getX(), pos.getZ());
             HashSet<WorldConstruction> constructs = dorfs.getConstructionsForCoords(pos.getX(), pos.getZ());
-            String message = "Region: " + region;
+            List<ITextComponent> messages = Lists.newArrayList();
+            messages.add(new TextComponentString("Region: " + region));
+            if (region != null)
+            {
+                int x = dorfs.shiftX(pos.getX());
+                int z = dorfs.shiftZ(pos.getZ());
+
+                CachedInterpolator interpolator = new CachedInterpolator();
+                String mess = "";
+
+                if (DorfMap.inBounds(x / scale, z / scale, dorfs.temperatureMap))
+                {
+                    int temp = interpolator.interpolate(dorfs.temperatureMap, x, z, scale);
+                    mess = mess + "Temp: " + temp + " ";
+                }
+                if (DorfMap.inBounds(x / scale, z / scale, dorfs.elevationMap))
+                {
+                    int height = interpolator.interpolate(dorfs.elevationMap, x, z, scale);
+                    mess = mess + "Height: " + height + " ";
+                }
+                if (DorfMap.inBounds(x / scale, z / scale, dorfs.rainMap))
+                {
+                    int rain = interpolator.interpolate(dorfs.rainMap, x, z, scale);
+                    mess = mess + "Rain: " + rain + " ";
+                }
+                if (DorfMap.inBounds(x / scale, z / scale, dorfs.vegitationMap))
+                {
+                    int veg = interpolator.interpolate(dorfs.vegitationMap, x, z, scale);
+                    mess = mess + "Veg:" + veg + " ";
+                }
+                messages.add(new TextComponentString(mess));
+            }
+
             if (sites != null) for (Site site : sites)
             {
-                message += ", Site: " + site;
+                messages.add(new TextComponentString("Site: " + site));
+            }
+            else
+            {
+                Site nearest = null;
+                int kx = dorfs.shiftX(pos.getX()) / (scale);
+                int kz = dorfs.shiftZ(pos.getZ()) / (scale);
+                BlockPos k = new BlockPos(kx, 0, kz);
+                double dist = Integer.MAX_VALUE;
+                for (Site site : dorfs.sitesById.values())
+                {
+                    BlockPos s = new BlockPos(site.x, 0, site.z);
+                    if (s.distanceSq(k) < dist)
+                    {
+                        dist = s.distanceSq(k);
+                        nearest = site;
+                    }
+                }
+                messages.add(new TextComponentString("Nearest Site: " + nearest));
             }
             if (constructs != null) for (WorldConstruction cons : constructs)
             {
-                message += ", Construct: " + cons;
+                messages.add(new TextComponentString("Construct: " + cons));
             }
-            entity.sendMessage(new TextComponentString(message));
+            for (ITextComponent message : messages)
+                sender.sendMessage(message);
         }
         else if (args.length > 0 && args[0].equalsIgnoreCase("river"))
         {
             int x1 = sender.getPosition().getX();
             int z1 = sender.getPosition().getZ();
-            int h;
-            int x = x1 / scale + x1 % scale;
-            int z = z1 / scale + z1 % scale;
-            if (x >= dorfs.waterMap.length || z >= dorfs.waterMap[0].length)
-            {
-                h = 1;
-            }
-            else h = gen.getRiverMaker().bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
-
-            System.out.println(gen.getRiverMaker().isInRiver(x1, z1) + " " + h + " " + x1 + " " + z1 + " " + scale);
+            int r = dorfs.riverMap[dorfs.shiftX(x1) / scale][dorfs.shiftZ(z1) / scale];
+            sender.sendMessage(new TextComponentString(
+                    (gen.getRiverMaker().isInRiver(dorfs.shiftX(x1), dorfs.shiftZ(z1), gen.getRiverMaker().getWidth())
+                            + " " + r)));
         }
         else if (args.length > 0 && args[0].equalsIgnoreCase("road"))
         {
             int x1 = sender.getPosition().getX();
             int z1 = sender.getPosition().getZ();
             int h;
-            int x = x1 / scale + x1 % scale;
-            int z = z1 / scale + z1 % scale;
-            if (x >= dorfs.waterMap.length || z >= dorfs.waterMap[0].length)
+            if (x1 / scale >= dorfs.waterMap.length || z1 / scale >= dorfs.waterMap[0].length)
             {
                 h = 1;
             }
-            else h = gen.getRoadMaker().bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
+            else h = gen.getRoadMaker().bicubicInterpolator.interpolate(dorfs.elevationMap, dorfs.shiftX(x1),
+                    dorfs.shiftZ(z1), scale);
             int dh = -20;
             HashSet<WorldConstruction> constructs = dorfs.getConstructionsForCoords(x1, z1);
             if (constructs != null)

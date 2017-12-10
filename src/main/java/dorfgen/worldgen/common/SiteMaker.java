@@ -69,7 +69,7 @@ public class SiteMaker
                 x1 = (x + i1);// / scale;
                 z1 = (z + k1);// / scale;
 
-                HashSet<Site> sites = dorfs.getSiteForCoords(x1 + dorfs.shift.getX(), z1 + dorfs.shift.getZ());
+                HashSet<Site> sites = dorfs.getSiteForCoords(dorfs.unShiftX(x1), dorfs.unShiftZ(z1));
 
                 if (sites == null) continue;
                 for (Site s : sites)
