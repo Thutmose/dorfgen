@@ -52,12 +52,12 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
-@Mod(modid = WorldGenerator.MODID, name = WorldGenerator.NAME, version = "1.8", acceptableRemoteVersions = "*")
+@Mod(modid = WorldGenerator.MODID, name = WorldGenerator.NAME, version = Reference.VERSION, acceptableRemoteVersions = "*")
 public class WorldGenerator
 {
 
-    public static final String   MODID         = "dorfgen";
-    public static final String   NAME          = "DF World Generator";
+    public static final String   MODID         = Reference.MOD_ID;
+    public static final String   NAME          = Reference.MOD_NAME;
 
     @Mod.Instance(MODID)
     public static WorldGenerator instance;

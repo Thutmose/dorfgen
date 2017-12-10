@@ -19,10 +19,6 @@ minecraft {
     
     replace "@VERSION@", project.version
     replaceIn "Reference.java"
-    replace "@MCVERSION", "${version_mcsupport}"
-    replaceIn "Reference.java"
-    replace "@FORGEVERSION", "${version_forgedep}"
-    replaceIn "Reference.java"
 }
 
 dependencies {

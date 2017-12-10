@@ -176,6 +176,10 @@ public class GuiCustomizeWorld extends GuiScreen
             {
                 generatorInfo.scalev = Integer.parseInt(scalev.getText());
             }
+            else
+            {
+                generatorInfo.scalev = new GeneratorInfo().scalev;
+            }
             if (!scaleh.getText().isEmpty())
             {
                 generatorInfo.scaleh = Integer.parseInt(scaleh.getText());
