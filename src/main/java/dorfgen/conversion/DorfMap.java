@@ -1,5 +1,6 @@
 package dorfgen.conversion;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.HashMap;
@@ -9,10 +10,8 @@ import java.util.Set;
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
-import net.minecraft.init.Biomes;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.biome.Biome;
 
 public class DorfMap
 {
@@ -35,6 +34,9 @@ public class DorfMap
         if (x < 0 || z < 0 || x >= map.length || z >= map[0].length) return false;
         return true;
     }
+
+    private static final Color                          RIVER                = new Color(0, 128, 128);
+    static final int                                    WATERSHIFT           = -24;
 
     public int[][]                                      biomeMap             = new int[0][0];
     public int[][]                                      elevationMap         = new int[0][0];
@@ -59,7 +61,6 @@ public class DorfMap
     public HashMap<Integer, WorldConstruction>          constructionsById    = new HashMap<Integer, WorldConstruction>();
     /** Coords are world tile resolution and are x + 2048 * z */
     public HashMap<Integer, HashSet<WorldConstruction>> constructionsByCoord = new HashMap<Integer, HashSet<WorldConstruction>>();
-    static int                                          waterShift           = -24;
 
     public BicubicInterpolator                          biomeInterpolator    = new BicubicInterpolator();
     public CachedBicubicInterpolator                    heightInterpolator   = new CachedBicubicInterpolator();
@@ -81,6 +82,7 @@ public class DorfMap
                                                                              {
                                                                              };
     public File                                         resourceDir;
+    public BiomeList                                    biomeList            = new BiomeList();
 
     void addSiteByCoord(int x, int z, Site site)
     {
@@ -136,10 +138,6 @@ public class DorfMap
         populateStructureMap();
 
         postProcessRegions();
-        if (biomeMap.length > 0)
-        {
-            postProcessBiomeMap();
-        }
     }
 
     public void populateBiomeMap()
@@ -151,8 +149,7 @@ public class DorfMap
         {
             for (int x = 0; x < img.getWidth(); x++)
             {
-                int rgb = images.biomeMap.getRGB(x, y);
-                biomeMap[x][y] = BiomeList.GetBiomeIndex(rgb);
+                biomeMap[x][y] = images.biomeMap.getRGB(x, y);
             }
         }
         images.biomeMap = null;
@@ -162,6 +159,7 @@ public class DorfMap
     {
         this.sigmoid = sigmoid;
         populateElevationMap();
+        populateWaterMap();
     }
 
     private int elevationSigmoid(int preHeight)
@@ -185,23 +183,15 @@ public class DorfMap
                 int h = b;
                 if (r == 0)
                 {
-                    h = b + waterShift;
+                    h = b + WATERSHIFT;
                 }
                 h = Math.max(0, h);
                 elevationMap[x][y] = elevationSigmoid(h);
                 if (elevationMap[x][y] > max) max = elevationMap[x][y];
                 if (elevationMap[x][y] < min) min = elevationMap[x][y];
-
-                if (biomeMap.length > 0)
-                    if (h < 145 && biomeMap[x][y] == Biome.getIdForBiome(Biomes.MUTATED_EXTREME_HILLS))
-                    {
-                    biomeMap[x][y] = Biome.getIdForBiome(Biomes.EXTREME_HILLS);
-                    }
             }
         }
-        System.out.println(max + " " + min);
-        // Don't clear the elevation map, it is needed again if sigmoid changes.
-        // images.elevationMap = null;
+        WorldGenerator.log("Max Alt: " + max + ", Min Alt: " + min + " for " + name);
     }
 
     public void populateWaterMap()
@@ -216,12 +206,19 @@ public class DorfMap
             {
                 int rgb = images.elevationWaterMap.getRGB(x, y);
                 int r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = (rgb >> 0) & 0xFF;
-                riverMap[x][y] = r != 0 || g != b ? -1 : b;
+                riverMap[x][y] = r != 0 || g != b ? -1 : b + WATERSHIFT;
                 waterMap[x][y] = r != 0 || g != 0 ? -1 : b;
+                if (riverMap[x][y] != -1)
+                {
+                    riverMap[x][y] = elevationSigmoid(riverMap[x][y]);
+                }
+                if (waterMap[x][y] != -1)
+                {
+                    waterMap[x][y] = elevationSigmoid(waterMap[x][y]);
+                }
             }
         }
         joinRivers();
-        images.elevationWaterMap = null;
     }
 
     public void populateTemperatureMap()
@@ -306,6 +303,7 @@ public class DorfMap
 
     private void joinRivers()
     {
+        boolean biomes = biomeMap.length > 0;
         for (int y = 0; y < riverMap[0].length; y++)
         {
             for (int x = 0; x < riverMap.length; x++)
@@ -329,6 +327,14 @@ public class DorfMap
             for (int x = 0; x < waterMap.length; x++)
             {
                 int b = waterMap[x][y];
+                if (biomes && riverMap[x][y] > 0)
+                {
+                    biomeMap[x][y] = RIVER.getRGB();
+                    // Also set the ones above as river to fix annoying
+                    // interpolation issues.
+                    if (x + 1 < biomeMap.length) biomeMap[x + 1][y] = RIVER.getRGB();
+                    if (y + 1 < biomeMap[x].length) biomeMap[x][y + 1] = RIVER.getRGB();
+                }
                 if (b > 0)
                 {
                     int num = countLarger(0, waterMap, x, y, 1);
@@ -398,24 +404,6 @@ public class DorfMap
             }
         }
         return ret;
-    }
-
-    public void postProcessBiomeMap()
-    {
-        boolean hasThermalMap = temperatureMap.length > 0;
-        for (int x = 0; x < biomeMap.length; x++)
-            for (int z = 0; z < biomeMap[0].length; z++)
-            {
-                int biome = biomeMap[x][z];
-                if (biome == Biome.getIdForBiome(Biomes.RIVER)) continue;
-                int temperature = hasThermalMap ? temperatureMap[x][z] : 128;
-                int drainage = drainageMap.length > 0 ? drainageMap[x][z] : 100;
-                int rain = rainMap.length > 0 ? rainMap[x][z] : 100;
-                int evil = evilMap.length > 0 ? evilMap[x][z] : 100;
-                Region region = getRegionForCoords(x * scale, z * scale);
-                int newBiome = BiomeList.getBiomeFromValues(biome, temperature, drainage, rain, evil, region);
-                biomeMap[x][z] = newBiome;
-            }
     }
 
     public Region getRegionForCoords(int x, int z)

@@ -12,9 +12,11 @@ public class PathMaker
 {
     public final SiteStructureGenerator structureGen;
     public final DorfMap                dorfs;
-    public BicubicInterpolator          bicubicInterpolator = new BicubicInterpolator();
+    public BicubicInterpolator          riverInterpolator     = new BicubicInterpolator();
+    public BicubicInterpolator          waterInterpolator     = new BicubicInterpolator();
+    public BicubicInterpolator          elevationInterpolator = new BicubicInterpolator();
     protected int                       scale;
-    protected boolean                   respectsSites       = true;
+    protected boolean                   respectsSites         = true;
 
     public PathMaker(DorfMap map, SiteStructureGenerator gen)
     {

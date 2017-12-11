@@ -3,7 +3,6 @@ package dorfgen.worldgen.common;
 import java.util.List;
 
 import dorfgen.WorldGenerator;
-import dorfgen.conversion.BiomeList;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
@@ -107,17 +106,15 @@ public class BiomeProviderFinite extends BiomeProvider
             for (int k1 = 0; k1 < 16; k1++)
             {
                 index = (i1) + (k1) * 16;
-                int biome = getBiomeFromMaps(map.shiftX(x + i1), map.shiftZ(z + k1));
-
-                biomes[index] = Biome.getBiome(biome);
+                biomes[index] = getBiomeFromMaps(map.shiftX(x + i1), map.shiftZ(z + k1));
             }
         }
         return biomes;
     }
 
-    private int getBiomeFromMaps(int x, int z)
+    private Biome getBiomeFromMaps(int x, int z)
     {
-        return Biome.getIdForBiome(BiomeList.mutateBiome(null, x, z, map));
+        return map.biomeList.mutateBiome(null, x, z, map);
     }
 
     @Override

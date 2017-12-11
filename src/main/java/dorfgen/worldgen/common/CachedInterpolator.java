@@ -93,6 +93,7 @@ public class CachedInterpolator extends BicubicInterpolator
         double[][] arr = new double[4][4];
         int num = 0;
         double sum = 0;
+        int min = Integer.MAX_VALUE;
         for (int i = -1; i <= 2; i++)
             for (int k = -1; k <= 2; k++)
             {
@@ -111,16 +112,24 @@ public class CachedInterpolator extends BicubicInterpolator
                 {
                     num++;
                     sum += value;
+                    min = Math.min(value, min);
                 }
                 arr[i + 1][k + 1] = value;
             }
+        if (min == Integer.MAX_VALUE) min = 0;
+
+        // Values of -1 are used for "no data", so replace them with an average.
+        // Maybe this should replace with nearest neighbour instead?
         int avg = (int) Math.round(sum / num);
         for (int i = -1; i <= 2; i++)
             for (int k = -1; k <= 2; k++)
             {
                 if (arr[i + 1][k + 1] == -1) arr[i + 1][k + 1] = avg;
             }
-        return (int) Math.round(getValue(arr, x, y));
+        // Cubic splines result in some areas being dipped down, we don't want
+        // that, so cap this at the minimum value found.
+        num = (int) Math.round(getValue(arr, x, y));
+        return Math.max(min, num);
     }
 
     @Override

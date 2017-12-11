@@ -45,6 +45,7 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
 {
     public CachedInterpolator                          elevationInterpolator = new CachedInterpolator();
     public CachedInterpolator                          waterInterpolator     = new CachedInterpolator();
+    public CachedInterpolator                          riverInterpolator     = new CachedInterpolator();
     public CachedBicubicInterpolator                   cachedInterpolator    = new CachedBicubicInterpolator();
     public final RiverMaker                            riverMaker;
     public final RoadMaker                             roadMaker;
@@ -84,8 +85,12 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
         villageGenerator.genSites(info.sites).genVillages(info.villages);
         riverMaker.setRespectsSites(generateSites).setScale(scale);
         roadMaker.setRespectsSites(generateSites).setScale(scale);
-        riverMaker.bicubicInterpolator = elevationInterpolator;
-        roadMaker.bicubicInterpolator = elevationInterpolator;
+        riverMaker.riverInterpolator = riverInterpolator;
+        riverMaker.waterInterpolator = waterInterpolator;
+        riverMaker.elevationInterpolator = elevationInterpolator;
+        roadMaker.riverInterpolator = riverInterpolator;
+        roadMaker.waterInterpolator = waterInterpolator;
+        roadMaker.elevationInterpolator = elevationInterpolator;
         constructor.bicubicInterpolator = elevationInterpolator;
         constructor.setScale(scale);
         structuregen.setScale(scale);
@@ -238,6 +243,8 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
         this.rand.setSeed((long) cubeX * 341873128712L + (long) cubeZ * 132897987541L);
         CubePrimer primer = new CubePrimer();
         elevationInterpolator.initImage(map.elevationMap, cubeX, cubeZ, 32, scale);
+        waterInterpolator.initImage(map.waterMap, cubeX, cubeZ, 32, scale);
+        riverInterpolator.initImage(map.riverMap, cubeX, cubeZ, 32, scale);
         if (lastX != cubeX || lastZ != cubeZ) this.biomesForGeneration = this.world.getBiomeProvider()
                 .getBiomes(this.biomesForGeneration, cubeX * 16, cubeZ * 16, 16, 16);
         lastX = cubeX;
@@ -282,7 +289,11 @@ public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenP
          * cube populators from registry. **/
         if (!MinecraftForge.EVENT_BUS.post(new CubePopulatorEvent(world, cube)))
         {
-            elevationInterpolator.initImage(map.elevationMap, cube.getX(), cube.getZ(), 32, scale);
+            int cubeX = cube.getX();
+            int cubeZ = cube.getZ();
+            elevationInterpolator.initImage(map.elevationMap, cubeX, cubeZ, 32, scale);
+            waterInterpolator.initImage(map.waterMap, cubeX, cubeZ, 32, scale);
+            riverInterpolator.initImage(map.riverMap, cubeX, cubeZ, 32, scale);
             int y = cube.getY();
             if (generateSites) structuregen.generate(cube.getX(), cube.getZ(), (World) world, y * 16, y * 16 + 15);
             if (generateRivers) riverMaker.postInitRivers((World) world, cube.getX(), cube.getZ(), y * 16, y * 16 + 15);

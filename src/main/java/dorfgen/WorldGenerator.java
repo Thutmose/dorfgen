@@ -1,11 +1,20 @@
 package dorfgen;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -45,6 +54,7 @@ import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLLoadCompleteEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerAboutToStartEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.eventhandler.Event.Result;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
@@ -124,7 +134,7 @@ public class WorldGenerator
         {
             instance.defaultRegion = key;
         }
-        System.out.println("Set Map for " + key);
+        log("Set Map for " + key);
         instance.regionMaps.put(key, map);
 
     }
@@ -198,6 +208,10 @@ public class WorldGenerator
             dorfProcess.start();
             mapThreads.add(dorfProcess);
         }
+        if (mapThreads.isEmpty())
+        {
+            log(Level.SEVERE, "No Maps found.");
+        }
 
         //
     }
@@ -236,6 +250,17 @@ public class WorldGenerator
     }
 
     @EventHandler
+    public void serverLoad(FMLServerAboutToStartEvent event)
+    {
+        // Reset all of the biome lists on server load. This is to account for
+        // worlds with different biome sets.
+        for (DorfMap dorf : regionMaps.values())
+        {
+            dorf.biomeList.clear();
+        }
+    }
+
+    @EventHandler
     public void serverLoad(FMLServerStartingEvent event)
     {
         event.registerServerCommand(new Commands());
@@ -267,8 +292,7 @@ public class WorldGenerator
                         }
                         catch (Exception e)
                         {
-                            System.out.println(s + " " + dorfs.elevationMap.length);
-                            e.printStackTrace();
+                            log(s + " " + dorfs.elevationMap.length, e);
                         }
                         evt.getWorld().setSpawnPoint(new BlockPos(x + scale / 2, y, z + scale / 2));
                         return;
@@ -291,8 +315,7 @@ public class WorldGenerator
                         }
                         catch (Exception e)
                         {
-                            System.out.println(s + " " + dorfs.elevationMap.length);
-                            e.printStackTrace();
+                            log(s + " " + dorfs.elevationMap.length, e);
                         }
                         evt.getWorld().setSpawnPoint(
                                 new BlockPos(dorfs.shiftX(x) + scale / 2, y, dorfs.shiftZ(z) + scale / 2));
@@ -368,4 +391,75 @@ public class WorldGenerator
         }
     }
 
+    private static Logger        logger     = Logger.getLogger("Dorfgen");
+    protected static FileHandler logHandler = null;
+
+    private static void initLogger()
+    {
+        logger.setLevel(Level.ALL);
+        try
+        {
+            File logfile = new File(".", "dorfgen.log");
+            if ((logfile.exists() || logfile.createNewFile()) && logfile.canWrite() && logHandler == null)
+            {
+                logHandler = new FileHandler(logfile.getPath());
+                logHandler.setFormatter(new LogFormatter());
+                logger.addHandler(logHandler);
+            }
+        }
+        catch (SecurityException | IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    public static void log(String toLog)
+    {
+        log(Level.INFO, toLog);
+    }
+
+    public static void log(Level level, String toLog)
+    {
+        if (logHandler == null) initLogger();
+        logger.log(level, toLog);
+    }
+
+    public static void log(Level level, String toLog, Exception thrown)
+    {
+        if (logHandler == null) initLogger();
+        logger.log(level, toLog, thrown);
+    }
+
+    public static void log(String toLog, Exception thrown)
+    {
+        log(Level.WARNING, toLog, thrown);
+    }
+
+    public static final class LogFormatter extends Formatter
+    {
+        private static final String SEP        = System.getProperty("line.separator");
+        private SimpleDateFormat    dateFormat = new SimpleDateFormat("MM-dd HH:mm:ss");
+
+        @Override
+        public String format(LogRecord record)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.append(dateFormat.format(record.getMillis()));
+            sb.append(" [").append(record.getLevel().getLocalizedName()).append("] ");
+
+            sb.append(record.getMessage());
+            sb.append(SEP);
+            Throwable thr = record.getThrown();
+
+            if (thr != null)
+            {
+                StringWriter thrDump = new StringWriter();
+                thr.printStackTrace(new PrintWriter(thrDump));
+                sb.append(thrDump.toString());
+            }
+
+            return sb.toString();
+        }
+    }
 }

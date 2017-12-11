@@ -210,6 +210,7 @@ public class Commands extends CommandBase
             int x1 = sender.getPosition().getX();
             int z1 = sender.getPosition().getZ();
             int r = dorfs.riverMap[dorfs.shiftX(x1) / scale][dorfs.shiftZ(z1) / scale];
+            r = gen.getRiverMaker().riverInterpolator.interpolate(dorfs.riverMap, x1, z1, scale);
             sender.sendMessage(new TextComponentString(
                     (gen.getRiverMaker().isInRiver(dorfs.shiftX(x1), dorfs.shiftZ(z1), gen.getRiverMaker().getWidth())
                             + " " + r)));
@@ -223,7 +224,7 @@ public class Commands extends CommandBase
             {
                 h = 1;
             }
-            else h = gen.getRoadMaker().bicubicInterpolator.interpolate(dorfs.elevationMap, dorfs.shiftX(x1),
+            else h = gen.getRoadMaker().riverInterpolator.interpolate(dorfs.elevationMap, dorfs.shiftX(x1),
                     dorfs.shiftZ(z1), scale);
             int dh = -20;
             HashSet<WorldConstruction> constructs = dorfs.getConstructionsForCoords(x1, z1);

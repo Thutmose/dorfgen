@@ -5,7 +5,6 @@ import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,7 +13,10 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.logging.Level;
 
 import javax.imageio.ImageIO;
 import javax.xml.parsers.DocumentBuilder;
@@ -23,6 +25,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+
+import com.google.common.collect.Lists;
 
 // import com.sun.org.apache.xerces.internal.dom.DeferredElementImpl;
 
@@ -36,10 +40,12 @@ import dorfgen.conversion.DorfMap.SiteType;
 import dorfgen.conversion.DorfMap.Structure;
 import dorfgen.conversion.DorfMap.StructureType;
 import dorfgen.conversion.DorfMap.WorldConstruction;
-import net.minecraft.world.biome.Biome;
+import net.minecraftforge.common.BiomeDictionary.Type;
+import net.minecraftforge.fml.relauncher.ReflectionHelper;
 
 public class FileLoader
 {
+
     public File                            resourceDir            = null;
     final DorfMap                          map;
 
@@ -67,7 +73,7 @@ public class FileLoader
         if (WorldGenerator.instance.defaultRegion.isEmpty()) WorldGenerator.instance.defaultRegion = name;
         this.map = new DorfMap(name);
         this.map.resourceDir = resourceDir;
-        File biomes = new File(folder, "biomes.csv");
+        File biomes = new File(folder, "biome_mappings.csv");
         boolean noRegion = true;
         for (File f : folder.listFiles())
         {
@@ -84,7 +90,7 @@ public class FileLoader
                         Integer id = Integer.parseInt(s1);
                         BufferedImage site = getImage(f1.getAbsolutePath());
                         if (site != null) sites.put(id, site);
-                        else new NullPointerException("Site " + id + " did not read correctly.").printStackTrace();
+                        else WorldGenerator.log("Site " + id + " did not read correctly. " + s);
                     }
                 }
             }
@@ -159,10 +165,10 @@ public class FileLoader
         }
         if (noRegion)
         {
-            System.err.println("No Region maps found for " + name);
+            WorldGenerator.log(Level.SEVERE, "No Region maps found for " + name);
             return;
         }
-        System.out.println("Loading Region " + name);
+        WorldGenerator.log("Loading Region " + name);
 
         if (!legends.contains("trunc"))
         {
@@ -191,15 +197,16 @@ public class FileLoader
         map.images.rainMap = getImage(rain);
         map.images.volcanismMap = getImage(volcanism);
 
-        loadBiomes(biomes);
         map.init();
         map.structureGen = new SiteStructureGenerator(map);
         map.structureGen.init();
+        loadBiomes(biomes);
         WorldGenerator.setMap(name, map);
     }
 
     BufferedImage getImage(String file)
     {
+        if (file.isEmpty()) return null;
         BufferedImage ret = null;
         try
         {
@@ -208,7 +215,7 @@ public class FileLoader
         }
         catch (Exception e)
         {
-            System.err.println("Cannot find " + file);
+            WorldGenerator.log("Cannot Find File: " + file, new Exception(e));
         }
 
         return ret;
@@ -424,7 +431,7 @@ public class FileLoader
                 }
                 else
                 {
-                    new Exception().printStackTrace();
+                    WorldGenerator.log("No Site found for id: " + id, new Exception());
                 }
 
             }
@@ -467,7 +474,7 @@ public class FileLoader
                     }
                     else
                     {
-                        new Exception().printStackTrace();
+                        WorldGenerator.log("No Region found for id: " + id, new Exception());
                     }
                 }
             }
@@ -510,7 +517,7 @@ public class FileLoader
                     }
                     else
                     {
-                        new Exception().printStackTrace();
+                        WorldGenerator.log("No Region found for id: " + id, new Exception());
                     }
                 }
             }
@@ -574,6 +581,7 @@ public class FileLoader
                     else
                     {
                         new NullPointerException("Unknown Construction Type").printStackTrace();
+                        WorldGenerator.log(Level.WARNING, "Unknown Construction Type: " + type);
                     }
                 }
             }
@@ -618,7 +626,8 @@ public class FileLoader
                 }
                 else
                 {
-                    new NullPointerException("Cannot Find Construction for id:" + id).printStackTrace();
+                    WorldGenerator.log(Level.WARNING, "Cannot Find Construction for id:" + id,
+                            new NullPointerException());
                 }
             }
         }
@@ -664,15 +673,14 @@ public class FileLoader
                 }
                 else
                 {
-                    new NullPointerException("Cannot Find Site for id:" + id).printStackTrace();
+                    WorldGenerator.log(Level.WARNING, "Cannot Find Site for id:" + id, new NullPointerException());
                 }
             }
-            System.out.println("Imported locations for " + n + " Sites");
+            WorldGenerator.log("Imported locations for " + n + " Sites for " + map.name);
         }
         catch (Exception e)
         {
-            e.printStackTrace();
-            System.err.println("Error with file " + file);
+            WorldGenerator.log("Error with file " + file, e);
         }
     }
 
@@ -683,25 +691,25 @@ public class FileLoader
         String line = "";
         String cvsSplitBy = ",";
 
-        try
-        {
-            InputStream res = new FileInputStream(biomes);
-            br = new BufferedReader(new InputStreamReader(res));
-            int n = 0;
-            while ((line = br.readLine()) != null)
-            {
-
-                String[] row = line.split(cvsSplitBy);
-                rows.add(new ArrayList<String>());
-                for (int i = 0; i < row.length; i++)
-                {
-                    rows.get(n).add(row[i]);
-                }
-                n++;
-            }
-
-        }
-        catch (FileNotFoundException e)
+        // try
+        // {
+        // InputStream res = new FileInputStream(biomes);
+        // br = new BufferedReader(new InputStreamReader(res));
+        // int n = 0;
+        // while ((line = br.readLine()) != null)
+        // {
+        //
+        // String[] row = line.split(cvsSplitBy);
+        // rows.add(new ArrayList<String>());
+        // for (int i = 0; i < row.length; i++)
+        // {
+        // rows.get(n).add(row[i]);
+        // }
+        // n++;
+        // }
+        //
+        // }
+        // catch (FileNotFoundException e)
         {
 
             FileWriter fwriter;
@@ -711,7 +719,7 @@ public class FileLoader
                 fwriter = new FileWriter(biomes);
                 out = new PrintWriter(fwriter);
 
-                String defaultPath = "/assets/dorfgen/biomes.csv";
+                String defaultPath = "/assets/dorfgen/biome_mappings.csv";
                 ArrayList<String> lines = new ArrayList<String>();
                 InputStream res;
                 try
@@ -752,28 +760,28 @@ public class FileLoader
             }
 
         }
-        catch (NullPointerException e)
-        {
-            e.printStackTrace();
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-        finally
-        {
-            if (br != null)
-            {
-                try
-                {
-                    br.close();
-                }
-                catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-            }
-        }
+        // catch (NullPointerException e)
+        // {
+        // e.printStackTrace();
+        // }
+        // catch (IOException e)
+        // {
+        // e.printStackTrace();
+        // }
+        // finally
+        // {
+        // if (br != null)
+        // {
+        // try
+        // {
+        // br.close();
+        // }
+        // catch (IOException e)
+        // {
+        // e.printStackTrace();
+        // }
+        // }
+        // }
 
         for (int i = 1; i < rows.size(); i++)
         {
@@ -781,44 +789,35 @@ public class FileLoader
             int r;
             int g;
             int b;
-            int biomeId = -1;
-            String biomeName = "";
+            List<Type> types = Lists.newArrayList();
             r = Integer.parseInt(row.get(0));
             g = Integer.parseInt(row.get(1));
             b = Integer.parseInt(row.get(2));
+            String typeString = row.get(3);
+            String[] args = typeString.split(" ");
+            for (String s : args)
+            {
+                Type type = getBiomeType(s);
+                if (type != null) types.add(type);
+                else WorldGenerator.log(Level.WARNING, "No Biome type by name: " + s);
+            }
 
-            try
+            // first row is blank, with colour of black.
+            if (types.isEmpty())
             {
-                biomeId = Integer.parseInt(row.get(3));
-            }
-            catch (Exception e)
-            {
-            }
-            if (row.size() > 4) biomeName = row.get(4);
-
-            if (biomeId < 0)
-            {
-                Iterator<Biome> iter = Biome.REGISTRY.iterator();
-                while (iter.hasNext())
-                {
-                    Biome biome = iter.next();
-                    if (biome != null
-                            && biome.getBiomeName().replace(" ", "").equalsIgnoreCase(biomeName.replace(" ", "")))
-                    {
-                        biomeId = Biome.getIdForBiome(biome);
-                        break;
-                    }
-                }
-            }
-            if (biomeId < 0)
-            {
-                System.out.println("Error in row " + i + " " + row);
+                WorldGenerator.log(Level.WARNING, "Error in row " + i + " " + row);
                 continue;
             }
             Color c = new Color(r, g, b);
-            BiomeList.biomes.put(c.getRGB(), new BiomeConversion(c, biomeId));
+            map.biomeList.biomes.put(c.getRGB(), new BiomeConversion(c, types.toArray(new Type[0])));
         }
 
     }
 
+    private static final Map<String, Type> byName = ReflectionHelper.getPrivateValue(Type.class, null, "byName");
+
+    public static Type getBiomeType(String name)
+    {
+        return byName.get(name.toUpperCase(Locale.ENGLISH));
+    }
 }

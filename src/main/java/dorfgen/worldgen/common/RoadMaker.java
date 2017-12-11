@@ -458,7 +458,7 @@ public class RoadMaker extends PathMaker
                 }
                 else
                 {
-                    h = bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
+                    h = elevationInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
                     if (x1 - dr > 0 && z1 - dr > 0)
                     {
                         if (dirs[0] || dirs[1])
@@ -469,7 +469,7 @@ public class RoadMaker extends PathMaker
                                 x2 = x1 + side.getFrontOffsetX() * r;
                                 z2 = z1 + side.getFrontOffsetZ() * r;
                                 if (!hasRoad(dorfs.unShiftX(x2), h, dorfs.unShiftZ(z2))) break;
-                                int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
+                                int h2 = elevationInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
                                 hMin = Math.min(hMin, h2);
                                 hMax = Math.max(hMax, h2);
                             }
@@ -479,7 +479,7 @@ public class RoadMaker extends PathMaker
                                 x2 = x1 + side.getFrontOffsetX() * r;
                                 z2 = z1 + side.getFrontOffsetZ() * r;
                                 if (!hasRoad(dorfs.unShiftX(x2), h, dorfs.unShiftZ(z2))) break;
-                                int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
+                                int h2 = elevationInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
                                 hMin = Math.min(hMin, h2);
                                 hMax = Math.max(hMax, h2);
                             }
@@ -492,7 +492,7 @@ public class RoadMaker extends PathMaker
                                 x2 = x1 + side.getFrontOffsetX() * r;
                                 z2 = z1 + side.getFrontOffsetZ() * r;
                                 if (!hasRoad(dorfs.unShiftX(x2), h, dorfs.unShiftZ(z2))) break;
-                                int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
+                                int h2 = elevationInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
                                 hMin = Math.min(hMin, h2);
                                 hMax = Math.max(hMax, h2);
                             }
@@ -502,7 +502,7 @@ public class RoadMaker extends PathMaker
                                 x2 = x1 + side.getFrontOffsetX() * r;
                                 z2 = z1 + side.getFrontOffsetZ() * r;
                                 if (!hasRoad(dorfs.unShiftX(x2), h, dorfs.unShiftZ(z2))) break;
-                                int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
+                                int h2 = elevationInterpolator.interpolate(dorfs.elevationMap, x2, z2, scale);
                                 hMin = Math.min(hMin, h2);
                                 hMax = Math.max(hMax, h2);
                             }

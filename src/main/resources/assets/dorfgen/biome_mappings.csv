@@ -1,0 +1,38 @@
+Red,Green,Blue,Biome Types,DF Biome
+128,128,128,MOUNTAIN SPARSE RARE,// mountain
+0,224,255,RIVER,// temperate freshwater lake
+0,192,255,RIVER,// temperate brackish lake
+0,160,255,RIVER,// temperate saltwater lake
+0,96,255,RIVER HOT,// tropical freshwater lake
+0,64,255,RIVER HOT,// tropical brackish lake
+0,32,255,RIVER HOT,// tropical saltwater lake
+0,255,255,OCEAN COLD,// arctic ocean
+0,0,255,OCEAN HOT,// tropical ocean
+0,128,255,OCEAN,// temperate ocean 
+64,255,255,WASTELAND SNOWY COLD,// glacier 
+128,255,255,COLD SNOWY FOREST,// tundra 
+96,192,128,SWAMP,// temperate freshwater swamp 
+64,192,128,SWAMP,// temperate saltwater swamp 
+96,255,128,SWAMP,// temperate freshwater marsh 
+64,255,128,SWAMP,// temperate saltwater marsh 
+96,192,64,SWAMP HOT,// tropical freshwater swamp 
+64,192,64,SWAMP HOT,// tropical saltwater swamp 
+64,255,96,SWAMP HOT,// mangrove swamp 
+96,255,64,SWAMP HOT,// tropical freshwater marsh 
+64,255,64,SWAMP HOT,// tropical saltwater marsh 
+0,96,64,COLD SNOWY FOREST,// taiga forest 
+0,96,32,CONIFEROUS FOREST,// temperate conifer forest 
+0,160,32,DENSE FOREST,// temperate broadleaf forest 
+0,96,0,FOREST,// tropical conifer forest 
+0,128,0,FOREST,// tropical dry broadleaf forest 
+0,160,0,JUNGLE,// tropical moist broadleaf forest 
+0,255,32,PLAINS,// temperate grassland 
+0,224,32,SAVANNA,// temperate savanna 
+0,192,32,PLAINS,// temperate shrubland 
+255,160,0,PLAINS,// tropical grassland 
+255,176,0,SAVANNA,// tropical savanna 
+255,192,0,JUNGLE,// tropical shrubland 
+255,96,32,MESA,// badland desert 
+255,255,0,SANDY DRY,// sand desert 
+255,128,64,MESA,// rock desert 
+0,128,128,RIVER,This is added at runtime for rivers.

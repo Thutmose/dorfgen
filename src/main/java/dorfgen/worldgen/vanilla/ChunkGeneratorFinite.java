@@ -9,7 +9,6 @@ import static net.minecraftforge.event.terraingen.PopulateChunkEvent.Populate.Ev
 import java.util.Random;
 
 import dorfgen.WorldGenerator;
-import dorfgen.conversion.BiomeList;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import dorfgen.conversion.SiteStructureGenerator;
@@ -73,6 +72,7 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
     final GeneratorInfo                 info;
     public CachedInterpolator           elevationInterpolator = new CachedInterpolator();
     public CachedInterpolator           waterInterpolator     = new CachedInterpolator();
+    public CachedInterpolator           riverInterpolator     = new CachedInterpolator();
     public CachedBicubicInterpolator    cachedInterpolator    = new CachedBicubicInterpolator();
 
     {
@@ -98,8 +98,12 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
         villageGenerator.genSites(info.sites).genVillages(info.villages);
         riverMaker.setRespectsSites(info.sites).setScale(scale);
         roadMaker.setRespectsSites(info.sites).setScale(scale);
-        riverMaker.bicubicInterpolator = elevationInterpolator;
-        roadMaker.bicubicInterpolator = elevationInterpolator;
+        riverMaker.riverInterpolator = riverInterpolator;
+        riverMaker.waterInterpolator = waterInterpolator;
+        riverMaker.elevationInterpolator = elevationInterpolator;
+        roadMaker.riverInterpolator = riverInterpolator;
+        roadMaker.waterInterpolator = waterInterpolator;
+        roadMaker.elevationInterpolator = elevationInterpolator;
         constructor.bicubicInterpolator = elevationInterpolator;
         constructor.setScale(scale);
         structuregen.setScale(scale);
@@ -167,7 +171,7 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
                     int x1 = (x + i) / scale;
                     int z1 = (z + k) / scale;
                     int h = 0;
-                    if (x1 >= map.elevationMap.length || z1 >= map.elevationMap[0].length)
+                    if (x1 >= map.waterMap.length || z1 >= map.waterMap[0].length)
                     {
                         h = b0;
                     }
@@ -196,6 +200,7 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
         ChunkPrimer primer = new PrimerWrapper(new ChunkPrimer());
         elevationInterpolator.initImage(map.elevationMap, chunkX, chunkZ, 32, scale);
         waterInterpolator.initImage(map.waterMap, chunkX, chunkZ, 32, scale);
+        riverInterpolator.initImage(map.riverMap, chunkX, chunkZ, 32, scale);
 
         this.biomesForGeneration = this.worldObj.getBiomeProvider().getBiomes(this.biomesForGeneration, chunkX * 16,
                 chunkZ * 16, 16, 16);
@@ -259,6 +264,8 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
     public void populate(int x, int z)
     {
         elevationInterpolator.initImage(map.elevationMap, x, z, 32, scale);
+        waterInterpolator.initImage(map.waterMap, x, z, 32, scale);
+        riverInterpolator.initImage(map.riverMap, x, z, 32, scale);
         BlockFalling.fallInstantly = true;
         int k = x * 16;
         int l = z * 16;
@@ -346,7 +353,7 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
                         int index = i + 16 * k;
                         Biome old = biomes[index];
                         if (BiomeDictionary.hasType(old, Type.OCEAN))
-                            biomes[index] = BiomeList.mutateBiome(Biomes.BEACH, x1, z1, map);
+                            biomes[index] = map.biomeList.mutateBiome(Biomes.BEACH, x1, z1, map);
                     }
                 }
             }

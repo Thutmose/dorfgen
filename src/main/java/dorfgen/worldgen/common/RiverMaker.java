@@ -10,7 +10,6 @@ import java.util.HashSet;
 
 import javax.vecmath.Vector3d;
 
-import dorfgen.conversion.BiomeList;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.SiteStructureGenerator;
@@ -82,39 +81,31 @@ public class RiverMaker extends PathMaker
                 x2 = (x + i1 + 1);
                 z2 = (z + k1 + 1);
 
-                if (x2 / scale + x2 % scale >= dorfs.waterMap.length
-                        || z2 / scale + z2 % scale >= dorfs.waterMap[0].length)
+                if (x2 / scale + x2 % scale >= dorfs.riverMap.length
+                        || z2 / scale + z2 % scale >= dorfs.riverMap[0].length)
                 {
                     h = 1;
                     skip = true;
                 }
                 else
                 {
-                    h = bicubicInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
-                    int minS = h;
-                    if (x1 > 0 && z1 > 0) for (EnumFacing side : EnumFacing.HORIZONTALS)
-                    {
-                        int h2 = bicubicInterpolator.interpolate(dorfs.elevationMap, x1 + side.getFrontOffsetX(),
-                                z1 + side.getFrontOffsetZ(), scale);
-                        if (h2 > h - 1) minS = Math.min(minS, h2);
-                    }
-                    h = minS;
+                    h = riverInterpolator.interpolate(dorfs.riverMap, x1, z1, scale);
                 }
-                oob = (h < minY - 4) || (h > maxY + 4);
+                oob = (h < minY - 16) || (h > maxY + 32 * dorfs.cubicHeightScale);
                 if (oob || skip) continue;
-                boolean river = isInRiver(x1, z1, 2 * width);
+                boolean river = isInRiver(x1, z1, 4 * width);
                 if (!river) continue;
-                biomes[i1 + k1 * 16] = BiomeList.mutateBiome(Biomes.RIVER, x1, z1, dorfs);
+                biomes[i1 + k1 * 16] = dorfs.biomeList.mutateBiome(Biomes.RIVER, x1, z1, dorfs);
                 if (!isInRiver(x1, z1, width)) continue;
-                int y = h;
-                for (int i = 1; i < 4; i++)
+                int y = h = h - 1 - minY;
+                for (int i = 2; i < 5; i++)
                 {
-                    y = h - i - minY;
+                    y = h - i;
                     if (y >= dorfs.yMin) primer.setBlockState(i1, y, k1, Blocks.WATER.getDefaultState());
                 }
-                for (int i = 0; i < 4; i++)
+                for (int i = -1; i < 32 * dorfs.cubicHeightScale; i++)
                 {
-                    y = h + i - minY;
+                    y = h + i;
                     if (y >= dorfs.yMin) primer.setBlockState(i1, y, k1, Blocks.AIR.getDefaultState());
                 }
             }
@@ -148,7 +139,7 @@ public class RiverMaker extends PathMaker
         return ret;
     }
 
-    public boolean isRiver(int x, int z, boolean strict)
+    public boolean isRiver(int x, int z, boolean onlyRiverMap)
     {
         int kx = x / scale;// Abs/(scale);
         int kz = z / scale;// Abs/(scale);
@@ -157,7 +148,7 @@ public class RiverMaker extends PathMaker
         if (kx < 0 || kz < 0) return false;
         int r = dorfs.riverMap[kx][kz];
         boolean river = r > 0;
-        if (!river && !strict) river = dorfs.waterMap[kx][kz] > 0;
+        if (!river && !onlyRiverMap) river = waterInterpolator.interpolate(dorfs.waterMap, x, z, scale) > 0;
         if (river || respectsSites) return river;
         HashSet<Site> ret = dorfs.sitesByCoord.get(key);
         if (ret != null)
