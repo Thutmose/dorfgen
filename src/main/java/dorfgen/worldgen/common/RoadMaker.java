@@ -218,7 +218,7 @@ public class RoadMaker extends PathMaker
 //            int num = 0;
 //            for(int i = 0; i<dirs.length; i++) if(dirs[i]) num++;
 //            if(num==1)
-//                System.out.println(Arrays.toString(point1) + 
+//                WorldGenerator.log(Arrays.toString(point1) + 
 //                  "  " + Arrays.toString(point2) + 
 //                  "  " + Arrays.toString(point3)+ 
 //                  "  " + Arrays.toString(point4));
@@ -327,12 +327,12 @@ public class RoadMaker extends PathMaker
 
         if (respectsSites && isInSite(x, z))
         {
-            System.out.println("Embark location x: " + embarkX + " z: " + embarkZ + " is in a site");
+            WorldGenerator.log("Embark location x: " + embarkX + " z: " + embarkZ + " is in a site");
         }
 
         if (hasRoad(x, minY, z))
         {
-            System.out.println("Embark location x: " + embarkX + " z: " + embarkZ + " has a road");
+            WorldGenerator.log("Embark location x: " + embarkX + " z: " + embarkZ + " has a road");
         }
 
         if (dorfs.getConstructionsForCoords(x, z) != null)
@@ -341,8 +341,8 @@ public class RoadMaker extends PathMaker
             {
                 if (constr.isInConstruct(x, minY % 16, z))
                 {
-                    System.out.println("Location x: " + x + " z: " + z + " is in a construction");
-                    System.out.println("    Construction is " + constr.toString());
+                    WorldGenerator.log("Location x: " + x + " z: " + z + " is in a construction");
+                    WorldGenerator.log("    Construction is " + constr.toString());
                 }
             }
         }
@@ -353,17 +353,17 @@ public class RoadMaker extends PathMaker
             {
                 if (constr.isInConstruct(embarkX, minY % 16, embarkZ))
                 {
-                    System.out.println("Location x: " + embarkX + " z: " + embarkZ + " is in a construction");
-                    System.out.println("    Construction is " + constr.toString());
+                    WorldGenerator.log("Location x: " + embarkX + " z: " + embarkZ + " is in a construction");
+                    WorldGenerator.log("    Construction is " + constr.toString());
                 }
             }
         }
 
         if (isNearSiteRoadEnd(x, z))
         {
-            System.out.println("Embark location x: " + embarkX + " z: " + embarkZ + " is near a site road end");
+            WorldGenerator.log("Embark location x: " + embarkX + " z: " + embarkZ + " is near a site road end");
             int[] roadEnd = getSiteRoadEnd(x, z);
-            System.out.println("Site road end is at x: " + roadEnd[0] + " z: " + roadEnd[1]);
+            WorldGenerator.log("Site road end is at x: " + roadEnd[0] + " z: " + roadEnd[1]);
 
             int minDistSqr = Integer.MAX_VALUE, dist;
             int x1, z1;
@@ -393,7 +393,7 @@ public class RoadMaker extends PathMaker
             }
             if (minDistSqr != Integer.MAX_VALUE)
             {
-                System.out.println("Nearest embark to road end found at x: " + embarkX1 + " z: " + embarkZ1);
+                WorldGenerator.log("Nearest embark to road end found at x: " + embarkX1 + " z: " + embarkZ1);
 
                 EnumFacing closestdir = EAST;
                 double distSqr2;
@@ -418,12 +418,12 @@ public class RoadMaker extends PathMaker
                     }
                 }
 
-                if (closestdir == EAST) System.out.println("Closest dir is east");
-                if (closestdir == WEST) System.out.println("Closest dir is west");
-                if (closestdir == NORTH) System.out.println("Closest dir is north");
-                if (closestdir == SOUTH) System.out.println("Closest dir is south");
+                if (closestdir == EAST) WorldGenerator.log("Closest dir is east");
+                if (closestdir == WEST) WorldGenerator.log("Closest dir is west");
+                if (closestdir == NORTH) WorldGenerator.log("Closest dir is north");
+                if (closestdir == SOUTH) WorldGenerator.log("Closest dir is south");
 
-                System.out.println("    with distance " + minDistSqr2);
+                WorldGenerator.log("    with distance " + minDistSqr2);
             }
         }
     }

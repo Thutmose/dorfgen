@@ -129,8 +129,8 @@ public class DorfMap
     public void init()
     {
         populateBiomeMap();
-        populateElevationMap();
         populateWaterMap();
+        populateElevationMap();
         populateTemperatureMap();
         populateVegitationMap();
         populateDrainageMap();
@@ -158,8 +158,8 @@ public class DorfMap
     public void setElevationSigmoid(ISigmoid sigmoid)
     {
         this.sigmoid = sigmoid;
-        populateElevationMap();
         populateWaterMap();
+        populateElevationMap();
     }
 
     private int elevationSigmoid(int preHeight)

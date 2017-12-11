@@ -99,15 +99,15 @@ public class MapGenSites extends MapGenVillage
         case CAMP:
             return villages;
         case CAVE:
-            return sites || villages;
+            return sites;
         case DARKFORTRESS:
             return villages;
         case DARKPITS:
             return villages;
         case FORTRESS:
-            return villages;
+            return sites || villages;
         case HAMLET:
-            return villages;
+            return sites || villages;
         case HILLOCKS:
             return villages;
         case HIPPYHUTS:
@@ -115,19 +115,19 @@ public class MapGenSites extends MapGenVillage
         case LABYRINTH:
             return villages;
         case LAIR:
-            return sites || villages;
+            return sites;
         case MOUNTAINHALLS:
             return villages;
         case SHRINE:
             return sites || villages;
         case TOMB:
-            return villages;
+            return sites;
         case TOWER:
-            return villages;
+            return sites;
         case TOWN:
             return villages;
         case VAULT:
-            return villages;
+            return sites;
         default:
             break;
         }

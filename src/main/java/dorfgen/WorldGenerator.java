@@ -375,7 +375,8 @@ public class WorldGenerator
                             {
                                 int pixelX = (x - site.corners[0][0] * scale - scale / 2 - width / 2) / width;
                                 int pixelY = (z - site.corners[0][1] * scale - scale / 2 - width / 2) / width;
-                                if (pixelX >= site.rgbmap.length || pixelY >= site.rgbmap[0].length)
+                                if (pixelX >= site.rgbmap.length || pixelY >= site.rgbmap[0].length || pixelX < 0
+                                        || pixelY < 0)
                                 {
                                     continue;
                                 }
