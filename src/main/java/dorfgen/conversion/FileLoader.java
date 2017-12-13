@@ -90,7 +90,7 @@ public class FileLoader
                         Integer id = Integer.parseInt(s1);
                         BufferedImage site = getImage(f1.getAbsolutePath());
                         if (site != null) sites.put(id, site);
-                        else WorldGenerator.log("Site " + id + " did not read correctly. " + s);
+                        else WorldGenerator.log("Site " + id + " did not read correctly. " + s + " " + map.name);
                     }
                 }
             }
@@ -173,13 +173,13 @@ public class FileLoader
         if (!legends.contains("trunc"))
         {
             MappedTruncate.ReadTruncateAndOutput(legends, legends.replace(".xml", "_trunc.xml"),
-                    "</world_constructions>", "\n</df_world>");
+                    "<artifacts>", "\n</df_world>", true);
             legends = legends.replace(".xml", "_trunc.xml");
         }
         if (!legendsPlus.contains("trunc"))
         {
             MappedTruncate.ReadTruncateAndOutput(legendsPlus, legendsPlus.replace(".xml", "_trunc.xml"),
-                    "</world_constructions>", "\n</df_world>");
+                    "<artifacts>", "\n</df_world>", true);
             legendsPlus = legendsPlus.replace(".xml", "_trunc.xml");
         }
         loadLegends(legends);
@@ -431,7 +431,7 @@ public class FileLoader
                 }
                 else
                 {
-                    WorldGenerator.log("No Site found for id: " + id, new Exception());
+                    WorldGenerator.log("No Site found for id: " + id + " " + map.name, new Exception());
                 }
 
             }
@@ -474,7 +474,7 @@ public class FileLoader
                     }
                     else
                     {
-                        WorldGenerator.log("No Region found for id: " + id, new Exception());
+                        WorldGenerator.log("No Region found for id: " + id + " " + map.name, new Exception());
                     }
                 }
             }
@@ -517,7 +517,7 @@ public class FileLoader
                     }
                     else
                     {
-                        WorldGenerator.log("No Region found for id: " + id, new Exception());
+                        WorldGenerator.log("No Region found for id: " + id + " " + map.name, new Exception());
                     }
                 }
             }
@@ -580,8 +580,8 @@ public class FileLoader
                     }
                     else
                     {
-                        new NullPointerException("Unknown Construction Type").printStackTrace();
-                        WorldGenerator.log(Level.WARNING, "Unknown Construction Type: " + type);
+                        WorldGenerator.log(Level.WARNING, "Unknown Construction Type: " + type + " " + map.name,
+                                new Exception());
                     }
                 }
             }
@@ -626,7 +626,7 @@ public class FileLoader
                 }
                 else
                 {
-                    WorldGenerator.log(Level.WARNING, "Cannot Find Construction for id:" + id,
+                    WorldGenerator.log(Level.WARNING, "Cannot Find Construction for id:" + id + " " + map.name,
                             new NullPointerException());
                 }
             }
@@ -673,14 +673,14 @@ public class FileLoader
                 }
                 else
                 {
-                    WorldGenerator.log(Level.WARNING, "Cannot Find Site for id:" + id, new NullPointerException());
+                    WorldGenerator.log(Level.WARNING, "Cannot Find Site for id:" + id + " " + map.name, new NullPointerException());
                 }
             }
             WorldGenerator.log("Imported locations for " + n + " Sites for " + map.name);
         }
         catch (Exception e)
         {
-            WorldGenerator.log("Error with file " + file, e);
+            WorldGenerator.log("Error with file " + file + " " + map.name, e);
         }
     }
 
@@ -799,13 +799,13 @@ public class FileLoader
             {
                 Type type = getBiomeType(s);
                 if (type != null) types.add(type);
-                else WorldGenerator.log(Level.WARNING, "No Biome type by name: " + s);
+                else WorldGenerator.log(Level.WARNING, "No Biome type by name: " + s + " " + map.name);
             }
 
             // first row is blank, with colour of black.
             if (types.isEmpty())
             {
-                WorldGenerator.log(Level.WARNING, "Error in row " + i + " " + row);
+                WorldGenerator.log(Level.WARNING, "Error in row " + i + " " + row + " " + map.name);
                 continue;
             }
             Color c = new Color(r, g, b);

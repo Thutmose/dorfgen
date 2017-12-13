@@ -100,6 +100,7 @@ public class BiomeProviderFinite extends BiomeProvider
      * @param blocks */
     private Biome[] makeBiomes(Biome[] biomes, int scale, int x, int z)
     {
+        if (biomes == null || biomes.length < 256) biomes = new Biome[256];
         int index;
         for (int i1 = 0; i1 < 16; i1++)
         {

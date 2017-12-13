@@ -9,7 +9,6 @@ import java.util.Set;
 
 import dorfgen.WorldGenerator;
 import dorfgen.conversion.Interpolator.BicubicInterpolator;
-import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 
@@ -63,8 +62,8 @@ public class DorfMap
     public HashMap<Integer, HashSet<WorldConstruction>> constructionsByCoord = new HashMap<Integer, HashSet<WorldConstruction>>();
 
     public BicubicInterpolator                          biomeInterpolator    = new BicubicInterpolator();
-    public CachedBicubicInterpolator                    heightInterpolator   = new CachedBicubicInterpolator();
-    public CachedBicubicInterpolator                    miscInterpolator     = new CachedBicubicInterpolator();
+    public BicubicInterpolator                          heightInterpolator   = new BicubicInterpolator();
+    public BicubicInterpolator                          miscInterpolator     = new BicubicInterpolator();
     public ImgHolder                                    images               = new ImgHolder();
     public SiteStructureGenerator                       structureGen;
     public int                                          scale                = WorldGenerator.scale;

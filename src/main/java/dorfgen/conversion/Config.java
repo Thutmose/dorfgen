@@ -35,9 +35,9 @@ public class Config
         int x = Integer.parseInt(spawnLoc[0]);
         int z = Integer.parseInt(spawnLoc[2]);
 
-        boolean finite = config.getBoolean("wrap", Configuration.CATEGORY_GENERAL, false,
+        WorldGenerator.finite = config.getBoolean("wrap", Configuration.CATEGORY_GENERAL, false,
                 "should entities be wrapped around the map if they stray off the loaded image.");
-        if (finite) new dorfgen.finite.FiniteHandler();
+        new dorfgen.finite.FiniteHandler();
 
         if (spawnpixel)
         {

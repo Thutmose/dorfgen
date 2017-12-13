@@ -25,7 +25,6 @@ sized = site.global_min_x ~= site.global_max_x
 local message = i..''
 
 while not df.isnull(site) do
-	sized = site.global_min_x ~= site.global_max_x
 	sized = true
 	
 	if sized then

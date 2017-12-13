@@ -1,27 +1,25 @@
 package dorfgen.worldgen.common;
 
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Random;
+import java.util.Set;
 
+import com.google.common.collect.Sets;
+
+import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Site;
 import dorfgen.conversion.DorfMap.SiteType;
-import net.minecraft.block.BlockLadder;
-import net.minecraft.init.Blocks;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityChest;
-import net.minecraft.tileentity.TileEntityMobSpawner;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.BlockPos;
+import dorfgen.worldgen.structures.scattered.StructureLair;
+import dorfgen.worldgen.structures.scattered.WoodlandMansionStart;
+import dorfgen.worldgen.structures.village.VillageWrappedList;
 import net.minecraft.world.World;
 import net.minecraft.world.gen.structure.ComponentScatteredFeaturePieces;
 import net.minecraft.world.gen.structure.MapGenStronghold;
 import net.minecraft.world.gen.structure.MapGenVillage;
 import net.minecraft.world.gen.structure.StructureStart;
 import net.minecraft.world.gen.structure.StructureStrongholdPieces;
-import net.minecraft.world.storage.loot.LootTableList;
-import net.minecraftforge.common.DungeonHooks;
+import net.minecraft.world.gen.structure.StructureVillagePieces;
 
 public class MapGenSites extends MapGenVillage
 {
@@ -53,10 +51,16 @@ public class MapGenSites extends MapGenVillage
     @Override
     protected boolean canSpawnStructureAtCoords(int x, int z)
     {
+        Set<Site> sites = Sets.newHashSet();
         x *= 16;
         z *= 16;
-        HashSet<Site> sites = map.getSiteForCoords(x, z);
-        if (sites == null) return false;
+        for (int dx = 0; dx < 16; dx += map.scale)
+            for (int dz = 0; dz < 16; dz += map.scale)
+            {
+                Set<Site> here = map.getSiteForCoords(x + dx, z + dz);
+                if (here != null) sites.addAll(here);
+            }
+        if (sites.isEmpty()) return false;
         x = map.shiftX(x);
         z = map.shiftZ(z);
         for (Site site : sites)
@@ -65,7 +69,6 @@ public class MapGenSites extends MapGenVillage
             {
                 set.add(site.id);
                 siteToGen = site;
-                System.out.println("Chosen to gen " + site);
                 return true;
             }
         }
@@ -75,8 +78,6 @@ public class MapGenSites extends MapGenVillage
 
     public boolean shouldSiteSpawn(int x, int z, Site site)
     {
-        boolean inSite = site.isInSite(x, z);
-        if (!inSite) return false;
         boolean middle = false;
         int[] mid = site.getSiteMid();
         x = site.map.unShiftX(x);
@@ -93,13 +94,14 @@ public class MapGenSites extends MapGenVillage
                 }
             }
         }
+        WorldGenerator.log(middle + " " + site);
         if (!middle) return false;
         switch (site.type)
         {
         case CAMP:
             return villages;
         case CAVE:
-            return sites;
+            return sites || villages;
         case DARKFORTRESS:
             return villages;
         case DARKPITS:
@@ -115,19 +117,19 @@ public class MapGenSites extends MapGenVillage
         case LABYRINTH:
             return villages;
         case LAIR:
-            return sites;
+            return sites || villages;
         case MOUNTAINHALLS:
             return villages;
         case SHRINE:
             return sites || villages;
         case TOMB:
-            return sites;
+            return sites || villages;
         case TOWER:
-            return sites;
+            return sites || villages;
         case TOWN:
             return villages;
         case VAULT:
-            return sites;
+            return sites || villages;
         default:
             break;
         }
@@ -140,7 +142,7 @@ public class MapGenSites extends MapGenVillage
         Site site = siteToGen;
         siteToGen = null;
         if (site == null) { return super.getStructureStart(x, z); }
-        System.out.println("Generating Site " + site);
+        WorldGenerator.log("Generating Site " + site);
         made.add(site.id);
 
         if (site.type == SiteType.FORTRESS)
@@ -156,32 +158,49 @@ public class MapGenSites extends MapGenVillage
             }
             return start;
         }
-        if (sites)
+
+        if (site.type == SiteType.DARKFORTRESS)
         {
-            if (site.type == SiteType.DARKFORTRESS)
-            {
-
-            }
-            else if (site.type == SiteType.DARKPITS)
-            {
-
-            }
-            else if (site.type == SiteType.HIPPYHUTS)
-            {
-                return new Start(map, world, rand, x, z, 0);
-            }
-            else if (site.type == SiteType.SHRINE)
-            {
-                return new Start(map, world, rand, x, z, 2);
-            }
-            else if (site.type == SiteType.LAIR)
-            {
-                return new Start(map, world, rand, x, z, 3);
-            }
-            else if (site.type == SiteType.CAVE) { return new Start(map, world, rand, x, z, 1); }
+            WoodlandMansionStart start = new WoodlandMansionStart(world, map, rand, x, z);
+            return start;
         }
+        else if (site.type == SiteType.DARKPITS)
+        {
+            WoodlandMansionStart start = new WoodlandMansionStart(world, map, rand, x, z);
+            return start;
+        }
+        else if (site.type == SiteType.HIPPYHUTS)
+        {
+            return new Start(map, world, rand, x, z, 0, site);
+        }
+        else if (site.type == SiteType.SHRINE)
+        {
+            return new Start(map, world, rand, x, z, 2, site);
+        }
+        else if (site.type == SiteType.LAIR)
+        {
+            return new Start(map, world, rand, x, z, 3, site);
+        }
+        else if (site.type == SiteType.CAVE) { return new Start(map, world, rand, x, z, 1, site); }
+
         StructureStart start = super.getStructureStart(x, z);
-        System.out.println(start + " " + x + " " + z);
+
+        if (start instanceof MapGenVillage.Start && !start.getComponents().isEmpty())
+        {
+            MapGenVillage.Start struct = (net.minecraft.world.gen.structure.MapGenVillage.Start) start;
+            StructureVillagePieces.Start initial = (net.minecraft.world.gen.structure.StructureVillagePieces.Start) struct
+                    .getComponents().get(0);
+            VillageWrappedList<?> pendingPaths = new VillageWrappedList<>(map);
+            pendingPaths.addAll(initial.pendingRoads);
+            initial.pendingRoads = pendingPaths;
+            VillageWrappedList<?> pendingHouses = new VillageWrappedList<>(map);
+            pendingHouses.addAll(initial.pendingHouses);
+            initial.pendingHouses = pendingHouses;
+            VillageWrappedList<?> comps = new VillageWrappedList<>(map);
+            comps.addAll(struct.getComponents());
+            struct.getComponents().clear();
+            struct.getComponents().addAll(comps);
+        }
         return start;
     }
 
@@ -191,7 +210,7 @@ public class MapGenSites extends MapGenVillage
         {
         }
 
-        public Start(DorfMap map, World world_, Random rand, int x, int z, int type)
+        public Start(DorfMap map, World world_, Random rand, int x, int z, int type, Site site)
         {
             super(x, z);
             if (type == 0)
@@ -225,148 +244,7 @@ public class MapGenSites extends MapGenVillage
             }
             else if (type == 3)
             {
-                System.out.println("Making a lair");
-
-                int h = map.biomeInterpolator.interpolate(map.elevationMap, x * 16, z * 16, map.scale);
-
-                BlockPos pos = new BlockPos(x * 16, h - 5, z * 16);
-                BlockPos blockpos1;
-                int i = rand.nextInt(2) + 2;
-                int j = -i - 1;
-                int k = i + 1;
-                int l = rand.nextInt(2) + 2;
-                int i1 = -l - 1;
-                int j1 = l + 1;
-                int l1;
-                int i2;
-                int j2;
-                for (l1 = j; l1 <= k; ++l1)
-                {
-                    for (i2 = 3; i2 >= -1; --i2)
-                    {
-                        for (j2 = i1; j2 <= j1; ++j2)
-                        {
-                            blockpos1 = pos.add(l1, i2, j2);
-                            world_.setBlockState(blockpos1, Blocks.STONE.getDefaultState(), 2);
-                        }
-                    }
-                }
-                world_.setBlockState(pos.add(k - 1, 4, 0), Blocks.TRAPDOOR.getDefaultState(), 2);
-
-                // TODO re-copy dungeon code from 1.8 again for this
-                for (l1 = j; l1 <= k; ++l1)
-                {
-                    for (i2 = 3; i2 >= -1; --i2)
-                    {
-                        for (j2 = i1; j2 <= j1; ++j2)
-                        {
-                            blockpos1 = pos.add(l1, i2, j2);
-
-                            if (l1 != j && i2 != -1 && j2 != i1 && l1 != k && i2 != 4 && j2 != j1)
-                            {
-                                if (world_.getBlockState(blockpos1).getBlock() != Blocks.CHEST)
-                                {
-                                    world_.setBlockToAir(blockpos1);
-                                }
-                            }
-                            else if (blockpos1.getY() >= map.yMin
-                                    && !world_.getBlockState(blockpos1.down()).getMaterial().isSolid())
-                            {
-                                world_.setBlockToAir(blockpos1);
-                            }
-                            else if (world_.getBlockState(blockpos1).getMaterial().isSolid()
-                                    && world_.getBlockState(blockpos1).getBlock() != Blocks.CHEST)
-                            {
-                                if (i2 == -1 && rand.nextInt(4) != 0)
-                                {
-                                    world_.setBlockState(blockpos1, Blocks.MOSSY_COBBLESTONE.getDefaultState(), 2);
-                                }
-                                else
-                                {
-                                    world_.setBlockState(blockpos1, Blocks.COBBLESTONE.getDefaultState(), 2);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                l1 = 0;
-
-                while (l1 < 2)
-                {
-                    i2 = 0;
-
-                    while (true)
-                    {
-                        if (i2 < 3)
-                        {
-                            label197:
-                            {
-                                j2 = pos.getX() + rand.nextInt(i * 2 + 1) - i;
-                                int l2 = pos.getY();
-                                int i3 = pos.getZ() + rand.nextInt(l * 2 + 1) - l;
-                                BlockPos blockpos2 = new BlockPos(j2, l2, i3);
-
-                                if (world_.isAirBlock(blockpos2))
-                                {
-                                    int k2 = 0;
-                                    Iterator<?> iterator = EnumFacing.Plane.HORIZONTAL.iterator();
-
-                                    while (iterator.hasNext())
-                                    {
-                                        EnumFacing enumfacing = (EnumFacing) iterator.next();
-
-                                        if (world_.getBlockState(blockpos2.offset(enumfacing)).getMaterial().isSolid())
-                                        {
-                                            ++k2;
-                                        }
-                                    }
-
-                                    if (k2 == 1)
-                                    {
-                                        world_.setBlockState(blockpos2, Blocks.CHEST.correctFacing(world_, blockpos2,
-                                                Blocks.CHEST.getDefaultState()), 2);
-                                        TileEntity tileentity1 = world_.getTileEntity(blockpos2);
-
-                                        if (tileentity1 instanceof TileEntityChest)
-                                        {
-                                            ((TileEntityChest) tileentity1)
-                                                    .setLootTable(LootTableList.CHESTS_SIMPLE_DUNGEON, rand.nextLong());
-                                        }
-
-                                        break label197;
-                                    }
-                                }
-
-                                ++i2;
-                                continue;
-                            }
-                        }
-
-                        ++l1;
-                        break;
-                    }
-                }
-                // Build Ladder
-                for (int h1 = 0; h1 < 4; h1++)
-                {
-                    world_.setBlockState(pos.add(k - 1, h1, 0),
-                            Blocks.LADDER.getDefaultState().withProperty(BlockLadder.FACING, EnumFacing.WEST), 2);
-                }
-
-                world_.setBlockState(pos, Blocks.MOB_SPAWNER.getDefaultState(), 2);
-                TileEntity tileentity = world_.getTileEntity(pos);
-
-                if (tileentity instanceof TileEntityMobSpawner)
-                {
-                    ((TileEntityMobSpawner) tileentity).getSpawnerBaseLogic()
-                            .setEntityId(DungeonHooks.getRandomDungeonMob(rand));
-                }
-                else
-                {
-                    System.err.println("Failed to fetch mob spawner entity at (" + pos.getX() + ", " + pos.getY() + ", "
-                            + pos.getZ() + ")");
-                }
+                this.components.add(new StructureLair(map, site));
             }
 
             this.updateBoundingBox();

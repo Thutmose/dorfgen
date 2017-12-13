@@ -56,7 +56,11 @@ public class BiomeList
             if (conversion != null) input = conversion.getBestMatch();
             else
             {
-                if (DorfMap.inBounds(x / scale, z / scale, dorfs.biomeMap))
+                if (value == 0)
+                {
+                    return Biomes.OCEAN;
+                }
+                else if (DorfMap.inBounds(x / scale, z / scale, dorfs.biomeMap))
                 {
                     WorldGenerator.log(Level.WARNING, "No Biome found for " + value + " at " + x + " " + z);
                     System.out.println(biomes.keySet());
@@ -74,9 +78,9 @@ public class BiomeList
         long key = region.name.hashCode();
         Random rand = new Random(key);
         int deepSea = (int) (seaLevel * 0.7);
-        int height = hasHeightmap ? dorfs.heightInterpolator.interpolateHeight(scale, x, z, dorfs.elevationMap)
+        int height = hasHeightmap ? dorfs.heightInterpolator.interpolate(dorfs.elevationMap, x, z, scale)
                 : seaLevel;
-        int temperature = hasThermalMap ? dorfs.miscInterpolator.interpolateHeight(scale, x, z, dorfs.temperatureMap)
+        int temperature = hasThermalMap ? dorfs.miscInterpolator.interpolate(dorfs.temperatureMap, x, z, scale)
                 : 128;
         if (BiomeDictionary.hasType(input, Type.BEACH))
         {

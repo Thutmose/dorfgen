@@ -38,6 +38,11 @@ public class BiomeConversion
     {
         if (match == null)
         {
+            if (types.size() == 1 && types.get(0) == Type.RIVER)
+            {
+                match = Biomes.RIVER;
+                return match;
+            }
             Set<Biome> biomes;
             List<Biome> sorted = Lists.newArrayList();
             Comparator<Biome> comparator = new Comparator<Biome>()

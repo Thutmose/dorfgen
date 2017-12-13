@@ -214,7 +214,7 @@ public class SiteStructureGenerator
                     WallSegment wall = structures.getWall(x1, z1, scale);
                     if (wall != null)
                     {
-                        h = dorfs.biomeInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
+                        h = dorfs.heightInterpolator.interpolate(dorfs.elevationMap, x1, z1, scale);
                         if (h < minY - 32 || h < maxY + 32) continue;
 
                         boolean surrounded = isBlockSurroundedByWall(site, structures, wall, x1, z1);
@@ -1053,10 +1053,10 @@ public class SiteStructureGenerator
             getBounds(site, scale);
             int floor = 0;
             int[] corners = new int[4];
-            corners[0] = dorfs.biomeInterpolator.interpolate(dorfs.elevationMap, bounds[0][0], bounds[0][1], scale);
-            corners[1] = dorfs.biomeInterpolator.interpolate(dorfs.elevationMap, bounds[1][0], bounds[1][1], scale);
-            corners[2] = dorfs.biomeInterpolator.interpolate(dorfs.elevationMap, bounds[1][0], bounds[0][1], scale);
-            corners[3] = dorfs.biomeInterpolator.interpolate(dorfs.elevationMap, bounds[0][0], bounds[1][1], scale);
+            corners[0] = dorfs.heightInterpolator.interpolate(dorfs.elevationMap, bounds[0][0], bounds[0][1], scale);
+            corners[1] = dorfs.heightInterpolator.interpolate(dorfs.elevationMap, bounds[1][0], bounds[1][1], scale);
+            corners[2] = dorfs.heightInterpolator.interpolate(dorfs.elevationMap, bounds[1][0], bounds[0][1], scale);
+            corners[3] = dorfs.heightInterpolator.interpolate(dorfs.elevationMap, bounds[0][0], bounds[1][1], scale);
 
             floor = corners[0] + corners[1] + corners[2] + corners[3];
             floor /= 4;

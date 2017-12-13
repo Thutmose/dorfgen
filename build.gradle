@@ -65,5 +65,12 @@ processResources
     }
 }
 
+jar {
+        manifest {
+        attributes 'FMLAT': 'dorfgen_at.cfg'
+                        
+    }
+}
+
 sourceCompatibility = 1.8
 targetCompatibility = 1.8

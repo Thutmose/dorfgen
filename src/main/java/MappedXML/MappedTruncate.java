@@ -17,10 +17,11 @@ public class MappedTruncate {
 	 * @param inPath Path and filename of input file
 	 * @param outPath Path and filename of output file
 	 * @param readTo String at which to truncate the file
+	 * @param truncateLast If true, will truncate before readTo
 	 */
-	public static void ReadTruncateAndOutput(String inPath, String outPath, String readTo) {
+	public static void ReadTruncateAndOutput(String inPath, String outPath, String readTo, boolean truncateLast) {
 		
-		ReadTruncateAndOutput(inPath, outPath, readTo, "");
+		ReadTruncateAndOutput(inPath, outPath, readTo, "", truncateLast);
 	}
 	
 	/**
@@ -31,14 +32,14 @@ public class MappedTruncate {
 	 * @param readTo String at which to truncate the file
 	 * @param append String to append after the truncated text
 	 */
-	public static void ReadTruncateAndOutput(String inPath, String outPath, String readTo, String append) {
+	public static void ReadTruncateAndOutput(String inPath, String outPath, String readTo, String append, boolean truncateLast) {
 		
 		try(Writer out = new BufferedWriter(new OutputStreamWriter(
 				new FileOutputStream(outPath), "utf-8"))) {
 			
 			try(FileInputStream in = new FileInputStream(inPath)) {
 				
-				InnerProcess(in, out, readTo);
+				InnerProcess(in, out, readTo, truncateLast);
 				
 				in.close();
 				
@@ -55,7 +56,7 @@ public class MappedTruncate {
 		}
 	}
 	
-	private static void InnerProcess(FileInputStream in, Writer out, String readTo) {
+	private static void InnerProcess(FileInputStream in, Writer out, String readTo, boolean truncateLast) {
 		
 		FileChannel inChannel = in.getChannel();
 		MappedByteBuffer inMap;
@@ -76,7 +77,7 @@ public class MappedTruncate {
 		if(size < MappedTruncate.BUFFER_SIZE) {
 			bufferMax = size;
 		}
-		
+		boolean done = false;
 		for(long i = 0; i < size; i += bufferMax) {
 			
 			if(bufferMax > size - i) bufferMax = size - i;
@@ -99,11 +100,12 @@ public class MappedTruncate {
 			}
 			
 			pos = s.indexOf(readTo);
+            done = pos != -1;
 			
-			if(pos == -1) {
+			if(!done) {
 				subs = s;
 			} else {
-				subs = s.substring(0, pos + readTo.length());
+                subs = s.substring(0, pos + (truncateLast ? readTo.length() : 0));
 			}
 			
 			try {
@@ -113,7 +115,7 @@ public class MappedTruncate {
 				return;
 			}
 			
-			if(pos != -1) break;
-		}
-	}
+			if(done) break;
+        }
+    }
 }
