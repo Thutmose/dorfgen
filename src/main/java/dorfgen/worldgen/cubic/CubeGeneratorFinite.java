@@ -1,432 +1,275 @@
 package dorfgen.worldgen.cubic;
 
-import java.util.Iterator;
-import java.util.Map;
+import java.util.List;
 import java.util.Random;
 
-import com.google.common.collect.Maps;
+import javax.annotation.Nonnull;
 
-import cubicchunks.api.worldgen.biome.CubicBiome;
-import cubicchunks.api.worldgen.populator.CubePopulatorEvent;
-import cubicchunks.api.worldgen.populator.ICubicPopulator;
-import cubicchunks.util.Box;
-import cubicchunks.util.Coords;
-import cubicchunks.util.CubePos;
-import cubicchunks.world.ICubicWorld;
-import cubicchunks.world.cube.Cube;
-import cubicchunks.worldgen.generator.BasicCubeGenerator;
-import cubicchunks.worldgen.generator.CubeGeneratorsRegistry;
-import cubicchunks.worldgen.generator.CubePrimer;
-import cubicchunks.worldgen.generator.ICubePrimer;
-import cubicchunks.worldgen.generator.custom.biome.replacer.IBiomeBlockReplacer;
-import dorfgen.WorldGenerator;
 import dorfgen.conversion.DorfMap;
-import dorfgen.conversion.Interpolator.CachedBicubicInterpolator;
-import dorfgen.conversion.SiteStructureGenerator;
-import dorfgen.worldgen.common.BiomeProviderFinite;
-import dorfgen.worldgen.common.CachedInterpolator;
-import dorfgen.worldgen.common.GeneratorInfo;
 import dorfgen.worldgen.common.IDorfgenProvider;
-import dorfgen.worldgen.common.MapGenSites;
 import dorfgen.worldgen.common.RiverMaker;
 import dorfgen.worldgen.common.RoadMaker;
 import dorfgen.worldgen.common.SiteMaker;
-import net.minecraft.block.Block;
-import net.minecraft.block.material.Material;
+import dorfgen.worldgen.vanilla.ChunkGeneratorFinite;
+import io.github.opencubicchunks.cubicchunks.api.util.Box;
+import io.github.opencubicchunks.cubicchunks.api.util.Coords;
+import io.github.opencubicchunks.cubicchunks.api.world.ICube;
+import io.github.opencubicchunks.cubicchunks.api.world.ICubicWorld;
+import io.github.opencubicchunks.cubicchunks.api.worldgen.CubeGeneratorsRegistry;
+import io.github.opencubicchunks.cubicchunks.api.worldgen.CubePrimer;
+import io.github.opencubicchunks.cubicchunks.api.worldgen.ICubeGenerator;
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.init.Biomes;
+import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.init.Blocks;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
-import net.minecraftforge.common.MinecraftForge;
+import net.minecraft.world.biome.Biome.SpawnListEntry;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.ChunkPrimer;
+import net.minecraft.world.gen.IChunkGenerator;
+import net.minecraftforge.fml.common.registry.GameRegistry;
 
-public class CubeGeneratorFinite extends BasicCubeGenerator implements IDorfgenProvider
+public class CubeGeneratorFinite implements IDorfgenProvider, ICubeGenerator
 {
-    public CachedInterpolator                          elevationInterpolator = new CachedInterpolator();
-    public CachedInterpolator                          waterInterpolator     = new CachedInterpolator();
-    public CachedInterpolator                          riverInterpolator     = new CachedInterpolator();
-    public CachedBicubicInterpolator                   cachedInterpolator    = new CachedBicubicInterpolator();
-    public final RiverMaker                            riverMaker;
-    public final RoadMaker                             roadMaker;
-    public final SiteMaker                             constructor;
-    public final SiteStructureGenerator                structuregen;
-    public final DorfMap                               map;
-    private MapGenSites                                villageGenerator;
+    final ChunkGeneratorFinite wrapped;
+    @Nonnull
+    private IChunkGenerator    vanilla;
+    @Nonnull
+    private World              world;
+    private int                worldHeightCubes;
+    /** Last chunk that was generated from the vanilla world gen */
+    @Nonnull
+    private ChunkPrimer        lastChunk;
+    /** We generate all the chunks in the vanilla range at once. This variable
+     * prevents infinite recursion */
+    private boolean            optimizationHack;
+    private Biome[]            biomes;
+    /** Detected block for filling cubes below the world */
+    @Nonnull
+    private IBlockState        extensionBlockBottom = Blocks.STONE.getDefaultState();
+    /** Detected block for filling cubes above the world */
+    @Nonnull
+    private IBlockState        extensionBlockTop    = Blocks.AIR.getDefaultState();
 
-    private int                                        lastX                 = Integer.MIN_VALUE,
-            lastZ = Integer.MIN_VALUE;
-    private Random                                     rand;
-    private Biome[]                                    biomesForGeneration;
-    private boolean                                    generateSites         = true;
-    private boolean                                    generateConstructions = false;
-    private boolean                                    generateRivers        = true;
-    final GeneratorInfo                                info;
-    private int                                        scale;
-
-    private Map<ResourceLocation, IBiomeBlockReplacer> replacerMap           = Maps.newHashMap();
-
-    public CubeGeneratorFinite(ICubicWorld world)
+    /** Create a new VanillaCompatibilityGenerator
+     *
+     * @param vanilla
+     *            The vanilla generator to mirror
+     * @param world
+     *            The world in which cubes are being generated */
+    public CubeGeneratorFinite(IChunkGenerator vanilla, World world)
     {
-        super(world);
-        this.rand = new Random();
-        String json = world.getWorldInfo().getGeneratorOptions();
-        info = GeneratorInfo.fromJson(json);
-        this.map = info.create(false);
-        this.structuregen = WorldGenerator.getStructureGen(info.region);
-        this.riverMaker = new RiverMaker(map, structuregen);
-        this.roadMaker = new RoadMaker(map, structuregen);
-        this.constructor = new SiteMaker(map, structuregen);
-        scale = info.scaleh;
-        generateConstructions = info.constructs;
-        generateRivers = info.rivers;
-        generateSites = info.sites;
-        this.villageGenerator = new MapGenSites(map);
-        villageGenerator.genSites(info.sites).genVillages(info.villages);
-        riverMaker.setRespectsSites(generateSites).setScale(scale);
-        roadMaker.setRespectsSites(generateSites).setScale(scale);
-        riverMaker.riverInterpolator = riverInterpolator;
-        riverMaker.waterInterpolator = waterInterpolator;
-        riverMaker.elevationInterpolator = elevationInterpolator;
-        roadMaker.riverInterpolator = riverInterpolator;
-        roadMaker.waterInterpolator = waterInterpolator;
-        roadMaker.elevationInterpolator = elevationInterpolator;
-        constructor.bicubicInterpolator = elevationInterpolator;
-        constructor.setScale(scale);
-        structuregen.setScale(scale);
-        ((BiomeProviderFinite) world.getBiomeProvider()).scale = scale;
-        initGenerator(world.getSeed());
-    }
-
-    private void initGenerator(long seed)
-    {
-        Iterator<Biome> iter = Biome.REGISTRY.iterator();
-        while (iter.hasNext())
-        {
-            Biome current = iter.next();
-            final IBlockState topBlock = current.topBlock;
-            final IBlockState fillerBlock = current.fillerBlock;
-            final int depth = 3;
-
-            replacerMap.put(current.getRegistryName(), new IBiomeBlockReplacer()
-            {
-                @Override
-                public IBlockState getReplacedBlock(IBlockState previousBlock, int x, int y, int z, double dx,
-                        double dy, double dz, double density)
-                {
-                    if (previousBlock.getMaterial().isLiquid()) return previousBlock;
-                    if (x >= 0 && z >= 0)
-                    {
-                        int x1 = x / scale;
-                        int z1 = z / scale;
-                        int h1 = -1;
-                        if (x1 >= map.waterMap.length || z1 >= map.waterMap[0].length)
-                        {
-
-                        }
-                        else
-                        {
-                            h1 = elevationInterpolator.interpolate(map.elevationMap, x, z, scale);
-                            h1 -= y;
-                            // Cube at this point is above ground.
-                            if (h1 > depth) return previousBlock;
-                            // Cube at this point is below ground
-                            if (h1 < 0) return previousBlock;
-                            // This is surface of ground.
-                            if (h1 == 0) return topBlock;
-                            // Otherwise fill.
-                            return fillerBlock;
-                        }
-
-                    }
-                    return previousBlock;
-                }
-            });
-        }
-    }
-
-    /** Takes Chunk Coordinates
-     * 
-     * @param cubeZ */
-    public void populateBlocksFromImage(int scale, int cubeX, int cubeY, int cubeZ, CubePrimer primer)
-    {
-        int x1, z1;
-        int x = map.shiftX(cubeX * 16);
-        int yMin = cubeY * 16;
-        int z = map.shiftZ(cubeZ * 16);
-        for (int i1 = 0; i1 < 16; i1++)
-        {
-            for (int k1 = 0; k1 < 16; k1++)
-            {
-                x1 = (x + i1) / scale;
-                z1 = (z + k1) / scale;
-                int h1 = -1;
-                if (x1 >= map.waterMap.length || z1 >= map.waterMap[0].length)
-                {
-
-                }
-                else
-                {
-                    h1 = elevationInterpolator.interpolate(map.elevationMap, x + i1, z + k1, scale);
-                }
-                h1 -= yMin;
-                // Cube at this point is above ground.
-                if (h1 < 0) continue;
-
-                // Cube at this point is below ground
-                if (h1 > 15) h1 = 15;
-                for (int j = 0; j <= h1; j++)
-                {
-                    primer.setBlockState(i1, j, k1, Blocks.STONE.getDefaultState());
-                }
-            }
-        }
-    }
-
-    public void fillOceans(int cubeX, int y, int cubeZ, CubePrimer primer, Biome[] biomes, boolean oob)
-    {
-        int yMin = y * 16;
-        int rx = cubeX * 16;
-        int rz = cubeZ * 16;
-        int x = map.shiftX(rx);
-        int z = map.shiftZ(rz);
-        int b0 = ((World) world).getSeaLevel() - 1;
-        b0 -= yMin;
-        for (int i = 0; i < 16; i++)
-            for (int k = 0; k < 16; k++)
-            {
-                if (oob)
-                {
-                    b0 = Math.min(b0, 16);
-                    for (int j = 0; j <= b0; j++)
-                    {
-                        if (j < 10)
-                        {
-                            primer.setBlockState(i, j, k, Blocks.STONE.getDefaultState());
-                        }
-                        else
-                        {
-                            primer.setBlockState(i, j, k, Blocks.WATER.getDefaultState());
-                        }
-                    }
-                    int index = i + k * 16;
-                    biomes[index] = Biomes.DEEP_OCEAN;
-                }
-                else
-                {
-                    int x1 = (x + i) / scale;
-                    int z1 = (z + k) / scale;
-                    int h = 0;
-                    if (x1 >= map.elevationMap.length || z1 >= map.elevationMap[0].length)
-                    {
-                        h = b0;
-                    }
-                    else h = waterInterpolator.interpolate(map.waterMap, (x + i), (z + k), scale) - 1;
-                    h -= yMin;
-                    h = Math.max(h, b0);
-                    h = Math.min(h, 16);
-                    if (h > 0)
-                    {
-                        for (int j = h; j > map.yMin; j--)
-                        {
-                            if (primer.getBlockState(i, j, k).getMaterial() != Material.AIR) break;
-                            primer.setBlockState(i, j, k, Blocks.WATER.getDefaultState());
-                        }
-                    }
-                }
-            }
+        wrapped = (ChunkGeneratorFinite) vanilla;
+        wrapped.wrapperClass = PrimerWrapper.class;
+        this.vanilla = vanilla;
+        this.world = world;
+        this.worldHeightCubes = 256 * 8;
     }
 
     @Override
-    public ICubePrimer generateCube(int cubeX, int cubeY, int cubeZ)
+    public void generateColumn(Chunk column)
     {
-        this.rand.setSeed((long) cubeX * 341873128712L + (long) cubeZ * 132897987541L);
+        this.biomes = this.world.getBiomeProvider().getBiomes(this.biomes, Coords.cubeToMinBlock(column.x),
+                Coords.cubeToMinBlock(column.z), ICube.SIZE, ICube.SIZE);
+        byte[] abyte = column.getBiomeArray();
+        for (int i = 0; i < abyte.length; ++i)
+        {
+            abyte[i] = (byte) Biome.getIdForBiome(this.biomes[i]);
+        }
+    }
+
+    @Override
+    public void recreateStructures(Chunk column)
+    {
+        vanilla.recreateStructures(column, column.x, column.z);
+    }
+
+    private Random getCubeSpecificRandom(int cubeX, int cubeY, int cubeZ)
+    {
+        Random rand = new Random(world.getSeed());
+        rand.setSeed(rand.nextInt() ^ cubeX);
+        rand.setSeed(rand.nextInt() ^ cubeZ);
+        rand.setSeed(rand.nextInt() ^ cubeY);
+        return rand;
+    }
+
+    @Override
+    public CubePrimer generateCube(int cubeX, int cubeY, int cubeZ)
+    {
         CubePrimer primer = new CubePrimer();
-        elevationInterpolator.initImage(map.elevationMap, cubeX, cubeZ, 32, scale);
-        waterInterpolator.initImage(map.waterMap, cubeX, cubeZ, 32, scale);
-        riverInterpolator.initImage(map.riverMap, cubeX, cubeZ, 32, scale);
-        if (lastX != cubeX || lastZ != cubeZ) this.biomesForGeneration = this.world.getBiomeProvider()
-                .getBiomes(this.biomesForGeneration, cubeX * 16, cubeZ * 16, 16, 16);
-        lastX = cubeX;
-        lastZ = cubeZ;
-        if (map.elevationMap.length == 0) map.finite = false;
 
-        int imgX = map.shiftX(cubeX * 16);
-        int imgZ = map.shiftZ(cubeZ * 16);
-        int x = imgX;
-        int z = imgZ;
-        int yMin = cubeY * 16;
-        int yMax = cubeY * 16 + 15;
-        boolean imgGen = false;
-        PrimerWrapper wrapper = new PrimerWrapper(primer);
-        if (imgX >= 0 && imgZ >= 0 && (imgX + 16) / scale <= map.elevationMap.length
-                && (imgZ + 16) / scale <= map.elevationMap[0].length)
+        if (cubeY < 0)
         {
-            imgGen = true;
-            populateBlocksFromImage(scale, cubeX, cubeY, cubeZ, primer);
-            makeBeaches(scale, x / scale, cubeY, z / scale, primer);
-            fillOceans(cubeX, cubeY, cubeZ, primer, biomesForGeneration, imgGen);
+            Random rand = new Random(world.getSeed());
+            rand.setSeed(rand.nextInt() ^ cubeX);
+            rand.setSeed(rand.nextInt() ^ cubeZ);
+            // Fill with bottom block
+            for (int x = 0; x < ICube.SIZE; x++)
+            {
+                for (int y = 0; y < ICube.SIZE; y++)
+                {
+                    for (int z = 0; z < ICube.SIZE; z++)
+                    {
+                        IBlockState state = extensionBlockBottom;
+                        primer.setBlockState(x, y, z, state);
+                    }
+                }
+            }
         }
-        this.replaceBiomeBlocks(world, cubeX, cubeY, cubeZ, primer, biomesForGeneration);
+        else if (cubeY >= worldHeightCubes)
+        {
+            // Fill with top block
+            for (int x = 0; x < ICube.SIZE; x++)
+            {
+                for (int y = 0; y < ICube.SIZE; y++)
+                {
+                    for (int z = 0; z < ICube.SIZE; z++)
+                    {
+                        primer.setBlockState(x, y, z, extensionBlockTop);
+                    }
+                }
+            }
+        }
+        else
+        {
 
-        if (!imgGen) fillOceans(cubeX, cubeY, cubeZ, primer, biomesForGeneration, false);
-        if (imgGen)
-        {
-            if (generateRivers)
-                riverMaker.makeRiversForChunk((World) world, cubeX, cubeZ, wrapper, biomesForGeneration, yMin, yMax);
-            if (generateSites)
-                constructor.buildSites((World) world, cubeX, cubeZ, wrapper, biomesForGeneration, yMin, yMax);
-            if (generateConstructions)
-                roadMaker.buildRoads((World) world, cubeX, cubeZ, wrapper, biomesForGeneration, yMin, yMax);
+            if (!optimizationHack)
+            {
+                optimizationHack = true;
+                // Recusrive generation
+                for (int y = worldHeightCubes - 1; y >= 0; y--)
+                {
+                    if (y == cubeY)
+                    {
+                        continue;
+                    }
+                    ((ICubicWorld) world).getCubeFromCubeCoords(cubeX, y, cubeZ);
+                }
+                optimizationHack = false;
+            }
+            // Copy from vanilla, replacing bedrock as appropriate
+            ChunkPrimer wrap = wrapped.fillPrimer(cubeX, cubeZ, cubeY * 16, cubeY * 16 + ICube.SIZE - 1);
+            if (wrap != null)
+            {
+                for (int x = 0; x < ICube.SIZE; x++)
+                {
+                    for (int y = 0; y < ICube.SIZE; y++)
+                    {
+                        int y1 = y + cubeY * 16;
+                        for (int z = 0; z < ICube.SIZE; z++)
+                        {
+                            IBlockState state = wrap.getBlockState(x, y1, z);
+                            if (state == Blocks.BEDROCK.getDefaultState())
+                            {
+                                if (y < ICube.SIZE / 2)
+                                {
+                                    primer.setBlockState(x, y, z, extensionBlockBottom);
+                                }
+                                else
+                                {
+                                    primer.setBlockState(x, y, z, extensionBlockTop);
+                                }
+                            }
+                            else
+                            {
+                                primer.setBlockState(x, y, z, state);
+                            }
+                        }
+                    }
+                }
+            }
         }
+
         return primer;
     }
 
     @Override
-    public void populate(Cube cube)
+    public void populate(ICube cube)
     {
-        /** If event is not canceled we will use default biome decorators and
-         * cube populators from registry. **/
-        if (!MinecraftForge.EVENT_BUS.post(new CubePopulatorEvent(world, cube)))
+        Random rand = getCubeSpecificRandom(cube.getX(), cube.getY(), cube.getZ());
+        CubeGeneratorsRegistry.populateVanillaCubic(world, rand, cube);
+        if (cube.getY() < 0 || cube.getY() >= worldHeightCubes) { return; }
+        // Cubes outside this range are only filled with their respective block
+        // No population takes place
+        if (cube.getY() >= 0 && cube.getY() < worldHeightCubes)
         {
-            int cubeX = cube.getX();
-            int cubeZ = cube.getZ();
-            elevationInterpolator.initImage(map.elevationMap, cubeX, cubeZ, 32, scale);
-            waterInterpolator.initImage(map.waterMap, cubeX, cubeZ, 32, scale);
-            riverInterpolator.initImage(map.riverMap, cubeX, cubeZ, 32, scale);
-            int y = cube.getY();
-            if (generateSites) structuregen.generate(cube.getX(), cube.getZ(), (World) world, y * 16, y * 16 + 15);
-            if (generateRivers) riverMaker.postInitRivers((World) world, cube.getX(), cube.getZ(), y * 16, y * 16 + 15);
+            try
+            {
+                vanilla.populate(cube.getX(), cube.getZ());
+            }
+            catch (IllegalArgumentException ex)
+            {
+                StackTraceElement[] stack = ex.getStackTrace();
+                if (stack == null || stack.length < 1 || !stack[0].getClassName().equals(Random.class.getName())
+                        || !stack[0].getMethodName().equals("nextInt"))
+                {
+                    throw ex;
+                }
+                else
+                {
 
-            CubicBiome biome = CubicBiome.getCubic(cube.getCubicWorld().getBiome(Coords.getCubeCenter(cube)));
-            CubePos pos = cube.getCoords();
-            // For surface generators we should actually use special RNG with
-            // seed
-            // that depends only in world seed and cube X/Z
-            // but using this for surface generation doesn't cause any
-            // noticeable issues
-            Random rand = new Random(cube.cubeRandomSeed());
-
-            ICubicPopulator decorator = biome.getDecorator();
-            decorator.generate(world, rand, pos, biome);
-            CubeGeneratorsRegistry.generateWorld(world, rand, pos, biome);
+                }
+            }
+            GameRegistry.generateWorld(cube.getX(), cube.getZ(), world, vanilla, world.getChunkProvider());
         }
     }
 
-    /** Retrieve the blockstate appropriate for the specified builder entry
-     *
-     * @return The block state */
-    private IBlockState getBlock(int x, int y, int z, ICubePrimer cubePrimer, Biome[] biomesIn)
+    @Override
+    public Box getFullPopulationRequirements(ICube cube)
     {
-        IBlockState block = cubePrimer.getBlockState(x & 15, y & 15, z & 15);
-        Biome biome = biomesIn[(x & 15) + 16 * (z & 15)];
-        return replacerMap.get(biome.getRegistryName()).getReplacedBlock(block, x, y, z, 0, 1, 0, 1);
-    }
-
-    public void replaceBiomeBlocks(ICubicWorld world, int cubeX, int cubeY, int cubeZ, ICubePrimer cubePrimer,
-            Biome[] biomesIn)
-    {
-        for (int i = 0; i < 16; i++)
-            for (int k = 0; k < 16; k++)
-                for (int j = 0; j < 16; j++)
-                {
-                    int absX = cubeX * 16 + i, absY = cubeY * 16 + j, absZ = cubeZ * 16 + k;
-                    cubePrimer.setBlockState(i, j, k, getBlock(absX, absY, absZ, cubePrimer, biomesIn));
-                }
+        if (cube.getY() >= 0 && cube.getY() < worldHeightCubes) { return new Box(-1, -cube.getY(), -1, 0,
+                worldHeightCubes - cube.getY() - 1, 0); }
+        return NO_REQUIREMENT;
     }
 
     @Override
-    public Box getPopulationRequirement(Cube cube)
+    public Box getPopulationPregenerationRequirements(ICube cube)
     {
-        return RECOMMENDED_POPULATOR_REQUIREMENT;
+        if (cube.getY() >= 0 && cube.getY() < worldHeightCubes) { return new Box(0, -cube.getY(), 0, 1,
+                worldHeightCubes - cube.getY() - 1, 1); }
+        return NO_REQUIREMENT;
     }
 
-    /** Takes Blocks Coordinates
-     * 
-     * @param scale
-     *            - number of blocks per pixel
-     * @param x
-     *            - x coordinate of the pixel being used
-     * @param z
-     *            - y coordinate of the pixel being used
-     * @param blocks */
-    private void makeBeaches(int scale, int x, int y, int z, CubePrimer blocks)
+    @Override
+    public void recreateStructures(ICube cube)
     {
-        // int x1, z1, h1;
-        // for (int i1 = 0; i1 < 16; i1++)
-        // {
-        // for (int k1 = 0; k1 < 16; k1++)
-        // {
-        // x1 = x + i1 / scale;
-        // z1 = z + k1 / scale;
-        // if (x1 >= map.elevationMap.length
-        // || z1 >= map.elevationMap[0].length)
-        // {
-        // h1 = 10;
-        // }
-        // else h1 = map.elevationMap[x1][z1];
-        // Biome b1 = biomesForGeneration[i1 + 16 * k1];
-        // boolean beach = false;
-        //
-        // if (b1 == Biomes.OCEAN || b1 == Biomes.DEEP_OCEAN || b1 ==
-        // Biomes.BEACH)
-        // {
-        // for (int j = 100; j > 10; j--)
-        // {
-        // if (!isIndexEmpty(blocks, i1, j, k1) && getBlock(blocks, i1, j, k1)
-        // != Blocks.WATER)
-        // {
-        // h1 = j;
-        // beach = true;
-        // break;
-        // }
-        // }
-        // }
-        // if (beach)
-        // {
-        // for (int j = h1 + 1; j < world.getProvider().getHorizon(); j++)
-        // {
-        // blocks.setBlockState(i1, j, k1, Blocks.WATER.getDefaultState());
-        // }
-        // }
-        // }
-        // }
     }
 
-    public static Block getBlock(CubePrimer primer, int x, int y, int z)
+    @Override
+    public List<SpawnListEntry> getPossibleCreatures(EnumCreatureType creatureType, BlockPos pos)
     {
-        IBlockState state = primer.getBlockState(x, y, z);
-        return state != null ? state.getBlock() : Blocks.AIR;
+        return vanilla.getPossibleCreatures(creatureType, pos);
     }
 
-    public static boolean isIndexEmpty(CubePrimer primer, int x, int y, int z)
+    @Override
+    public BlockPos getClosestStructure(String name, BlockPos pos, boolean findUnexplored)
     {
-        IBlockState state = primer.getBlockState(x, y, z);
-        return state == null || state.getBlock() == Blocks.AIR;
+        return vanilla.getNearestStructurePos((World) world, name, pos, findUnexplored);
     }
 
     @Override
     public RiverMaker getRiverMaker()
     {
-        return riverMaker;
+        return wrapped.getRiverMaker();
     }
 
     @Override
     public RoadMaker getRoadMaker()
     {
-        return roadMaker;
+        return wrapped.getRoadMaker();
     }
 
     @Override
     public SiteMaker getSiteMaker()
     {
-        return constructor;
+        return wrapped.getSiteMaker();
     }
 
     @Override
     public DorfMap getDorfMap()
     {
-        return map;
+        return wrapped.getDorfMap();
     }
 
 }

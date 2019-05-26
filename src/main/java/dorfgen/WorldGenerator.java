@@ -5,9 +5,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.FileHandler;
@@ -21,33 +18,21 @@ import com.google.common.collect.Maps;
 
 import dorfgen.conversion.Config;
 import dorfgen.conversion.DorfMap;
-import dorfgen.conversion.DorfMap.Site;
-import dorfgen.conversion.DorfMap.SiteType;
 import dorfgen.conversion.FileLoader;
-import dorfgen.conversion.SiteMapColours;
 import dorfgen.conversion.SiteStructureGenerator;
-import dorfgen.worldgen.common.BiomeProviderFinite;
 import dorfgen.worldgen.common.IDorfgenProvider;
 import dorfgen.worldgen.common.MapGenSites.Start;
 import dorfgen.worldgen.structures.village.VillageWrapper;
 import dorfgen.worldgen.vanilla.WorldTypeFinite;
+import io.github.opencubicchunks.cubicchunks.api.world.ICubicWorldServer;
 import net.minecraft.block.Block;
-import net.minecraft.client.renderer.block.model.ModelResourceLocation;
-import net.minecraft.init.Blocks;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemBlock;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.WorldType;
 import net.minecraft.world.gen.structure.MapGenStructureIO;
-import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.RegistryEvent;
-import net.minecraftforge.event.terraingen.DecorateBiomeEvent.Decorate;
-import net.minecraftforge.event.terraingen.DecorateBiomeEvent.Decorate.EventType;
-import net.minecraftforge.event.world.WorldEvent.Load;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.Optional;
@@ -57,11 +42,6 @@ import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerAboutToStartEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
-import net.minecraftforge.fml.common.eventhandler.Event.Result;
-import net.minecraftforge.fml.common.eventhandler.EventPriority;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
 
 @Mod(modid = WorldGenerator.MODID, name = WorldGenerator.NAME, version = Reference.VERSION, acceptableRemoteVersions = "*")
 public class WorldGenerator
@@ -203,12 +183,14 @@ public class WorldGenerator
             @Override
             public IDorfgenProvider getProvider(World entityWorld)
             {
-                if (entityWorld instanceof cubicchunks.world.ICubicWorldServer)
+                if (entityWorld instanceof ICubicWorldServer)
                 {
-                    cubicchunks.world.ICubicWorldServer world = (cubicchunks.world.ICubicWorldServer) entityWorld;
-                    if (world.isCubicWorld()) if (world.getCubeCache()
-                            .getCubeGenerator() instanceof IDorfgenProvider) { return (IDorfgenProvider) world
-                                    .getCubeCache().getCubeGenerator(); }
+                    ICubicWorldServer world = (ICubicWorldServer) entityWorld;
+                    if (world.isCubicWorld())
+                    {
+                        if (world.getCubeGenerator() instanceof IDorfgenProvider)
+                            return (IDorfgenProvider) world.getCubeGenerator();
+                    }
                 }
                 return IGenGetter.super.getProvider(entityWorld);
             }

@@ -15,6 +15,7 @@ import dorfgen.worldgen.common.BiomeProviderFinite;
 import dorfgen.worldgen.common.CachedInterpolator;
 import dorfgen.worldgen.common.GeneratorInfo;
 import dorfgen.worldgen.common.IDorfgenProvider;
+import dorfgen.worldgen.common.IPrimerWrapper;
 import dorfgen.worldgen.common.MapGenSites;
 import dorfgen.worldgen.common.RiverMaker;
 import dorfgen.worldgen.common.RoadMaker;
@@ -44,35 +45,38 @@ import net.minecraftforge.event.terraingen.TerrainGen;
 public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDorfgenProvider
 {
     /** RNG. */
-    private Random                      rand;
+    private Random                         rand;
     /** Reference to the World object. */
-    private World                       worldObj;
+    private World                          worldObj;
     /** are map structures going to be generated (e.g. strongholds) */
-    private final boolean               mapFeaturesEnabled;
+    private final boolean                  mapFeaturesEnabled;
     // private MapGenBase caveGenerator = new MapGenUGRegions();
     // /** Holds Stronghold Generator */
     // private MapGenStronghold strongholdGenerator = new MapGenStronghold();
     /** Holds Village Generator */
-    public MapGenSites                  villageGenerator;
+    public MapGenSites                     villageGenerator;
     /** Holds Mineshaft Generator */
-    private MapGenMineshaft             mineshaftGenerator    = new MapGenMineshaft();
+    private MapGenMineshaft                mineshaftGenerator    = new MapGenMineshaft();
     // private MapGenScatteredFeature scatteredFeatureGenerator = new
     // MapGenScatteredFeature();
     /** Holds ravine generator */
-    private MapGenBase                  ravineGenerator       = new MapGenRavine();
-    public final RiverMaker             riverMaker;
-    public final RoadMaker              roadMaker;
-    public final SiteMaker              constructor;
-    public final SiteStructureGenerator structuregen;
-    public final DorfMap                map;
+    private MapGenBase                     ravineGenerator       = new MapGenRavine();
+    public final RiverMaker                riverMaker;
+    public final RoadMaker                 roadMaker;
+    public final SiteMaker                 constructor;
+    public final SiteStructureGenerator    structuregen;
+    public final DorfMap                   map;
     /** The biomes that are used to generate the chunk */
-    private Biome[]                     biomesForGeneration;
-    private int                         scale;
-    final GeneratorInfo                 info;
-    public CachedInterpolator           elevationInterpolator = new CachedInterpolator();
-    public CachedInterpolator           waterInterpolator     = new CachedInterpolator();
-    public CachedInterpolator           riverInterpolator     = new CachedInterpolator();
-    public CachedInterpolator           biomeInterpolator     = new CachedInterpolator();
+    private Biome[]                        biomesForGeneration;
+    private int                            scale;
+    final GeneratorInfo                    info;
+    public CachedInterpolator              elevationInterpolator = new CachedInterpolator();
+    public CachedInterpolator              waterInterpolator     = new CachedInterpolator();
+    public CachedInterpolator              riverInterpolator     = new CachedInterpolator();
+    public CachedInterpolator              biomeInterpolator     = new CachedInterpolator();
+
+    public Class<? extends IPrimerWrapper> wrapperClass          = PrimerWrapper.class;
+    public IPrimerWrapper                  lastWrapper           = null;
 
     {
         mineshaftGenerator = (MapGenMineshaft) TerrainGen.getModdedMapGen(mineshaftGenerator, MINESHAFT);
@@ -112,7 +116,7 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
         world.setSeaLevel((int) world.provider.getHorizon());
     }
 
-    private void preSetSeaLevel(int x, int z)
+    public void preSetSeaLevel(int x, int z)
     {
         int maxWater = worldObj.getSeaLevel();
         for (int i = -32; i >= 32; i++)
@@ -130,13 +134,52 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
         worldObj.setSeaLevel(maxWater);
     }
 
-    private void postSetSeaLevel()
+    public void postSetSeaLevel()
     {
         worldObj.setSeaLevel((int) worldObj.provider.getHorizon());
     }
 
+    public void prepInterpolators(int chunkX, int chunkZ)
+    {
+        elevationInterpolator.initImage(map.elevationMap, chunkX, chunkZ, 32, scale);
+        biomeInterpolator.initBiome(map.biomeMap, chunkX, chunkZ, 16, scale);
+        waterInterpolator.initImage(map.waterMap, chunkX, chunkZ, 32, scale);
+        riverInterpolator.initImage(map.riverMap, chunkX, chunkZ, 32, scale);
+        this.biomesForGeneration = this.worldObj.getBiomeProvider().getBiomes(this.biomesForGeneration, chunkX * 16,
+                chunkZ * 16, 16, 16);
+        if (map.elevationMap.length == 0) map.finite = false;
+    }
+
+    public void fillPrimer(ChunkPrimer primer, int chunkX, int chunkZ, int minY, int maxY)
+    {
+        int imgX = map.shiftX(chunkX * 16);
+        int imgZ = map.shiftZ(chunkZ * 16);
+        boolean inImg = false;
+        if (imgX >= 0 && imgZ >= 0 && (imgX + 16) / scale <= map.elevationMap.length
+                && (imgZ + 16) / scale <= map.elevationMap[0].length)
+        {
+            populateBlocksFromImage(scale, chunkX, chunkZ, primer, minY, maxY);
+            inImg = true;
+            fillOceansAndLakes(worldObj, chunkX, chunkZ, biomesForGeneration, primer, false, minY, maxY);
+            // Doesn't do anything with y coord.
+            makeBeaches(scale, chunkX, chunkZ, primer, biomesForGeneration);
+        }
+        else
+        {
+            fillOceansAndLakes(worldObj, chunkX, chunkZ, biomesForGeneration, primer, true, minY, maxY);
+        }
+        if (inImg)
+        {
+            if (info.rivers)
+                riverMaker.makeRiversForChunk(worldObj, chunkX, chunkZ, primer, biomesForGeneration, minY, maxY);
+            if (info.sites) constructor.buildSites(worldObj, chunkX, chunkZ, primer, biomesForGeneration, minY, maxY);
+            if (info.constructs)
+                roadMaker.buildRoads(worldObj, chunkX, chunkZ, primer, biomesForGeneration, minY, maxY);
+        }
+    }
+
     /** Takes Chunk Coordinates */
-    public void populateBlocksFromImage(int scale, int chunkX, int chunkZ, ChunkPrimer primer)
+    public void populateBlocksFromImage(int scale, int chunkX, int chunkZ, ChunkPrimer primer, int minY, int maxY)
     {
         int x1, z1;
         int x = map.shiftX(chunkX * 16);
@@ -157,8 +200,9 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
 
                 double s = worldObj.provider.getHeight() / 256d;
                 if (h1 > worldObj.getSeaLevel()) h1 = (int) (h1 * s);
+                h1 = Math.min(maxY, h1);
 
-                for (int j = 0; j < h1; j++)
+                for (int j = minY; j < h1; j++)
                 {
                     primer.setBlockState(i1, j, k1, Blocks.STONE.getDefaultState());
                 }
@@ -166,7 +210,8 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
         }
     }
 
-    public void fillOceansAndLakes(World world, int chunkX, int chunkZ, Biome[] biomes, ChunkPrimer primer, boolean oob)
+    public void fillOceansAndLakes(World world, int chunkX, int chunkZ, Biome[] biomes, ChunkPrimer primer, boolean oob,
+            int minY, int maxY)
     {
         int x = map.shiftX(chunkX * 16);
         int z = map.shiftZ(chunkZ * 16);
@@ -176,7 +221,9 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
             {
                 if (oob)
                 {
-                    for (int j = 0; j <= b0; j++)
+                    int min = Math.max(0, minY);
+                    int max = Math.min(maxY, b0);
+                    for (int j = min; j <= max; j++)
                     {
                         if (j < 10)
                         {
@@ -203,7 +250,9 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
                     h = Math.max(h, b0);
                     if (h > 0)
                     {
-                        for (int j = h; j > map.yMin; j--)
+                        int min = Math.max(h, minY);
+                        int max = Math.min(maxY, map.yMin);
+                        for (int j = min; j > max; j--)
                         {
                             if (primer.getBlockState(i, j, k).getMaterial() != Material.AIR) break;
                             primer.setBlockState(i, j, k, Blocks.WATER.getDefaultState());
@@ -211,6 +260,38 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
                     }
                 }
             }
+    }
+
+    public ChunkPrimer fillPrimer(int chunkX, int chunkZ, int minY, int maxY)
+    {
+        if (lastWrapper != null && lastWrapper.getX() == chunkX && lastWrapper.getZ() == chunkZ)
+            return lastWrapper.getPrimer();
+        try
+        {
+            lastWrapper = wrapperClass.newInstance();
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
+        }
+        lastWrapper.setX(chunkX);
+        lastWrapper.setZ(chunkZ);
+        ChunkPrimer primer = lastWrapper.getPrimer();
+        prepInterpolators(chunkX, chunkZ);
+        fillPrimer(primer, chunkX, chunkZ, minY, maxY);
+        this.replaceBiomeBlocks(chunkX, chunkZ, primer, this.biomesForGeneration);
+        if (info.villages || info.sites)
+        {
+            preSetSeaLevel(chunkX, chunkZ);
+            this.villageGenerator.generate(this.worldObj, chunkX, chunkZ, primer);
+            postSetSeaLevel();
+        }
+        return primer;
+    }
+
+    public ChunkPrimer fillPrimer(int chunkX, int chunkZ)
+    {
+        return fillPrimer(chunkX, chunkZ, 0, worldObj.getHeight());
     }
 
     @Override
@@ -221,47 +302,7 @@ public class ChunkGeneratorFinite extends ChunkGeneratorOverworld implements IDo
     {
         this.rand.setSeed((long) chunkX * 341873128712L + (long) chunkZ * 132897987541L);
 
-        ChunkPrimer primer = new PrimerWrapper(new ChunkPrimer());
-        elevationInterpolator.initImage(map.elevationMap, chunkX, chunkZ, 32, scale);
-        biomeInterpolator.initBiome(map.biomeMap, chunkX, chunkZ, 16, scale);
-        waterInterpolator.initImage(map.waterMap, chunkX, chunkZ, 32, scale);
-        riverInterpolator.initImage(map.riverMap, chunkX, chunkZ, 32, scale);
-
-        this.biomesForGeneration = this.worldObj.getBiomeProvider().getBiomes(this.biomesForGeneration, chunkX * 16,
-                chunkZ * 16, 16, 16);
-        if (map.elevationMap.length == 0) map.finite = false;
-
-        int imgX = map.shiftX(chunkX * 16);
-        int imgZ = map.shiftZ(chunkZ * 16);
-        boolean inImg = false;
-        if (imgX >= 0 && imgZ >= 0 && (imgX + 16) / scale <= map.elevationMap.length
-                && (imgZ + 16) / scale <= map.elevationMap[0].length)
-        {
-            populateBlocksFromImage(scale, chunkX, chunkZ, primer);
-            inImg = true;
-            fillOceansAndLakes(worldObj, chunkX, chunkZ, biomesForGeneration, primer, false);
-            makeBeaches(scale, chunkX, chunkZ, primer, biomesForGeneration);
-        }
-        else
-        {
-            fillOceansAndLakes(worldObj, chunkX, chunkZ, biomesForGeneration, primer, true);
-        }
-        if (inImg)
-        {
-            if (info.rivers)
-                riverMaker.makeRiversForChunk(worldObj, chunkX, chunkZ, primer, biomesForGeneration, 0, 255);
-            if (info.sites) constructor.buildSites(worldObj, chunkX, chunkZ, primer, biomesForGeneration, 0, 255);
-            if (info.constructs) roadMaker.buildRoads(worldObj, chunkX, chunkZ, primer, biomesForGeneration, 0, 255);
-        }
-
-        this.replaceBiomeBlocks(chunkX, chunkZ, primer, this.biomesForGeneration);
-
-        if (info.villages || info.sites)
-        {
-            preSetSeaLevel(chunkX, chunkZ);
-            this.villageGenerator.generate(this.worldObj, chunkX, chunkZ, primer);
-            postSetSeaLevel();
-        }
+        ChunkPrimer primer = fillPrimer(chunkX, chunkZ);
 
         Chunk chunk;
 

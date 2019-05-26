@@ -1,48 +1,77 @@
 buildscript {
     repositories {
         jcenter()
-        maven { url = "http://files.minecraftforge.net/maven" }
+        maven {
+            name = "Forge"
+            url = "http://files.minecraftforge.net/maven"
+        }
+        maven {
+            name = "Sonatype"
+            url = 'https://oss.sonatype.org/content/groups/public'
+        }
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
     }
 }
-apply plugin: 'net.minecraftforge.gradle.forge'
 
-group= "dorfgen" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = "dorfgen"
+plugins {
+    id 'com.matthewprenger.cursegradle' version '1.0.9'
+}
+
+repositories {
+    maven {
+        name = "CurseForge"
+        url = "https://minecraft.curseforge.com/api/maven/"
+    }
+}
+
+apply plugin: 'net.minecraftforge.gradle.forge'
+//Only edit below this line, the above code adds and enables the nessasary things for Forge to be setup.
+
+
+version = "${version_minecraft}-${version_compile}"
+group= ""
+archivesBaseName = "${compile_name}"
+
+repositories {
+    maven {
+        //JEI files
+        url = "http://dvs1.progwml6.com/files/maven"
+    }
+    maven {
+        // location of a maven mirror for JEI files, as a fallback
+        name = "ModMaven"
+        url = "http://modmaven.k-4u.nl"
+    }
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 minecraft {
-    version = "${version_minecraft}-${version_forge}"
-    mappings = "${version_mappings}"
+    version = "${version_long}"
     runDir = "run"
+    mappings = "${version_mappings}"
+    useDepAts = false
     
-    replace "@VERSION@", project.version
+    replace "@VERSION", project.version_compile
     replaceIn "Reference.java"
 }
 
-dependencies {
-    // you may put jars on which you depend on in ./libs
-    // or you may define them like so..
-    //compile "some.group:artifact:version:classifier"
-    //compile "some.group:artifact:version"
-      
-    // real examples
-    //compile 'com.mod-buildcraft:buildcraft:6.0.8:dev'  // adds buildcraft to the dev env
-    //compile 'com.googlecode.efficient-java-matrix-library:ejml:0.24' // adds ejml to the dev env
+task deobfJar(type: Jar) {
+    from sourceSets.main.output
+    classifier = 'deobf'
+}
 
-    // the 'provided' configuration is for optional dependencies that exist at compile-time but might not at runtime.
-    //provided 'com.mod-buildcraft:buildcraft:6.0.8:dev'
+artifacts {
+    archives deobfJar
+}
 
-    // the deobf configurations:  'deobfCompile' and 'deobfProvided' are the same as the normal compile and provided,
-    // except that these dependencies get remapped to your current MCP mappings
-    //deobfCompile 'com.mod-buildcraft:buildcraft:6.0.8:dev'
-    //deobfProvided 'com.mod-buildcraft:buildcraft:6.0.8:dev'
-
-    // for more info...
-    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
-    // http://www.gradle.org/docs/current/userguide/dependency_management.html
-
+jar {
+        manifest {
+            attributes "FMLAT": "${at_file}"
+    }
 }
 
 processResources
@@ -64,13 +93,3 @@ processResources
         exclude 'mcmod.info'
     }
 }
-
-jar {
-        manifest {
-        attributes 'FMLAT': 'dorfgen_at.cfg'
-                        
-    }
-}
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
