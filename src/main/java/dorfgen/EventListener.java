@@ -153,15 +153,17 @@ public class EventListener
             DorfMap dorfs = ((BiomeProviderFinite) event.getWorld().getBiomeProvider()).map;
             int width = (scale / SiteStructureGenerator.SITETOBLOCK);
             if (width == 0) return;
-            Collection<Site> sites = dorfs.getSiteForCoords(event.getPos().getX(), event.getPos().getZ());
+            BlockPos pos = event.getPlacementPos();
+            if (pos == null) return;
+            Collection<Site> sites = dorfs.getSiteForCoords(pos.getX(), pos.getZ());
             if (sites != null && event.getType() == EventType.TREE)
             {
                 for (Site site : sites)
                 {
                     if (site != null && site.rgbmap != null)
                     {
-                        for (int x = event.getPos().getX(); x < event.getPos().getX() + 16; x++)
-                            for (int z = event.getPos().getZ(); z < event.getPos().getZ() + 16; z++)
+                        for (int x = pos.getX(); x < pos.getX() + 16; x++)
+                            for (int z = pos.getZ(); z < pos.getZ() + 16; z++)
                             {
                                 int pixelX = (x - site.corners[0][0] * scale - scale / 2 - width / 2) / width;
                                 int pixelY = (z - site.corners[0][1] * scale - scale / 2 - width / 2) / width;

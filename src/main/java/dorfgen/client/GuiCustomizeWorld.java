@@ -26,6 +26,7 @@ public class GuiCustomizeWorld extends GuiScreen
     private GuiTextField         spawn;
     private List<GuiTextField>   text          = Lists.newArrayList();
     private boolean              hasSigmoid;
+    private boolean              autoOrigin = true;
 
     public GuiCustomizeWorld(GuiCreateWorld createWorldGuiIn, String preset, boolean hasSigmoid)
     {
@@ -59,6 +60,7 @@ public class GuiCustomizeWorld extends GuiScreen
         region.setText(generatorInfo.region);
         scaleh.setText(generatorInfo.scaleh + "");
         scalev.setText(hasSigmoid ? generatorInfo.scalev + "" : generatorInfo.scalev != 1 ? "" : 1 + "");
+        
         dx.setText(generatorInfo.dx + "");
         dz.setText(generatorInfo.dz + "");
         sx.setText(generatorInfo.sx + "");
@@ -213,7 +215,6 @@ public class GuiCustomizeWorld extends GuiScreen
                 generatorInfo.spawn = spawn.getText();
             }
             this.createWorldGui.chunkProviderSettingsJson = this.getPreset();
-            System.out.println(this.createWorldGui.chunkProviderSettingsJson);
             this.mc.displayGuiScreen(this.createWorldGui);
         }
 

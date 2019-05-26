@@ -176,4 +176,11 @@ public class VillageWrapper extends Village
         }
     }
 
+    @Override
+    public StructureBoundingBox getBoundingBox()
+    {
+        if (wrapped != null) return wrapped.getBoundingBox();
+        return super.getBoundingBox();
+    }
+
 }

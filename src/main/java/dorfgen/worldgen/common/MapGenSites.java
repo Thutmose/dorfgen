@@ -94,7 +94,6 @@ public class MapGenSites extends MapGenVillage
                 }
             }
         }
-        WorldGenerator.log(middle + " " + site);
         if (!middle) return false;
         switch (site.type)
         {
