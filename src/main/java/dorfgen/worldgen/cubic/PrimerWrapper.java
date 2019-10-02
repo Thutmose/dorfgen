@@ -1,6 +1,7 @@
 package dorfgen.worldgen.cubic;
 
 import dorfgen.worldgen.common.IPrimerWrapper;
+import io.github.opencubicchunks.cubicchunks.api.world.ICube;
 import io.github.opencubicchunks.cubicchunks.api.worldgen.CubePrimer;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.world.chunk.ChunkPrimer;
@@ -9,7 +10,7 @@ public class PrimerWrapper extends ChunkPrimer implements IPrimerWrapper
 {
     final CubePrimer wrapped;
     int              minY = 0;
-    int              maxY = 2047;
+    int              maxY = ICube.SIZE;
 
     public PrimerWrapper()
     {
@@ -19,15 +20,15 @@ public class PrimerWrapper extends ChunkPrimer implements IPrimerWrapper
     @Override
     public IBlockState getBlockState(int x, int y, int z)
     {
-        if (y < minY || y > maxY) return CubePrimer.DEFAULT_STATE;
-        return wrapped.getBlockState(x, y, z);
+        if (y < minY) return CubePrimer.DEFAULT_STATE;
+        return wrapped.getBlockState(x, y % maxY, z);
     }
 
     @Override
     public void setBlockState(int x, int y, int z, IBlockState state)
     {
-        if (y < minY || y > maxY) return;
-        wrapped.setBlockState(x, y, z, state);
+        if (y < minY) return;
+        wrapped.setBlockState(x, y % maxY, z, state);
     }
 
     int x, z;
