@@ -1,95 +1,125 @@
 buildscript {
     repositories {
+        maven { url = 'https://files.minecraftforge.net/maven' }
         jcenter()
-        maven {
-            name = "Forge"
-            url = "http://files.minecraftforge.net/maven"
-        }
-        maven {
-            name = "Sonatype"
-            url = 'https://oss.sonatype.org/content/groups/public'
+        mavenCentral()
+        flatDir {
+          dirs 'libs'
         }
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
     }
 }
 
 plugins {
-    id 'com.matthewprenger.cursegradle' version '1.0.9'
+  // This is needed for the obtaining of version from git repo
+  id 'org.ajoberstar.grgit' version '2.3.0'
 }
 
-repositories {
-    maven {
-        name = "CurseForge"
-        url = "https://minecraft.curseforge.com/api/maven/"
-    }
+apply plugin: 'net.minecraftforge.gradle'
+apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
+
+ext {
+    VERSION_COMPILE = gitVersion()
+    // Force a refresh of the toml file
+    cleanTOML()
 }
 
-apply plugin: 'net.minecraftforge.gradle.forge'
-//Only edit below this line, the above code adds and enables the nessasary things for Forge to be setup.
 
-
-version = "${version_minecraft}-${version_compile}"
-group= ""
+version = "${version_minecraft}-${VERSION_COMPILE}"
+group = 'thut'
 archivesBaseName = "${compile_name}"
 
-repositories {
-    maven {
-        //JEI files
-        url = "http://dvs1.progwml6.com/files/maven"
-    }
-    maven {
-        // location of a maven mirror for JEI files, as a fallback
-        name = "ModMaven"
-        url = "http://modmaven.k-4u.nl"
-    }
-}
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
 
 minecraft {
-    version = "${version_long}"
-    runDir = "run"
-    mappings = "${version_mappings}"
-    useDepAts = false
+    mappings channel: 'snapshot', version: "${version_mappings}"
+    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
     
-    replace "@VERSION", project.version_compile
-    replaceIn "Reference.java"
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.console.level', 'debug'
+
+            mods {
+                dorfgen {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
+            property 'forge.logging.console.level', 'debug'
+
+            mods {
+                dorfgen {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
 }
 
-task deobfJar(type: Jar) {
-    from sourceSets.main.output
-    classifier = 'deobf'
-}
-
-artifacts {
-    archives deobfJar
+dependencies {
+    minecraft "net.minecraftforge:forge:${version_minecraft}-${version_forge}"
 }
 
 jar {
-        manifest {
-            attributes "FMLAT": "${at_file}"
+    manifest {
+        attributes 'FMLAT': 'accesstransformer.cfg',
+        "Specification-Title": "${compile_name}",
+        "Specification-Vendor": "${author_name}",
+        "Specification-Version": VERSION_COMPILE,
+        "Implementation-Title": project.name,
+        "Implementation-Version": VERSION_COMPILE,
+        "Implementation-Vendor" :"${author_name}",
+        "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
     }
 }
 
-processResources
+processResources.doLast {
+    def TOMLFILE = "./build/resources/main/META-INF/mods.toml"
+    replaceParameters(TOMLFILE, "@VERSION", VERSION_COMPILE)
+    replaceParameters(TOMLFILE, "version_mc", "${version_mcsupport}")
+}
+
+def replaceParameters(filename, find, replace) {
+    ant.replace(file:filename,token:find,value:replace)
+}
+
+task sourcesJar(type: Jar) {
+	classifier = "sources"
+	from sourceSets.main.allJava
+}
+
+artifacts {
+	archives sourcesJar
+}
+
+def cleanTOML()
 {
-    // this will ensure that this task is redone when the versions change.
-    inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
-
-    // replace stuff in mcmod.info, nothing else
-    from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
-                
-        // replace version and mcversion
-        expand 'version':project.version, 'mcversion':project.minecraft.version
-    }
-        
-    // copy everything else, thats not the mcmod.info
-    from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
-    }
+    delete "./build/resources/main/META-INF/mods.toml" 
 }
+
+def gitVersion() {
+    def raw = grgit.describe(longDescr: true)
+    def desc = (raw == null ? 'unknown-offset-hash' : grgit.describe(longDescr: true)).split('-') as List
+    def hash = desc.remove(desc.size() - 1)
+    def offset = desc.remove(desc.size() - 1)
+    def branch = grgit.branch.current().name
+    return "${version_major}.${version_minor}.${offset}"
+}
+
+//def gitVersion() {
+//    def raw = grgit.describe(longDescr: true)
+//    def desc = (raw == null ? 'unknown-offset-hash' : grgit.describe(longDescr: true)).split('-') as List
+//    def vers = desc.get(1)
+//    def offset = vers.split(/[.]/)[2]
+//    def ver = offset.toInteger() + 1
+//    return "${version_major}.${version_minor}.${ver}"
+//}

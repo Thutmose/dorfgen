@@ -3,11 +3,8 @@ package dorfgen.conversion;
 import java.awt.Color;
 import java.util.HashMap;
 
-import dorfgen.WorldGenerator;
-import net.minecraft.block.BlockDirt;
-import net.minecraft.block.BlockDirt.DirtType;
-import net.minecraft.block.state.IBlockState;
-import net.minecraft.init.Blocks;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 
 public enum SiteMapColours
 {
@@ -25,12 +22,12 @@ public enum SiteMapColours
     ROAD(50, 30, 15),
 
     // roofs
-    GREENROOF(30, 100, 10), // Roof on some light brown wall buildings
-    BROWNROOF(100, 70, 10), // Roof on some other light bown buildings, smaller
-                            // ones
+    GREENROOF(30, 100, 10),// Roof on some light brown wall buildings
+    BROWNROOF(100, 70, 10),// Roof on some other light bown buildings, smaller
+                           // ones
     DARKBROWNROOF(75, 50, 20), DARKBROWNROOF2(50, 20, 20), LIGHTBROWNROOF(170, 120, 30), LIGHTYELLOWROOF(255, 255,
-            100), DULLGREENROOF(128, 192, 128), REDROOF(255, 0,
-                    0), LIGHTCYANROOF(128, 255, 255), LIGHTORANGEROOF(255, 128, 64), LIGHTGREYROOF(192, 192, 192),
+            100), DULLGREENROOF(128, 192, 128), REDROOF(255, 0, 0), LIGHTCYANROOF(128, 255, 255), LIGHTORANGEROOF(255,
+                    128, 64), LIGHTGREYROOF(192, 192, 192),
 
     // Strucure Walls
     LIGHTBROWNBUILDINGWALL(170, 120, 30), TOWNBUILDINGWHITEWALL(255, 255, 255), DARKGREYBUILDINGWALL(50, 50,
@@ -39,43 +36,41 @@ public enum SiteMapColours
     // Town/Keep Walls
     TOWNWALL(70, 70, 70), TOWNWALLMID(40, 40, 40), TOWERWALL(55, 55, 55), TOWERROOF(110, 110, 110),;
 
-    private static HashMap<Integer, SiteMapColours> colourMap = new HashMap<Integer, SiteMapColours>();
+    private static HashMap<Integer, SiteMapColours> colourMap = new HashMap<>();
     public static boolean                           init      = false;
     public final Color                              colour;
 
-    SiteMapColours(int red, int green, int blue)
+    SiteMapColours(final int red, final int green, final int blue)
     {
-        colour = new Color(red, green, blue);
+        this.colour = new Color(red, green, blue);
     }
 
-    public boolean matches(int rgb)
+    public boolean matches(final int rgb)
     {
-        return colour.getRGB() == rgb;
+        return this.colour.getRGB() == rgb;
     }
 
-    public static SiteMapColours getMatch(int rgb)
+    public static SiteMapColours getMatch(final int rgb)
     {
-        if (!init)
+        if (!SiteMapColours.init)
         {
-            init = true;
-            colourMap.clear();
-            for (SiteMapColours t : values())
-            {
-                colourMap.put(t.colour.getRGB(), t);
-            }
+            SiteMapColours.init = true;
+            SiteMapColours.colourMap.clear();
+            for (final SiteMapColours t : SiteMapColours.values())
+                SiteMapColours.colourMap.put(t.colour.getRGB(), t);
         }
-        return colourMap.get(rgb);
+        return SiteMapColours.colourMap.get(rgb);
     }
 
-    public static IBlockState[] getSurfaceBlocks(SiteMapColours point)
+    public static BlockState[] getSurfaceBlocks(final SiteMapColours point)
     {
-        IBlockState[] ret = new IBlockState[3];
+        final BlockState[] ret = new BlockState[3];
         ret[0] = Blocks.DIRT.getDefaultState();
 
         if (point == ROAD)
         {
             ret[0] = Blocks.COBBLESTONE.getDefaultState();
-            ret[1] = WorldGenerator.roadSurface.getDefaultState();
+            ret[1] = Blocks.GRASS_PATH.getDefaultState();
         }
         if (point == LIGHTYELLOWFARM)
         {
@@ -95,17 +90,17 @@ public enum SiteMapColours
         if (point == BROWNFARMSPACER)
         {
             ret[0] = Blocks.WATER.getDefaultState();
-            ret[1] = Blocks.DIRT.getDefaultState().withProperty(BlockDirt.VARIANT, DirtType.PODZOL);
+            ret[1] = Blocks.COARSE_DIRT.getDefaultState();
         }
         if (point == YELLOWFARMSPACER)
         {
             ret[0] = Blocks.WATER.getDefaultState();
-            ret[1] = Blocks.DIRT.getDefaultState().withProperty(BlockDirt.VARIANT, DirtType.PODZOL);
+            ret[1] = Blocks.COARSE_DIRT.getDefaultState();
         }
         if (point == LIGHTYELLOWFARMSPACER)
         {
             ret[0] = Blocks.WATER.getDefaultState();
-            ret[1] = Blocks.DIRT.getDefaultState().withProperty(BlockDirt.VARIANT, DirtType.PODZOL);
+            ret[1] = Blocks.COARSE_DIRT.getDefaultState();
         }
 
         if (point == RIVER)

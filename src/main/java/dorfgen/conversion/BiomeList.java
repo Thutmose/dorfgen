@@ -2,148 +2,129 @@ package dorfgen.conversion;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
-import java.util.logging.Level;
 
 import com.google.common.collect.Lists;
 
-import dorfgen.WorldGenerator;
+import dorfgen.Dorfgen;
 import dorfgen.conversion.DorfMap.Region;
-import net.minecraft.init.Biomes;
+import dorfgen.world.feature.BeachMaker;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.Biomes;
 import net.minecraftforge.common.BiomeDictionary;
 import net.minecraftforge.common.BiomeDictionary.Type;
+import net.minecraftforge.registries.ForgeRegistries;
 
 public class BiomeList
 {
 
-    public static int                        FREEZING  = 67;
-    public static int                        COLD      = 80;
-    public static int                        TEMPERATE = 128;
-    public static int                        WARM      = 155;
-    public static int                        HOT       = 180;
-    public static int                        SCORCHING = 255;
+    public static int FREEZING  = 67;
+    public static int COLD      = 80;
+    public static int TEMPERATE = 128;
+    public static int WARM      = 155;
+    public static int HOT       = 180;
+    public static int SCORCHING = 255;
 
-    public static int                        DRY       = 100;
-    public static int                        WET       = 200;
+    public static int DRY = 100;
+    public static int WET = 200;
 
-    private static ArrayList<Biome>          biomeArray;
+    private static ArrayList<Biome> biomeArray;
 
-    public HashMap<Integer, BiomeConversion> biomes    = new HashMap<Integer, BiomeConversion>();
+    public HashMap<Integer, BiomeConversion> biomes = new HashMap<>();
 
     public void clear()
     {
-        biomeArray = null;
-        for (BiomeConversion con : biomes.values())
-        {
+        BiomeList.biomeArray = null;
+        for (final BiomeConversion con : this.biomes.values())
             con.clear();
-        }
     }
 
     // Takes relative map coordinates.
-    public Biome mutateBiome(Biome input, int x, int z, DorfMap dorfs)
+    public Biome mutateBiome(Biome input, final int x, final int z, final DorfMap dorfs)
     {
-        initArr();
-        int scale = dorfs.scale;
+        this.initArr();
+        final int scale = dorfs.scale;
         if (input == null)
         {
-            int value = dorfs.biomeInterpolator.interpolateBiome(dorfs.biomeMap, x, z, scale);
-            BiomeConversion conversion = biomes.get(value);
+            final int value = dorfs.biomeInterpolator.interpolateBiome(dorfs.biomeMap, x, z, scale);
+            final BiomeConversion conversion = this.biomes.get(value);
             if (conversion != null) input = conversion.getBestMatch();
             else
             {
-                if (value == 0)
-                {
-                    return Biomes.OCEAN;
-                }
+                if (value == 0) return Biomes.OCEAN;
                 else if (DorfMap.inBounds(x / scale, z / scale, dorfs.biomeMap))
                 {
-                    WorldGenerator.log(Level.WARNING, "No Biome found for " + value + " at " + x + " " + z);
-                    System.out.println(biomes.keySet());
+                    Dorfgen.LOGGER.warn("No Biome found for " + value + " at " + x + " " + z);
+                    System.out.println(this.biomes.keySet());
                 }
                 return Biomes.OCEAN;
             }
         }
-        boolean hasHeightmap = dorfs.elevationMap.length > 0;
-        boolean hasThermalMap = dorfs.temperatureMap.length > 0;
-        boolean hasRainMap = dorfs.rainMap.length > 0;
-        boolean hasVolcanismMap = dorfs.volcanismMap.length > 0;
-        boolean hasVegMap = dorfs.vegitationMap.length > 0;
-        int seaLevel = dorfs.sigmoid.elevationSigmoid(dorfs.seaLevel);
-        Region region = dorfs.getRegionForCoords(dorfs.unShiftX(x), dorfs.unShiftZ(z));
-        long key = region.name.hashCode();
-        Random rand = new Random(key);
-        int deepSea = (int) (seaLevel * 0.7);
-        int height = hasHeightmap ? dorfs.heightInterpolator.interpolate(dorfs.elevationMap, x, z, scale)
+        final boolean hasHeightmap = dorfs.elevationMap.length > 0;
+        final boolean hasThermalMap = dorfs.temperatureMap.length > 0;
+        // final boolean hasRainMap = dorfs.rainMap.length > 0;
+        // final boolean hasVolcanismMap = dorfs.volcanismMap.length > 0;
+        // final boolean hasVegMap = dorfs.vegitationMap.length > 0;
+        final int seaLevel = dorfs.sigmoid.elevationSigmoid(dorfs.seaLevel);
+        final Region region = dorfs.getRegionForCoords(dorfs.unShiftX(x), dorfs.unShiftZ(z));
+        final long key = region.name.hashCode();
+        final Random rand = new Random(key);
+        final int deepSea = (int) (seaLevel * 0.7);
+        final int height = hasHeightmap ? dorfs.heightInterpolator.interpolate(dorfs.elevationMap, x, z, scale)
                 : seaLevel;
-        int temperature = hasThermalMap ? dorfs.miscInterpolator.interpolate(dorfs.temperatureMap, x, z, scale)
+        final int temperature = hasThermalMap ? dorfs.miscInterpolator.interpolate(dorfs.temperatureMap, x, z, scale)
                 : 128;
-        if (BiomeDictionary.hasType(input, Type.BEACH))
+        boolean beach = BeachMaker.isBeach(input);
+        final boolean ocean = BeachMaker.isOcean(input);
+
+        final boolean beachOrOcean = beach || ocean;
+        if (height > 60 && beachOrOcean) beach = true;
+        else if (height > deepSea && beachOrOcean)
         {
-            List<Biome> beaches = Lists.newArrayList(BiomeDictionary.getBiomes(Type.BEACH));
-            beaches.sort(new Comparator<Biome>()
-            {
-                @Override
-                public int compare(Biome o1, Biome o2)
-                {
-                    return o1.getRegistryName().compareTo(o2.getRegistryName());
-                }
-            });
+            beach = false;
+            input = Biomes.WARM_OCEAN;
+            if (temperature < BiomeList.WARM) input = Biomes.LUKEWARM_OCEAN;
+            if (temperature < BiomeList.TEMPERATE) input = Biomes.OCEAN;
+            if (temperature < BiomeList.COLD) input = Biomes.COLD_OCEAN;
+            if (temperature < BiomeList.FREEZING) input = Biomes.FROZEN_OCEAN;
+        }
+        else if (beachOrOcean)
+        {
+            beach = false;
+            input = Biomes.DEEP_WARM_OCEAN;
+            if (temperature < BiomeList.WARM) input = Biomes.DEEP_LUKEWARM_OCEAN;
+            if (temperature < BiomeList.TEMPERATE) input = Biomes.DEEP_OCEAN;
+            if (temperature < BiomeList.COLD) input = Biomes.DEEP_COLD_OCEAN;
+            if (temperature < BiomeList.FREEZING) input = Biomes.DEEP_FROZEN_OCEAN;
+        }
+        if (beach)
+        {
+            final List<Biome> beaches = Lists.newArrayList(BiomeDictionary.getBiomes(Type.BEACH));
+            beaches.sort((o1, o2) -> o1.getRegistryName().compareTo(o2.getRegistryName()));
             Collections.shuffle(beaches, rand);
-            if (temperature < 80)
+            if (temperature < BiomeList.COLD)
             {
-                for (Biome b : beaches)
-                {
+                for (final Biome b : beaches)
                     if (BiomeDictionary.hasType(b, Type.COLD))
                     {
                         input = b;
                         break;
                     }
-                }
             }
-            else
-            {
-                for (Biome b : beaches)
+            else for (final Biome b : beaches)
+                if (!BiomeDictionary.hasType(b, Type.COLD))
                 {
-                    if (!BiomeDictionary.hasType(b, Type.COLD))
-                    {
-                        input = b;
-                        break;
-                    }
+                    input = b;
+                    break;
                 }
-            }
-        }
-        if (height > deepSea && (input == Biomes.DEEP_OCEAN || input == Biomes.OCEAN))
-        {
-            input = Biomes.OCEAN;
-            if (temperature < 65)
-            {
-                input = Biomes.FROZEN_OCEAN;
-            }
-        }
-        if (height <= deepSea && (input == Biomes.OCEAN))
-        {
-            input = Biomes.DEEP_OCEAN;
         }
         return input;
     }
 
     private void initArr()
     {
-        if (biomeArray == null)
-        {
-            biomeArray = new ArrayList<Biome>();
-            Iterator<Biome> iter = Biome.REGISTRY.iterator();
-            while (iter.hasNext())
-            {
-                Biome b = iter.next();
-                if (b != null) biomeArray.add(b);
-            }
-        }
+        if (BiomeList.biomeArray == null) BiomeList.biomeArray = new ArrayList<>(ForgeRegistries.BIOMES.getValues());
     }
-
 }
