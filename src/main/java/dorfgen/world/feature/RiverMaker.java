@@ -19,7 +19,7 @@ import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos.Mutable;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.world.IWorld;
 import net.minecraft.world.chunk.IChunk;
 
 public class RiverMaker extends PathMaker
@@ -29,56 +29,34 @@ public class RiverMaker extends PathMaker
         super(map, gen);
     }
 
-    public void postInitRivers(final World world, final int chunkX, final int chunkZ, final int minY, final int maxY)
-    {
-        final int x0 = chunkX * 16;
-        final int z0 = chunkZ * 16;
-        final int x = this.dorfs.shiftX(x0);
-        final int z = this.dorfs.shiftZ(z0);
-        int x1, z1;
-        final Mutable pos = new Mutable();
-        final Mutable pos2 = new Mutable();
-        final int width = this.getWidth();
-        for (int i1 = 1; i1 < 15; i1++)
-            for (int k1 = 1; k1 < 15; k1++)
-            {
-                x1 = x + i1;
-                z1 = z + k1;
-                if (this.isInRiver(x1, z1, width)) for (int y = minY; y <= maxY; y++)
-                {
-                    pos.setPos(x0 + i1, y, z0 + k1);
-                    pos2.setPos(x0 + i1, y == minY ? y + 1 : y - 1, z0 + k1);
-                    final BlockState state = world.getBlockState(pos);
-                    final BlockState state2 = world.getBlockState(pos);
-                    if (state.getMaterial().isLiquid()) world.neighborChanged(pos, state2.getBlock(), pos2);
-                }
-            }
-    }
-
-    public void makeRiversForChunk(final IChunk primer, final Mutable pos, final int minY, final int maxY)
+    public void makeRiversForChunk(final IChunk primer, final IWorld worldIn, final Mutable pos, final int minY,
+            final int maxY)
     {
         final ChunkPos cpos = primer.getPos();
-        final int x = this.dorfs.shiftX(cpos.getXStart());
-        final int z = this.dorfs.shiftZ(cpos.getZStart());
+        // these are world coordinates
+        int x0, z0;
+
+        x0 = cpos.getXStart();
+        z0 = cpos.getZStart();
+
+        final int x = this.dorfs.shiftX(x0);
+        final int z = this.dorfs.shiftZ(z0);
 
         // These are in dorfmap coords
         int x1, z1;
 
-        // These are same coords shifted over 1
-        int x2, z2;
-
         int h;
-
-        boolean skip = false;
+        final int[][] heightmap = this.dorfs.elevationMap;
         boolean oob = false;
         final int width = this.getWidth();
-        for (int i1 = 0; i1 < 16; i1++)
-            for (int k1 = 0; k1 < 16; k1++)
+        final int seaLevel = primer.getWorldForge() != null ? primer.getWorldForge().getSeaLevel()
+                : this.dorfs.sigmoid.elevationSigmoid(this.dorfs.seaLevel);
+        final int topAir = 8;
+        for (int dx = 0; dx < 16; dx++)
+            for (int dz = 0; dz < 16; dz++)
             {
-                x1 = x + i1;
-                z1 = z + k1;
-                x2 = x + i1 + 1;
-                z2 = z + k1 + 1;
+                x1 = x + dx;
+                z1 = z + dz;
 
                 if (x1 < 0) x1 = 0;
                 if (z1 < 0) z1 = 0;
@@ -86,30 +64,28 @@ public class RiverMaker extends PathMaker
                 if (z1 / this.scale >= this.dorfs.biomeMap[0].length) z1 = this.dorfs.biomeMap[0].length * this.scale
                         - 1;
 
-                if (x2 / this.scale + x2 % this.scale >= this.dorfs.riverMap.length || z2 / this.scale + z2
-                        % this.scale >= this.dorfs.riverMap[0].length)
-                {
-                    h = 1;
-                    skip = true;
-                }
-                else h = this.riverInterpolator.interpolate(this.dorfs.riverMap, x1, z1, this.scale);
-                oob = h < minY - 16 || h > maxY + 32 * this.dorfs.cubicHeightScale;
-                if (oob || skip) continue;
+                h = this.riverInterpolator.interpolate(heightmap, x1, z1, this.scale);
+                oob = h < minY - 16 || h > maxY + topAir;
+                if (oob) continue;
                 final boolean river = this.isInRiver(x1, z1, 4 * width);
                 if (!river) continue;
                 if (!this.isInRiver(x1, z1, width)) continue;
-                int y = h = h - 1 - minY;
-                for (int i = 2; i < 5; i++)
-                {
-                    y = h - i;
-                    pos.setPos(i1, y, k1);
-                    if (y >= this.dorfs.yMin) primer.setBlockState(pos, Blocks.WATER.getDefaultState(), false);
-                }
-                for (int i = -1; i < 32 * this.dorfs.cubicHeightScale; i++)
+                int y;
+                h = h - 1 - minY;
+                for (int i = -2; i < topAir; i++)
                 {
                     y = h + i;
-                    pos.setPos(i1, y, k1);
-                    if (y >= this.dorfs.yMin) primer.setBlockState(pos, Blocks.AIR.getDefaultState(), false);
+                    final boolean water = i < 0 || y <= seaLevel;
+                    final BlockState state = water ? Blocks.WATER.getDefaultState() : Blocks.AIR.getDefaultState();
+                    // Carve air above, except if below sea level
+                    if (y > minY && y < maxY)
+                    {
+                        primer.setBlockState(pos.setPos(dx, y, dz), state, false);
+                        // Tick the top layers of water
+                        if (i >= -1 && water) worldIn.getPendingFluidTicks().scheduleTick(pos.setPos(x0 + dx, y, z0
+                                + dz), state.getFluidState().getFluid(), 0);
+                    }
+
                 }
             }
     }
@@ -131,8 +107,8 @@ public class RiverMaker extends PathMaker
 
     public boolean isRiver(final int x, final int z, final boolean onlyRiverMap)
     {
-        final int kx = x / this.scale;// Abs/(scale);
-        final int kz = z / this.scale;// Abs/(scale);
+        final int kx = x / this.scale;
+        final int kz = z / this.scale;
         final int key = kx + 8192 * kz;
         if (kx >= this.dorfs.waterMap.length || kz >= this.dorfs.waterMap[0].length) return false;
         if (kx < 0 || kz < 0) return false;

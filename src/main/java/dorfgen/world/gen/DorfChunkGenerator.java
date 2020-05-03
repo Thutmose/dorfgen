@@ -2,8 +2,7 @@ package dorfgen.world.gen;
 
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.SiteStructureGenerator;
-import dorfgen.util.CachedInterpolator;
-import dorfgen.world.feature.BeachMaker;
+import dorfgen.util.Interpolator.BicubicInterpolator;
 import dorfgen.world.feature.RiverMaker;
 import dorfgen.world.feature.RoadMaker;
 import dorfgen.world.feature.SiteMaker;
@@ -13,6 +12,7 @@ import net.minecraft.crash.ReportedException;
 import net.minecraft.util.SharedSeedRandom;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockPos.Mutable;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeManager;
@@ -33,16 +33,15 @@ import net.minecraft.world.gen.feature.Feature;
 
 public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
 {
-    public CachedInterpolator elevationInterpolator = new CachedInterpolator();
-    public CachedInterpolator waterInterpolator     = new CachedInterpolator();
-    public CachedInterpolator riverInterpolator     = new CachedInterpolator();
-    public CachedInterpolator biomeInterpolator     = new CachedInterpolator();
+    public BicubicInterpolator elevationInterpolator = new BicubicInterpolator();
+    public BicubicInterpolator waterInterpolator     = new BicubicInterpolator();
+    public BicubicInterpolator riverInterpolator     = new BicubicInterpolator();
+    public BicubicInterpolator biomeInterpolator     = new BicubicInterpolator();
 
     private final INoiseGenerator surfaceDepthNoise;
 
     private final RiverMaker riverMaker;
     private final RoadMaker  roadMaker;
-    private final BeachMaker beachMaker;
     private final SiteMaker  siteMaker;
     private final DorfMap    map;
 
@@ -57,20 +56,30 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
         this.biomes = (DorfBiomeProvider) biomeProviderIn;
         this.info = generationSettingsIn.getInfo();
         this.map = this.info.create(true);
+        this.map.scale = 8;
+
+        if (this.map.scale < SiteStructureGenerator.SITETOBLOCK) this.info.sites = false;
+
         this.biomes.map = this.map;
-        this.beachMaker = new BeachMaker(worldIn, this.biomes);
+
         this.roadMaker = new RoadMaker(this.map, this.map.structureGen);
         this.riverMaker = new RiverMaker(this.map, this.map.structureGen);
         this.siteMaker = new SiteMaker(this.map, this.map.structureGen);
 
         this.riverMaker.setRespectsSites(this.info.sites).setScale(this.map.scale);
         this.roadMaker.setRespectsSites(this.info.sites).setScale(this.map.scale);
+        this.siteMaker.setScale(this.map.scale);
+
+        this.siteMaker.bicubicInterpolator = this.elevationInterpolator;
         this.riverMaker.riverInterpolator = this.riverInterpolator;
         this.riverMaker.waterInterpolator = this.waterInterpolator;
         this.riverMaker.elevationInterpolator = this.elevationInterpolator;
         this.roadMaker.riverInterpolator = this.riverInterpolator;
         this.roadMaker.waterInterpolator = this.waterInterpolator;
         this.roadMaker.elevationInterpolator = this.elevationInterpolator;
+
+        this.map.heightInterpolator = this.elevationInterpolator;
+        this.map.biomeInterpolator = this.biomeInterpolator;
 
         this.surfaceDepthNoise = new PerlinNoiseGenerator(new SharedSeedRandom(this.seed), 3, 0);
     }
@@ -79,8 +88,27 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
     public void generateBiomes(final IChunk chunkIn)
     {
         this.biomes.forGen = true;
+        // this.biomeInterpolator.initBiome(this.map.biomeMap,
+        // chunkIn.getPos().x, chunkIn.getPos().z, 16, this.map.scale);
         super.generateBiomes(chunkIn);
         this.biomes.forGen = false;
+    }
+
+    public void prepInterpolators(final ChunkPos chunkPos)
+    {
+        // The cached ones worked nicely in single threaded, however here, that
+        // is an issue, as the caches are not threadsafe!
+
+        // final int x0 = chunkPos.x;
+        // final int z0 = chunkPos.z;
+        // this.elevationInterpolator.initImage(this.map.elevationMap, x0, z0,
+        // 32, this.map.scale);
+        // this.biomeInterpolator.initBiome(this.map.biomeMap, x0, z0, 16,
+        // this.map.scale);
+        // this.waterInterpolator.initImage(this.map.waterMap, x0, z0, 32,
+        // this.map.scale);
+        // this.riverInterpolator.initImage(this.map.riverMap, x0, z0, 32,
+        // this.map.scale);
     }
 
     @Override
@@ -89,11 +117,13 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
         // This should apply biome replacements, etc
         final int x0 = chunk.getPos().getXStart();
         final int z0 = chunk.getPos().getZStart();
+
+        this.prepInterpolators(chunk.getPos());
+
         final SharedSeedRandom sharedseedrandom = new SharedSeedRandom();
         sharedseedrandom.setBaseChunkSeed(chunk.getPos().x, chunk.getPos().z);
 
         final BlockPos.Mutable pos = new BlockPos.Mutable();
-        this.beachMaker.makeBeaches(this.getSeaLevel(), this.getSettings(), chunk, pos);
 
         // Block coordinates
         int x, y, z;
@@ -126,7 +156,10 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
                 biome.buildSurface(sharedseedrandom, chunk, x, z, y, surfaceNoise, this.getSettings().getDefaultBlock(),
                         this.getSettings().getDefaultFluid(), this.getSeaLevel(), this.world.getSeed());
             }
-        this.riverMaker.makeRiversForChunk(chunk, pos, this.map.yMin, this.world.getHeight());
+        this.roadMaker.buildRoads(chunk, pos, this.map.yMin, this.world.getHeight());
+        // This only gets done if the sites actually fit
+        if (this.map.scale >= SiteStructureGenerator.SITETOBLOCK) this.siteMaker.buildSites(chunk, pos, this.map.yMin,
+                this.world.getHeight());
     }
 
     @Override
@@ -189,12 +222,8 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
 
         final IChunk chunk = region.getChunk(i, j);
         final Mutable pos = new Mutable();
-        if (this.map.scale >= SiteStructureGenerator.SITETOBLOCK)
-        {
-            // this.roadMaker.buildRoads(chunk, pos);
-            this.map.structureGen.generate(chunk, region, pos);
-            this.siteMaker.buildSites(this.world, chunk, pos, this.map.yMin, this.world.getHeight());
-        }
+        // This only gets done if the sites actually fit
+        if (this.map.scale >= SiteStructureGenerator.SITETOBLOCK) this.map.structureGen.generate(chunk, region, pos);
     }
 
     @Override
@@ -223,10 +252,7 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
         final int x0 = chunkIn.getPos().getXStart();
         final int z0 = chunkIn.getPos().getZStart();
 
-        this.elevationInterpolator.initImage(this.map.elevationMap, chunkIn.getPos().x, chunkIn.getPos().z, 32,
-                this.map.scale);
-        this.waterInterpolator.initImage(this.map.waterMap, chunkIn.getPos().x, chunkIn.getPos().z, 32, this.map.scale);
-        this.riverInterpolator.initImage(this.map.riverMap, chunkIn.getPos().x, chunkIn.getPos().z, 32, this.map.scale);
+        this.prepInterpolators(chunkIn.getPos());
 
         final int imgX = this.map.shiftX(x0);
         final int imgZ = this.map.shiftX(z0);
@@ -270,6 +296,8 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
                 }
         }
         chunksection.unlock();
+
+        this.riverMaker.makeRiversForChunk(chunkIn, worldIn, new Mutable(), this.map.yMin, this.world.getHeight());
     }
 
     @Override

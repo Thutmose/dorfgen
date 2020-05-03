@@ -15,7 +15,6 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos.Mutable;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.IWorld;
 import net.minecraft.world.chunk.IChunk;
 
 public class SiteMaker
@@ -57,7 +56,7 @@ public class SiteMaker
         return siteCol;
     }
 
-    public void buildSites(final IWorld world, final IChunk blocks, final Mutable pos, final int minY, final int maxY)
+    public void buildSites(final IChunk blocks, final Mutable pos, final int minY, final int maxY)
     {
         final int width = this.scale / SiteStructureGenerator.SITETOBLOCK;
         if (this.dorfs.structureMap.length == 0 || width == 0) return;
@@ -66,11 +65,11 @@ public class SiteMaker
         final int z = this.dorfs.shiftZ(cpos.getZStart());
         int x1, z1, h;
 
-        for (int i1 = 0; i1 < 16; i1++)
-            for (int k1 = 0; k1 < 16; k1++)
+        for (int dx = 0; dx < 16; dx++)
+            for (int dz = 0; dz < 16; dz++)
             {
-                x1 = x + i1;// / scale;
-                z1 = z + k1;// / scale;
+                x1 = x + dx;
+                z1 = z + dz;
 
                 final Set<Site> sites = this.dorfs.getSiteForCoords(this.dorfs.unShiftX(x1), this.dorfs.unShiftZ(z1));
 
@@ -83,8 +82,8 @@ public class SiteMaker
                     h = this.bicubicInterpolator.interpolate(this.dorfs.elevationMap, x1, z1, this.scale);
                     final int j = h - 1;
 
-                    if (Math.abs(j - minY) > 8) return;
-                    if (Math.abs(maxY - j) > 8) return;
+                    // if (Math.abs(j - minY) > 8) return;
+                    // if (Math.abs(maxY - j) > 8) return;
 
                     final SiteStructures structs = this.structureGen.getStructuresForSite(s);
                     final StructureSpace struct = structs.getStructure(x1, z1, this.scale);
@@ -108,9 +107,9 @@ public class SiteMaker
                             .getDefaultState();
 
                     if (surface == null) continue;
-                    blocks.setBlockState(pos.setPos(i1, j - minY, k1), surface, false);
-                    blocks.setBlockState(pos.setPos(i1, j - 1 - minY, k1), repBlocks[0], false);
-                    if (above != null) blocks.setBlockState(pos.setPos(i1, j + 1, k1), above, false);
+                    blocks.setBlockState(pos.setPos(dx, j - minY, dz), surface, false);
+                    blocks.setBlockState(pos.setPos(dx, j - 1 - minY, dz), repBlocks[0], false);
+                    if (above != null) blocks.setBlockState(pos.setPos(dx, j + 1, dz), above, false);
                     final boolean tower = siteCol.toString().contains("TOWER");
                     if (wall || roof)
                     {
@@ -119,18 +118,18 @@ public class SiteMaker
                         while (j1 < h + 1)
                         {
                             j1 = j1 + 1;
-                            blocks.setBlockState(pos.setPos(i1, j1 - minY, k1), Blocks.AIR.getDefaultState(), false);
-                            blocks.setBlockState(pos.setPos(i1, h + num - minY, k1), surface, false);
+                            blocks.setBlockState(pos.setPos(dx, j1 - minY, dz), Blocks.AIR.getDefaultState(), false);
+                            blocks.setBlockState(pos.setPos(dx, h + num - minY, dz), surface, false);
                         }
                         j1 = j;
                         if (wall) while (j1 < h + num)
                         {
                             j1 = j1 + 1;
-                            blocks.setBlockState(pos.setPos(i1, j1 - minY, k1), surface, false);
+                            blocks.setBlockState(pos.setPos(dx, j1 - minY, dz), surface, false);
                         }
                     }
 
-                    if (siteCol.toString().contains("ROAD")) if (i1 > 0 && i1 < 15 && k1 > 0 && k1 < 15)
+                    if (siteCol.toString().contains("ROAD")) if (dx > 0 && dx < 15 && dz > 0 && dz < 15)
                     {
                         h = this.bicubicInterpolator.interpolate(this.dorfs.elevationMap, x1, z1, this.scale);
                         int h2;
@@ -144,25 +143,25 @@ public class SiteMaker
                         if (px != null && !px.toString().contains("ROAD") && z1 % 8 == 0)
                         {
                             h2 = this.bicubicInterpolator.interpolate(this.dorfs.elevationMap, x1 + 1, z1, this.scale);
-                            blocks.setBlockState(pos.setPos(i1, h2 - minY, k1), Blocks.TORCH.getDefaultState(), false);
+                            blocks.setBlockState(pos.setPos(dx, h2 - minY, dz), Blocks.TORCH.getDefaultState(), false);
                         }
 
                         if (nx != null && !nx.toString().contains("ROAD") && z1 % 8 == 0)
                         {
                             h2 = this.bicubicInterpolator.interpolate(this.dorfs.elevationMap, x1 - 1, z1, this.scale);
-                            blocks.setBlockState(pos.setPos(i1, h2 - minY, k1), Blocks.TORCH.getDefaultState(), false);
+                            blocks.setBlockState(pos.setPos(dx, h2 - minY, dz), Blocks.TORCH.getDefaultState(), false);
                         }
 
                         if (pz != null && !pz.toString().contains("ROAD") && x1 % 8 == 0)
                         {
                             h2 = this.bicubicInterpolator.interpolate(this.dorfs.elevationMap, x1, z1 + 1, this.scale);
-                            blocks.setBlockState(pos.setPos(i1, h2 - minY, k1), Blocks.TORCH.getDefaultState(), false);
+                            blocks.setBlockState(pos.setPos(dx, h2 - minY, dz), Blocks.TORCH.getDefaultState(), false);
                         }
 
                         if (nz != null && !nz.toString().contains("ROAD") && x1 % 8 == 0)
                         {
                             h2 = this.bicubicInterpolator.interpolate(this.dorfs.elevationMap, x1, z1 - 1, this.scale);
-                            blocks.setBlockState(pos.setPos(i1, h2 - minY, k1), Blocks.TORCH.getDefaultState(), false);
+                            blocks.setBlockState(pos.setPos(dx, h2 - minY, dz), Blocks.TORCH.getDefaultState(), false);
                         }
                     }
                 }

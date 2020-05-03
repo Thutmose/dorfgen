@@ -23,8 +23,11 @@ import net.minecraft.block.DoorBlock;
 import net.minecraft.block.HorizontalBlock;
 import net.minecraft.block.LadderBlock;
 import net.minecraft.block.LeverBlock;
+import net.minecraft.block.RedstoneLampBlock;
 import net.minecraft.block.TrapDoorBlock;
 import net.minecraft.block.WallTorchBlock;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.merchant.villager.VillagerEntity;
 import net.minecraft.state.properties.DoubleBlockHalf;
 import net.minecraft.state.properties.Half;
 import net.minecraft.util.Direction;
@@ -287,7 +290,7 @@ public class SiteStructureGenerator
                             {
                                 // Towers get lamps with levers under them
                                 world.setBlockState(mutablePos.setPos(x2, h - 1, z2), Blocks.REDSTONE_LAMP
-                                        .getDefaultState(), flag);
+                                        .getDefaultState().with(RedstoneLampBlock.LIT, true), flag);
                                 world.setBlockState(mutablePos.setPos(x2, h - 3, z2), material.getDefaultState(), flag);
                                 this.placeOnLever(world, x2, h - 2, z2, mutablePos);
                             }
@@ -308,12 +311,9 @@ public class SiteStructureGenerator
 
                         if (villager)
                         {
-                            // TODO decide on a villager to spawn
-                            // final EntityVillager entityvillager = new
-                            // EntityVillager(world, 0);
-                            // entityvillager.setLocationAndAngles(x2 + 0.5D,
-                            // (double) h, z2 + 0.5D, 0.0F, 0.0F);
-                            // world.spawnEntityInWorld(entityvillager);
+                            final VillagerEntity entityvillager = EntityType.VILLAGER.create(world.getWorld());
+                            entityvillager.setLocationAndAngles(x2 + 0.5D, h, z2 + 0.5D, 0.0F, 0.0F);
+                            world.addEntity(entityvillager);
                         }
                     }
                 }

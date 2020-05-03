@@ -11,6 +11,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.DorfMap.Region;
 import dorfgen.conversion.DorfMap.Site;
+import dorfgen.util.Interpolator.BicubicInterpolator;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.Commands;
@@ -90,6 +91,15 @@ public class DorfCommand
         final DorfMap dorfs = Dorfgen.instance.getDorfs(player.getEntityWorld());
         final Region region = dorfs.getRegionForCoords(pos.getX(), pos.getZ());
         final Set<Site> sites = dorfs.getSiteForCoords(pos.getX(), pos.getZ());
+
+        final int scale = dorfs.scale;
+        final int x = dorfs.shiftX(pos.getX());
+        final int z = dorfs.shiftZ(pos.getZ());
+
+        final BicubicInterpolator interp = new BicubicInterpolator();
+        final int h = interp.interpolate(dorfs.elevationMap, x, z, scale);
+        System.out.println(h);
+
         String message = "Region: " + region.toString();
         for (final Site site : sites)
             message += ", Site: " + site;

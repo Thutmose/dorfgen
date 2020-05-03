@@ -23,7 +23,6 @@ import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos.Mutable;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 import net.minecraft.world.chunk.IChunk;
 
 public class RoadMaker extends PathMaker
@@ -403,7 +402,7 @@ public class RoadMaker extends PathMaker
         }
     }
 
-    public void buildRoads(final World world, final IChunk blocks, final Mutable pos, final int minY, final int maxY)
+    public void buildRoads(final IChunk blocks, final Mutable pos, final int minY, final int maxY)
     {
         this.minY = minY;
         this.maxY = maxY;
@@ -420,8 +419,8 @@ public class RoadMaker extends PathMaker
         for (int i = 0; i < 16; i++)
             for (int j = 0; j < 16; j++)
             {
-                final int x1 = x + i;
-                final int z1 = z + j;
+                int x1 = x + i;
+                int z1 = z + j;
                 int x2 = x + i + dr;
                 int z2 = z + j + dr;
                 final boolean[] dirs = this.getRoadDirection(this.dorfs.unShiftX(x1), this.dorfs.unShiftZ(z1));
@@ -434,6 +433,12 @@ public class RoadMaker extends PathMaker
                 }
                 else
                 {
+                    if (x1 < 0) x1 = 0;
+                    if (z1 < 0) z1 = 0;
+                    if (x1 / this.scale >= this.dorfs.biomeMap.length) x1 = this.dorfs.biomeMap.length * this.scale - 1;
+                    if (z1 / this.scale >= this.dorfs.biomeMap[0].length) z1 = this.dorfs.biomeMap[0].length
+                            * this.scale - 1;
+
                     h = this.elevationInterpolator.interpolate(this.dorfs.elevationMap, x1, z1, this.scale);
                     if (x1 - dr > 0 && z1 - dr > 0)
                     {
