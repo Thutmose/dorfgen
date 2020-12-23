@@ -1,7 +1,6 @@
 package dorfgen.world.gen;
 
-import java.util.Collections;
-
+import dorfgen.Dorfgen;
 import dorfgen.conversion.DorfMap;
 import dorfgen.util.Interpolator.BicubicInterpolator;
 import dorfgen.util.Interpolator.CachedBicubicInterpolator;
@@ -11,6 +10,7 @@ import net.minecraft.world.biome.BiomeContainer;
 import net.minecraft.world.biome.Biomes;
 import net.minecraft.world.biome.provider.BiomeProvider;
 import net.minecraft.world.chunk.IChunk;
+import net.minecraft.world.gen.feature.structure.Structure;
 
 public class DorfBiomeProvider extends BiomeProvider
 {
@@ -31,18 +31,34 @@ public class DorfBiomeProvider extends BiomeProvider
     public CachedBicubicInterpolator heightInterpolator = new CachedBicubicInterpolator();
     public CachedBicubicInterpolator miscInterpolator   = new CachedBicubicInterpolator();
 
-    int            scale;
-    public boolean forGen = false;
-    public DorfMap map;
+    int                 scale;
+    public boolean      forGen = false;
+    public DorfMap      map;
+    final GeneratorInfo info;
 
     protected DorfBiomeProvider(final DorfSettings settings)
     {
-        super(Collections.emptySet());
+        // Allow all the biomes!
+        super(Biome.BIOMES);
+        this.info = settings.getInfo();
     }
 
     private Biome getBiomeFromMaps(final int x, final int z)
     {
-        return this.map.biomeList.mutateBiome(null, x, z, this.map);
+        final Biome input = this.map.biomeInterpolator.interpolateBiome(this.map.biomeList.biomeArr, x, z, this.scale);
+        if (input == null)
+        {
+            Dorfgen.LOGGER.error("Null biome for {}, {}", x, z);
+            return Biomes.DEFAULT;
+        }
+        return input;
+    }
+
+    @Override
+    public boolean hasStructure(final Structure<?> structureIn)
+    {
+        if (!this.info.villages && structureIn.getRegistryName().toString().contains("village")) return false;
+        return super.hasStructure(structureIn);
     }
 
     @Override
@@ -56,7 +72,13 @@ public class DorfBiomeProvider extends BiomeProvider
         }
         x = this.map.shiftX(x);
         z = this.map.shiftZ(z);
-        this.scale = this.map.scale;
+        this.scale = this.map.getScale();
+
+        if (this.scale == 0)
+        {
+            System.out.println("wat?");
+            return Biomes.DEFAULT;
+        }
 
         if (x < 0) x = 0;
         if (z < 0) z = 0;

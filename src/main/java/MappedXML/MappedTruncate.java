@@ -15,7 +15,7 @@ public class MappedTruncate
 
     /**
      * Truncates a file at the first occurrence of a string.
-     * 
+     *
      * @param inPath
      *            Path and filename of input file
      * @param outPath
@@ -35,7 +35,7 @@ public class MappedTruncate
     /**
      * Truncates a file at the first occurrence of a string.
      * Concatenates a string after the truncation.
-     * 
+     *
      * @param inPath
      *            Path and filename of input file
      * @param outPath
@@ -133,6 +133,7 @@ public class MappedTruncate
 
             try
             {
+                subs = subs.replace("encoding='CP437'", "encoding='UTF-8'");
                 out.write(subs.toCharArray());
             }
             catch (final Exception e)

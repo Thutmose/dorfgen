@@ -1,7 +1,9 @@
 package dorfgen;
 
+import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -19,6 +21,10 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.StringTextComponent;
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.gen.GenerationStage.Decoration;
+import net.minecraft.world.gen.feature.ConfiguredFeature;
+import net.minecraft.world.gen.feature.structure.Structures;
 import net.minecraftforge.server.permission.DefaultPermissionLevel;
 import net.minecraftforge.server.permission.PermissionAPI;
 
@@ -92,13 +98,20 @@ public class DorfCommand
         final Region region = dorfs.getRegionForCoords(pos.getX(), pos.getZ());
         final Set<Site> sites = dorfs.getSiteForCoords(pos.getX(), pos.getZ());
 
-        final int scale = dorfs.scale;
+        final int scale = dorfs.getScale();
         final int x = dorfs.shiftX(pos.getX());
         final int z = dorfs.shiftZ(pos.getZ());
 
         final BicubicInterpolator interp = new BicubicInterpolator();
         final int h = interp.interpolate(dorfs.elevationMap, x, z, scale);
-        System.out.println(h);
+
+        final Biome b = player.getEntityWorld().getBiome(pos);
+        final List<String> vars = Lists.newArrayList();
+        for (final ConfiguredFeature<?, ?> ba : b.getFeatures(Decoration.SURFACE_STRUCTURES))
+            vars.add(ba.config.toString());
+        System.out.println(vars);
+
+        System.out.println(b.hasStructure(Structures.VILLAGE));
 
         String message = "Region: " + region.toString();
         for (final Site site : sites)
@@ -113,11 +126,11 @@ public class DorfCommand
         final DorfMap dorfs = Dorfgen.instance.getDorfs(player.getEntityWorld());
         final Site site = dorfs.sitesByName.get(name);
         if (site == null) throw new CommandException(new StringTextComponent("no site " + name));
-        final int x = site.x * dorfs.scale + dorfs.scale;
-        final int z = site.z * dorfs.scale + dorfs.scale;
+        final int x = site.x * dorfs.getScale() + dorfs.getScale();
+        final int z = site.z * dorfs.getScale() + dorfs.getScale();
         final int relx = x - Dorfgen.shift.getX();
         final int relz = z - Dorfgen.shift.getZ();
-        final int y = dorfs.biomeInterpolator.interpolate(dorfs.elevationMap, relx, relz, dorfs.scale) + 10;
+        final int y = dorfs.biomeInterpolator.interpolate(dorfs.elevationMap, relx, relz, dorfs.getScale()) + 10;
         player.sendMessage(new StringTextComponent("Teleported to " + site));
         player.setPositionAndUpdate(x, y, z);
         return 0;

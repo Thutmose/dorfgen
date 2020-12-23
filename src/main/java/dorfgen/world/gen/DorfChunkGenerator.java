@@ -1,5 +1,9 @@
 package dorfgen.world.gen;
 
+import java.util.List;
+
+import com.google.common.collect.Lists;
+
 import dorfgen.conversion.DorfMap;
 import dorfgen.conversion.SiteStructureGenerator;
 import dorfgen.util.Interpolator.BicubicInterpolator;
@@ -14,6 +18,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockPos.Mutable;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.IWorld;
+import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeManager;
 import net.minecraft.world.biome.provider.BiomeProvider;
@@ -23,16 +28,21 @@ import net.minecraft.world.chunk.IChunk;
 import net.minecraft.world.gen.ChunkGenerator;
 import net.minecraft.world.gen.GenerationStage;
 import net.minecraft.world.gen.GenerationStage.Carving;
-import net.minecraft.world.gen.GenerationStage.Decoration;
 import net.minecraft.world.gen.Heightmap.Type;
 import net.minecraft.world.gen.INoiseGenerator;
 import net.minecraft.world.gen.PerlinNoiseGenerator;
 import net.minecraft.world.gen.WorldGenRegion;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
+import net.minecraft.world.gen.feature.DecoratedFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
+import net.minecraft.world.gen.feature.IFeatureConfig;
+import net.minecraft.world.gen.feature.structure.Structure;
+import net.minecraft.world.gen.feature.template.TemplateManager;
 
 public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
 {
+    public static List<Structure<?>> VILLAGETYPE = Lists.newArrayList();
+
     public BicubicInterpolator elevationInterpolator = new BicubicInterpolator();
     public BicubicInterpolator waterInterpolator     = new BicubicInterpolator();
     public BicubicInterpolator riverInterpolator     = new BicubicInterpolator();
@@ -53,22 +63,23 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
             final DorfSettings generationSettingsIn)
     {
         super(worldIn, biomeProviderIn, generationSettingsIn);
-        this.biomes = (DorfBiomeProvider) biomeProviderIn;
+        if (DorfChunkGenerator.VILLAGETYPE.isEmpty()) DorfChunkGenerator.VILLAGETYPE.addAll(Feature.ILLAGER_STRUCTURES);
+
         this.info = generationSettingsIn.getInfo();
         this.map = this.info.create(true);
-        this.map.scale = 8;
-
-        if (this.map.scale < SiteStructureGenerator.SITETOBLOCK) this.info.sites = false;
+        this.map.biomeList.noiseGen = new PerlinNoiseGenerator(new SharedSeedRandom(this.world.getSeed()), 3, 0);
+        this.biomes = (DorfBiomeProvider) biomeProviderIn;
+        this.surfaceDepthNoise = this.map.biomeList.noiseGen;
+        if (this.map.getScale() < SiteStructureGenerator.SITETOBLOCK) this.info.sites = false;
 
         this.biomes.map = this.map;
-
         this.roadMaker = new RoadMaker(this.map, this.map.structureGen);
         this.riverMaker = new RiverMaker(this.map, this.map.structureGen);
         this.siteMaker = new SiteMaker(this.map, this.map.structureGen);
 
-        this.riverMaker.setRespectsSites(this.info.sites).setScale(this.map.scale);
-        this.roadMaker.setRespectsSites(this.info.sites).setScale(this.map.scale);
-        this.siteMaker.setScale(this.map.scale);
+        this.riverMaker.setRespectsSites(this.info.sites).setScale(this.map.getScale());
+        this.roadMaker.setRespectsSites(this.info.sites).setScale(this.map.getScale());
+        this.siteMaker.setScale(this.map.getScale());
 
         this.siteMaker.bicubicInterpolator = this.elevationInterpolator;
         this.riverMaker.riverInterpolator = this.riverInterpolator;
@@ -81,15 +92,12 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
         this.map.heightInterpolator = this.elevationInterpolator;
         this.map.biomeInterpolator = this.biomeInterpolator;
 
-        this.surfaceDepthNoise = new PerlinNoiseGenerator(new SharedSeedRandom(this.seed), 3, 0);
     }
 
     @Override
     public void generateBiomes(final IChunk chunkIn)
     {
         this.biomes.forGen = true;
-        // this.biomeInterpolator.initBiome(this.map.biomeMap,
-        // chunkIn.getPos().x, chunkIn.getPos().z, 16, this.map.scale);
         super.generateBiomes(chunkIn);
         this.biomes.forGen = false;
     }
@@ -98,17 +106,6 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
     {
         // The cached ones worked nicely in single threaded, however here, that
         // is an issue, as the caches are not threadsafe!
-
-        // final int x0 = chunkPos.x;
-        // final int z0 = chunkPos.z;
-        // this.elevationInterpolator.initImage(this.map.elevationMap, x0, z0,
-        // 32, this.map.scale);
-        // this.biomeInterpolator.initBiome(this.map.biomeMap, x0, z0, 16,
-        // this.map.scale);
-        // this.waterInterpolator.initImage(this.map.waterMap, x0, z0, 32,
-        // this.map.scale);
-        // this.riverInterpolator.initImage(this.map.riverMap, x0, z0, 32,
-        // this.map.scale);
     }
 
     @Override
@@ -133,7 +130,7 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
 
         final int imgX = this.map.shiftX(x0);
         final int imgZ = this.map.shiftX(z0);
-        final int scale = this.map.scale;
+        final int scale = this.map.getScale();
 
         for (int dx = 0; dx < 16; dx++)
             for (int dz = 0; dz < 16; dz++)
@@ -158,15 +155,14 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
             }
         this.roadMaker.buildRoads(chunk, pos, this.map.yMin, this.world.getHeight());
         // This only gets done if the sites actually fit
-        if (this.map.scale >= SiteStructureGenerator.SITETOBLOCK) this.siteMaker.buildSites(chunk, pos, this.map.yMin,
-                this.world.getHeight());
+        if (this.map.getScale() >= SiteStructureGenerator.SITETOBLOCK) this.siteMaker.buildSites(chunk, pos,
+                this.map.yMin, this.world.getHeight());
     }
 
     @Override
     public int getGroundHeight()
     {
-        // TODO adjust this?
-        return 64;
+        return this.world.getSeaLevel() + 1;
     }
 
     @Override
@@ -183,13 +179,20 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
         for (final GenerationStage.Decoration stage : GenerationStage.Decoration.values())
             try
             {
-                if (stage == Decoration.LOCAL_MODIFICATIONS) continue;
-
                 int featureIndex = 0;
-                for (final ConfiguredFeature<?, ?> configuredfeature : biome.getFeatures(stage))
+                for (final ConfiguredFeature<?, ?> feature : biome.getFeatures(stage))
                 {
-
-                    if (configuredfeature.feature == Feature.LAKE)
+                    final IFeatureConfig conf = feature.config;
+                    if (conf instanceof DecoratedFeatureConfig)
+                    {
+                        final DecoratedFeatureConfig config = (DecoratedFeatureConfig) conf;
+                        if (config.feature.feature == Feature.LAKE)
+                        {
+                            ++featureIndex;
+                            continue;
+                        }
+                    }
+                    if (feature.feature == Feature.LAKE)
                     {
                         ++featureIndex;
                         continue;
@@ -197,15 +200,16 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
                     random.setFeatureSeed(i1, featureIndex, stage.ordinal());
                     try
                     {
-                        configuredfeature.place(region, this, random, blockpos);
+
+                        feature.place(region, this, random, blockpos);
                     }
                     catch (final Exception exception)
                     {
                         final CrashReport crashreport = CrashReport.makeCrashReport(exception, "Feature placement");
-                        crashreport.makeCategory("Feature").addDetail("Id", configuredfeature.feature.getRegistryName())
+                        crashreport.makeCategory("Feature").addDetail("Id", feature.feature.getRegistryName())
                                 .addDetail("Description", () ->
                                 {
-                                    return configuredfeature.feature.toString();
+                                    return feature.feature.toString();
                                 });
                         throw new ReportedException(crashreport);
                     }
@@ -223,7 +227,8 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
         final IChunk chunk = region.getChunk(i, j);
         final Mutable pos = new Mutable();
         // This only gets done if the sites actually fit
-        if (this.map.scale >= SiteStructureGenerator.SITETOBLOCK) this.map.structureGen.generate(chunk, region, pos);
+        if (this.map.getScale() >= SiteStructureGenerator.SITETOBLOCK) this.map.structureGen.generate(chunk, region,
+                pos);
     }
 
     @Override
@@ -241,8 +246,102 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
     @Override
     public void func_225550_a_(final BiomeManager p_225550_1_, final IChunk p_225550_2_, final Carving p_225550_3_)
     {
-        // super.func_225550_a_(p_225550_1_, p_225550_2_, p_225550_3_);
+        super.func_225550_a_(p_225550_1_, p_225550_2_, p_225550_3_);
     }
+
+    @Override
+    public void generateStructureStarts(final IWorld worldIn, final IChunk chunkIn)
+    {
+        super.generateStructureStarts(worldIn, chunkIn);
+    }
+
+    @Override
+    public void generateStructures(final BiomeManager p_227058_1_, final IChunk chunkIn,
+            final ChunkGenerator<?> p_227058_3_, final TemplateManager p_227058_4_)
+    {
+        super.generateStructures(p_227058_1_, chunkIn, p_227058_3_, p_227058_4_);
+    }
+
+    @Override
+    public BlockPos findNearestStructure(final World worldIn, final String name, final BlockPos pos, final int radius,
+            final boolean p_211403_5_)
+    {
+        // TODO Auto-generated method stub
+        return super.findNearestStructure(worldIn, name, pos, radius, p_211403_5_);
+    }
+
+    @Override
+    public <C extends IFeatureConfig> C getStructureConfig(final Biome biomeIn, final Structure<C> structureIn)
+    {
+        // TODO Auto-generated method stub
+        return super.getStructureConfig(biomeIn, structureIn);
+    }
+
+    @Override
+    public boolean hasStructure(final Biome biomeIn, final Structure<? extends IFeatureConfig> structureIn)
+    {
+        // TODO Auto-generated method stub
+        return super.hasStructure(biomeIn, structureIn);
+    }
+
+    @Override
+    protected Biome getBiome(final BiomeManager biomeManagerIn, final BlockPos posIn)
+    {
+        // TODO Auto-generated method stub
+        return super.getBiome(biomeManagerIn, posIn);
+    }
+
+    // private void initVillageBases(final IWorld worldIn, final IChunk chunkIn)
+    // {
+    // final ObjectList<AbstractVillagePiece> pieces = new
+    // ObjectArrayList<>(10);
+    // final ObjectList<JigsawJunction> junctions = new ObjectArrayList<>(32);
+    // final ChunkPos chunkpos = chunkIn.getPos();
+    // final int cx = chunkpos.x;
+    // final int cz = chunkpos.z;
+    // final int x0 = cx << 4;
+    // final int z0 = cz << 4;
+    //
+    // for (final Structure<?> structure : DorfChunkGenerator.VILLAGETYPE)
+    // {
+    // final String s = structure.getStructureName();
+    // final LongIterator longiterator =
+    // chunkIn.getStructureReferences(s).iterator();
+    //
+    // while (longiterator.hasNext())
+    // {
+    // final long posHash = longiterator.nextLong();
+    // final ChunkPos chunkpos1 = new ChunkPos(posHash);
+    // final IChunk ichunk = worldIn.getChunk(chunkpos1.x, chunkpos1.z);
+    // final StructureStart structurestart = ichunk.getStructureStart(s);
+    // if (structurestart != null && structurestart.isValid())
+    // for (final StructurePiece structurepiece :
+    // structurestart.getComponents())
+    // if (structurepiece.func_214810_a(chunkpos, 12) && structurepiece
+    // instanceof AbstractVillagePiece)
+    // {
+    // final AbstractVillagePiece abstractvillagepiece = (AbstractVillagePiece)
+    // structurepiece;
+    // final JigsawPattern.PlacementBehaviour jigsawpattern$placementbehaviour =
+    // abstractvillagepiece
+    // .getJigsawPiece().getPlacementBehaviour();
+    // if (jigsawpattern$placementbehaviour ==
+    // JigsawPattern.PlacementBehaviour.RIGID) pieces.add(
+    // abstractvillagepiece);
+    //
+    // for (final JigsawJunction jigsawjunction :
+    // abstractvillagepiece.getJunctions())
+    // {
+    // final int startX = jigsawjunction.getSourceX();
+    // final int startZ = jigsawjunction.getSourceZ();
+    // if (startX > x0 - 12 && startZ > z0 - 12 && startX < x0 + 15 + 12 &&
+    // startZ < z0 + 15 + 12)
+    // junctions.add(jigsawjunction);
+    // }
+    // }
+    // }
+    // }
+    // }
 
     @Override
     public void makeBase(final IWorld worldIn, final IChunk chunkIn)
@@ -256,7 +355,10 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
 
         final int imgX = this.map.shiftX(x0);
         final int imgZ = this.map.shiftX(z0);
-        final int scale = this.map.scale;
+        final int scale = this.map.getScale();
+
+        // Set up bases for villages, etc
+        // if (this.info.villages) this.initVillageBases(worldIn, chunkIn);
 
         // Block coordinates
         int x, y, z;
@@ -308,7 +410,7 @@ public class DorfChunkGenerator extends ChunkGenerator<DorfSettings>
     {
         x = this.map.shiftX(x);
         z = this.map.shiftX(z);
-        final int scale = this.map.scale;
+        final int scale = this.map.getScale();
 
         if (x < 0) x = 0;
         if (z < 0) z = 0;

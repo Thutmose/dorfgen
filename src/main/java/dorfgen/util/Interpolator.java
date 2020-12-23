@@ -1,5 +1,8 @@
 package dorfgen.util;
 
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.Biomes;
+
 public class Interpolator
 {
 
@@ -43,30 +46,30 @@ public class Interpolator
             return (int) Math.round(this.getValue(arr, x, y));
         }
 
-        public int interpolateBiome(final int[][] image, final int xAbs, final int yAbs, final int scale)
+        public Biome interpolateBiome(final Biome[][] biomeArr, final int xAbs, final int yAbs, final int scale)
         {
             final int pixelX = xAbs / scale;
             final int pixelY = yAbs / scale;
 
-            if (pixelX >= image.length || pixelY >= image[0].length) return 0;
+            if (pixelX >= biomeArr.length || pixelY >= biomeArr[0].length) return Biomes.DEFAULT;
 
-            int val = image[pixelX][pixelY];
+            Biome val = biomeArr[pixelX][pixelY];
             final double x = (xAbs - scale * pixelX) / (double) scale, y = (yAbs - scale * pixelY) / (double) scale;
 
             double max = -1;
             int index = -1;
-            final int[] biomes = new int[16];
+            final Biome[] biomes = new Biome[16];
             for (int i = -1; i < 3; i++)
                 for (int k = -1; k < 3; k++)
                 {
                     final int locX = pixelX + i;
                     final int locY = pixelY + k;
-                    if (locX >= 0 && locX < image.length && locY >= 0 && locY < image[0].length) biomes[i + 1 + (k + 1)
-                            * 4] = image[locX][locY];
+                    if (locX >= 0 && locX < biomeArr.length && locY >= 0 && locY < biomeArr[0].length) biomes[i + 1 + (k
+                            + 1) * 4] = biomeArr[locX][locY];
                 }
             for (int n = 0; n < 16; n++)
             {
-                final int num = biomes[n];
+                final Biome num = biomes[n];
                 final double[][] arr = new double[4][4];
                 for (int i = 0; i < 16; i++)
                     if (biomes[i] == num) arr[i % 4][i / 4] = 10;
@@ -79,7 +82,6 @@ public class Interpolator
                 }
             }
             if (index >= 0) val = biomes[index];
-
             return val;
         }
     }

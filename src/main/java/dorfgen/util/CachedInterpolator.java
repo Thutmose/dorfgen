@@ -51,31 +51,6 @@ public class CachedInterpolator extends BicubicInterpolator
         return this;
     }
 
-    public CachedInterpolator initBiome(final int[][] image, final int chunkX, final int chunkZ, final int size,
-            final int scale)
-    {
-        if (image == this.lastMap && chunkX == this.lastChunkX && chunkZ == this.lastChunkZ) return this;
-        this.lastMap = image;
-        this.lastChunkX = chunkX;
-        this.lastChunkZ = chunkZ;
-        this.map1.clear();
-        final int x0 = chunkX * 16 + 8;
-        final int z0 = chunkZ * 16 + 8;
-        for (int i = -size; i <= size; i++)
-            for (int k = -size; k <= size; k++)
-            {
-                final int x1 = x0 + size;
-                final int z1 = z0 + size;
-                if (x1 > 0 && z1 > 0 && x1 < image.length && z1 < image[0].length)
-                {
-                    final long key = x1 + (long) z1 * CachedInterpolator.ZOFFSET;
-                    final int value = this.interpolateBiome(image, x1, z1, scale);
-                    this.map1.put(key, value);
-                }
-            }
-        return this;
-    }
-
     @Override
     public int interpolate(final int[][] image, final int xAbs, final int yAbs, final int scale)
     {
@@ -124,15 +99,5 @@ public class CachedInterpolator extends BicubicInterpolator
         // that, so cap this at the minimum value found.
         num = (int) Math.round(this.getValue(arr, x, y));
         return Math.max(min, num);
-    }
-
-    @Override
-    public int interpolateBiome(final int[][] image, final int xAbs, final int yAbs, final int scale)
-    {
-        final long key = xAbs + (long) yAbs * CachedInterpolator.ZOFFSET;
-        if (this.map1.containsKey(key)) return this.map1.get(key);
-        final int value = super.interpolateBiome(image, xAbs, yAbs, scale);
-        this.map1.put(key, value);
-        return value;
     }
 }

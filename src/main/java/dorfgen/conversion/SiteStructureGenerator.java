@@ -80,51 +80,51 @@ public class SiteStructureGenerator
         boolean nearStruct = false;
         if (!nearStruct)
         {
-            nearStruct = structures.isStructure(x1 - 1, z1, this.dorfs.scale);
+            nearStruct = structures.isStructure(x1 - 1, z1, this.dorfs.getScale());
             if (nearStruct)
             {
-                final boolean t1 = !wall.isInWall(site, x1, z1 - 1, this.dorfs.scale);
-                final boolean t2 = !wall.isInWall(site, x1, z1 + 1, this.dorfs.scale);
+                final boolean t1 = !wall.isInWall(site, x1, z1 - 1, this.dorfs.getScale());
+                final boolean t2 = !wall.isInWall(site, x1, z1 + 1, this.dorfs.getScale());
                 surrounded = !(t1 || t2);
             }
         }
         if (!nearStruct)
         {
-            nearStruct = structures.isStructure(x1 + 1, z1, this.dorfs.scale);
+            nearStruct = structures.isStructure(x1 + 1, z1, this.dorfs.getScale());
             if (nearStruct)
             {
-                final boolean t1 = !wall.isInWall(site, x1, z1 - 1, this.dorfs.scale);
-                final boolean t2 = !wall.isInWall(site, x1, z1 + 1, this.dorfs.scale);
+                final boolean t1 = !wall.isInWall(site, x1, z1 - 1, this.dorfs.getScale());
+                final boolean t2 = !wall.isInWall(site, x1, z1 + 1, this.dorfs.getScale());
                 surrounded = !(t1 || t2);
             }
         }
         if (!nearStruct)
         {
-            nearStruct = structures.isStructure(x1, z1 - 1, this.dorfs.scale);
+            nearStruct = structures.isStructure(x1, z1 - 1, this.dorfs.getScale());
             if (nearStruct)
             {
-                final boolean t1 = !wall.isInWall(site, x1 - 1, z1, this.dorfs.scale);
-                final boolean t2 = !wall.isInWall(site, x1 + 1, z1, this.dorfs.scale);
+                final boolean t1 = !wall.isInWall(site, x1 - 1, z1, this.dorfs.getScale());
+                final boolean t2 = !wall.isInWall(site, x1 + 1, z1, this.dorfs.getScale());
                 surrounded = !(t1 || t2);
             }
         }
         if (!nearStruct)
         {
-            nearStruct = structures.isStructure(x1, z1 + 1, this.dorfs.scale);
+            nearStruct = structures.isStructure(x1, z1 + 1, this.dorfs.getScale());
             if (nearStruct)
             {
-                final boolean t1 = !wall.isInWall(site, x1 - 1, z1, this.dorfs.scale);
-                final boolean t2 = !wall.isInWall(site, x1 + 1, z1, this.dorfs.scale);
+                final boolean t1 = !wall.isInWall(site, x1 - 1, z1, this.dorfs.getScale());
+                final boolean t2 = !wall.isInWall(site, x1 + 1, z1, this.dorfs.getScale());
                 surrounded = !(t1 || t2);
             }
         }
         if (!nearStruct)
         {
 
-            if (surrounded) surrounded = wall.isInWall(site, x1 - 1, z1 - 1, this.dorfs.scale);
-            if (surrounded) surrounded = wall.isInWall(site, x1 + 1, z1 - 1, this.dorfs.scale);
-            if (surrounded) surrounded = wall.isInWall(site, x1 - 1, z1 + 1, this.dorfs.scale);
-            if (surrounded) surrounded = wall.isInWall(site, x1 + 1, z1 + 1, this.dorfs.scale);
+            if (surrounded) surrounded = wall.isInWall(site, x1 - 1, z1 - 1, this.dorfs.getScale());
+            if (surrounded) surrounded = wall.isInWall(site, x1 + 1, z1 - 1, this.dorfs.getScale());
+            if (surrounded) surrounded = wall.isInWall(site, x1 - 1, z1 + 1, this.dorfs.getScale());
+            if (surrounded) surrounded = wall.isInWall(site, x1 + 1, z1 + 1, this.dorfs.getScale());
 
         }
 
@@ -172,7 +172,7 @@ public class SiteStructureGenerator
         final int chunkZ = chunk.getPos().z;
         final int flag = 3;
         final int flag_torch = 3;
-        final int scale = this.dorfs.scale;
+        final int scale = this.dorfs.getScale();
         int x = chunkX, z = chunkZ, x1, x2, z1, z2;
         x *= 16;
         z *= 16;

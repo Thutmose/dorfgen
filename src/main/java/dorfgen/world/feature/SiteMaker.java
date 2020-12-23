@@ -29,7 +29,7 @@ public class SiteMaker
     {
         this.dorfs = map;
         this.structureGen = gen;
-        this.setScale(map.scale);
+        this.setScale(map.getScale());
     }
 
     public void setScale(final int scale)

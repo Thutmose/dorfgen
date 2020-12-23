@@ -82,11 +82,12 @@ public class Dorfgen
         final File configDir = FMLPaths.CONFIGDIR.get().resolve(Dorfgen.MODID).toFile();
         configDir.mkdirs();
 
+        int i = 0;
         for (final File subDir : configDir.listFiles())
         {
             if (!subDir.isDirectory()) continue;
             final Thread dorfProcess = new Thread(() -> new FileLoader(subDir));
-            dorfProcess.setName("dorfgen image processor");
+            dorfProcess.setName("dorfgen image processor " + i++);
             dorfProcess.start();
             this.mapThreads.add(dorfProcess);
         }
@@ -102,6 +103,10 @@ public class Dorfgen
         synchronized (this.maps)
         {
             Dorfgen.LOGGER.info("Addng DorfMap {} ({})", map.name, map.altName);
+            final long time = System.nanoTime();
+            map.biomeList.init(map);
+            final double dt = (System.nanoTime() - time) / 1e9;
+            Dorfgen.LOGGER.info(dt + " time taken to init this stupid map!");
             this.maps.put(map.name, map);
             this.mapList.add(map);
         }
@@ -109,7 +114,14 @@ public class Dorfgen
 
     public DorfMap getDorfs(final String name)
     {
-        return this.maps.get(name);
+        final DorfMap ret = this.maps.get(name);
+        if (ret == null)
+        {
+            Dorfgen.LOGGER.error("Unknown World name {}", name);
+            Dorfgen.LOGGER.error("Known Sites: {}", this.maps.keySet());
+            return this.getDorfs((IWorld) null);
+        }
+        return ret;
     }
 
     public DorfMap getDorfs(final IWorld world)

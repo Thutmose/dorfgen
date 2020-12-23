@@ -22,7 +22,7 @@ public class PathMaker
     {
         this.dorfs = map;
         this.structureGen = gen;
-        this.setScale(this.dorfs.scale);
+        this.setScale(this.dorfs.getScale());
     }
 
     public PathMaker setRespectsSites(final boolean respect)

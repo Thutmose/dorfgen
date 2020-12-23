@@ -109,9 +109,11 @@ public class FileLoader
             else if (!f.isDirectory())
             {
                 s = f.getAbsolutePath();
-                if (s.contains("-legends") && !s.contains("plus")) this.legends = s;
-                else if (s.contains("-legends_plus")) this.legendsPlus = s;
+                if (s.contains("-legends") && !s.contains("plus") && s.endsWith(".xml")) this.legends = s;
+                else if (s.contains("-legends_plus") && s.endsWith(".xml")) this.legendsPlus = s;
                 else if (s.contains("constructs.txt")) this.constructionFineCoords = s;
+                // sites is not needed for worlds after DF 0.47, as this info is
+                // in the legends.xml now
                 else if (s.contains("sites.txt")) this.siteInfo = s;
             }
         }
@@ -127,7 +129,7 @@ public class FileLoader
             if (!this.legends.contains("trunc"))
             {
                 MappedTruncate.ReadTruncateAndOutput(this.legends, this.legends.replace(".xml", "_trunc.xml"),
-                        "<artifacts>", "\n</df_world>", true);
+                        "</world_constructions>", "\n</df_world>", true);
                 this.legends = this.legends.replace(".xml", "_trunc.xml");
             }
             this.loadLegends(this.legends);
@@ -138,17 +140,20 @@ public class FileLoader
             if (!this.legendsPlus.contains("trunc"))
             {
                 MappedTruncate.ReadTruncateAndOutput(this.legendsPlus, this.legendsPlus.replace(".xml", "_trunc.xml"),
-                        "<artifacts>", "\n</df_world>", true);
+                        "</world_constructions>", "\n</df_world>", true);
                 this.legendsPlus = this.legendsPlus.replace(".xml", "_trunc.xml");
             }
             names = this.loadLegendsPlus(this.legendsPlus);
         }
         if (!this.constructionFineCoords.isEmpty()) this.loadFineConstructLocations(this.constructionFineCoords);
+        // sites is not needed for worlds after DF 0.47, as this info is
+        // in the legends.xml now
         if (!this.siteInfo.isEmpty()) this.loadSiteInfo(this.siteInfo);
 
         this.map.name = names.size() > 0 ? names.get(0) : name;
         this.map.altName = names.size() > 1 ? names.get(1) : name;
 
+        Dorfgen.LOGGER.info("Loading Images");
         this.map.images.biomeMap = this.getImage(this.biome);
         this.map.images.elevationMap = this.getImage(this.elevation);
         this.map.images.elevationWaterMap = this.getImage(this.elevationWater);
@@ -158,6 +163,7 @@ public class FileLoader
         this.map.images.drainageMap = this.getImage(this.drainage);
         this.map.images.rainMap = this.getImage(this.rain);
         this.map.images.volcanismMap = this.getImage(this.volcanism);
+        Dorfgen.LOGGER.info("Loaded Images");
 
         this.map.init();
         this.map.structureGen = new SiteStructureGenerator(this.map);
@@ -201,6 +207,7 @@ public class FileLoader
                 String typeName = null;
                 String name = null;
                 String coords = null;
+                String rectangle = null;
                 for (int j = 0; j < siteNode.getChildNodes().getLength(); j++)
                 {
                     final Node node = siteNode.getChildNodes().item(j);
@@ -209,13 +216,29 @@ public class FileLoader
                     if (nodeName.equals("name")) name = node.getFirstChild().getNodeValue();
                     if (nodeName.equals("type")) typeName = node.getFirstChild().getNodeValue();
                     if (nodeName.equals("coords")) coords = node.getFirstChild().getNodeValue();
+                    if (nodeName.equals("rectangle")) rectangle = node.getFirstChild().getNodeValue();
                 }
                 if (id == -1) continue;
                 final SiteType type = SiteType.getSite(typeName);
-                final String[] args = coords.split(",");
+
+                if (type == null)
+                {
+                    Dorfgen.LOGGER.error("Unknown Type: {}", typeName);
+                    continue;
+                }
+                String[] args = coords.split(",");
                 int x = Integer.parseInt(args[0]);
                 int z = Integer.parseInt(args[1]);
                 final Site site = new Site(this.map, name, id, type, x, z);
+
+                if (rectangle != null)
+                {
+                    args = rectangle.split(":");
+                    final String[] r0 = args[0].split(",");
+                    final String[] r1 = args[1].split(",");
+                    site.setSiteLocation(Integer.parseInt(r0[0]), Integer.parseInt(r0[1]), Integer.parseInt(r1[0]),
+                            Integer.parseInt(r1[1]));
+                }
                 if (this.sites.containsKey(id))
                 {
                     final BufferedImage image = this.sites.get(id);
@@ -244,7 +267,13 @@ public class FileLoader
                     if (nodeName.equals("name")) name = node.getFirstChild().getNodeValue();
                     if (nodeName.equals("type")) typeName = node.getFirstChild().getNodeValue();
                 }
-                final Region region = new Region(this.map, id, name, RegionType.valueOf(typeName.toUpperCase()));
+                final RegionType type = RegionType.valueOf(typeName.toUpperCase(Locale.ROOT));
+                if (type == null)
+                {
+                    Dorfgen.LOGGER.error("Unknown Region Type: {}", typeName);
+                    continue;
+                }
+                final Region region = new Region(this.map, id, name, type);
                 this.map.regionsById.put(id, region);
             }
 
@@ -265,8 +294,13 @@ public class FileLoader
                     if (nodeName.equals("type")) typeName = node.getFirstChild().getNodeValue();
                     if (nodeName.equals("depth")) depth = Integer.parseInt(node.getFirstChild().getNodeValue());
                 }
-
-                final Region region = new Region(this.map, id, name, depth, RegionType.valueOf(typeName.toUpperCase()));
+                final RegionType type = RegionType.valueOf(typeName.toUpperCase(Locale.ROOT));
+                if (type == null)
+                {
+                    Dorfgen.LOGGER.error("Unknown Region Type: {}", typeName);
+                    continue;
+                }
+                final Region region = new Region(this.map, id, name, depth, type);
                 this.map.ugRegionsById.put(id, region);
             }
         }
@@ -314,6 +348,7 @@ public class FileLoader
                                 StructureType structType = null;
                                 String name = "";
                                 String name2 = "";
+                                String typeName = "";
 
                                 for (int l = 0; l < structureList.getLength(); l++)
                                 {
@@ -322,7 +357,7 @@ public class FileLoader
                                             .getFirstChild().getNodeValue());
                                     if (subName.equals("type"))
                                     {
-                                        final String typeName = structureList.item(l).getFirstChild().getNodeValue();
+                                        typeName = structureList.item(l).getFirstChild().getNodeValue();
                                         for (final StructureType t : StructureType.values())
                                             if (t.name.equals(typeName))
                                             {
@@ -336,6 +371,11 @@ public class FileLoader
                                             .getNodeValue();
                                 }
                                 if (structId == -1) continue;
+                                if (structType == null)
+                                {
+                                    Dorfgen.LOGGER.error("Unknown Structure Type: {}", typeName);
+                                    continue;
+                                }
                                 toAdd.add(new Structure(this.map, name, name2, structId, structType));
                             }
                         }

@@ -69,18 +69,19 @@ public class DorfMap
     public BicubicInterpolator    miscInterpolator   = new BicubicInterpolator();
     public ImgHolder              images             = new ImgHolder();
     public SiteStructureGenerator structureGen;
-    public int                    scale              = Dorfgen.scale;
-    public int                    cubicHeightScale   = Dorfgen.cubicHeightScale;
-    public boolean                finite             = Dorfgen.finite;
-    public int                    yMin               = 0;
-    public BlockPos               spawn              = Dorfgen.spawn;
-    public BlockPos               shift              = Dorfgen.shift;
-    public String                 spawnSite          = Dorfgen.spawnSite;
-    public int                    seaLevel           = 73;
-    public String                 name               = "";
-    public String                 altName            = "";
-    public final File             mainDir;
-    public boolean                randomSpawn;
+
+    private int       scale            = Dorfgen.scale;
+    public int        cubicHeightScale = Dorfgen.cubicHeightScale;
+    public boolean    finite           = Dorfgen.finite;
+    public int        yMin             = 0;
+    public BlockPos   spawn            = Dorfgen.spawn;
+    public BlockPos   shift            = Dorfgen.shift;
+    public String     spawnSite        = Dorfgen.spawnSite;
+    public int        seaLevel         = 73;
+    public String     name             = "";
+    public String     altName          = "";
+    public final File mainDir;
+    public boolean    randomSpawn;
 
     public ISigmoid  sigmoid   = new ISigmoid()
                                {
@@ -107,6 +108,11 @@ public class DorfMap
     public void setScale(final int scale)
     {
         this.scale = scale;
+    }
+
+    public int getScale()
+    {
+        return this.scale;
     }
 
     public int shiftX(final int xAbs)
@@ -358,18 +364,26 @@ public class DorfMap
         return ret;
     }
 
+    public Region getRegionForPixel(int x, int z)
+    {
+        x /= 16;
+        z /= 16;
+        final int key = x + 2048 * z;
+        return this.regionsByCoord.get(key);
+    }
+
     public Region getRegionForCoords(int x, int z)
     {
-        x = this.shiftX(x) / (this.scale * 16);
-        z = this.shiftZ(z) / (this.scale * 16);
+        x = this.shiftX(x) / (this.getScale() * 16);
+        z = this.shiftZ(z) / (this.getScale() * 16);
         final int key = x + 2048 * z;
         return this.regionsByCoord.get(key);
     }
 
     public Region getUgRegionForCoords(int x, final int depth, int z)
     {
-        x = this.shiftX(x) / (this.scale * 16);
-        z = this.shiftZ(z) / (this.scale * 16);
+        x = this.shiftX(x) / (this.getScale() * 16);
+        z = this.shiftZ(z) / (this.getScale() * 16);
         final int key = x + 2048 * z + depth * 4194304;
         return this.ugRegionsByCoord.get(key);
     }
@@ -378,8 +392,8 @@ public class DorfMap
     {
         x = this.shiftX(x);
         z = this.shiftZ(z);
-        final int kx = x / this.scale;
-        final int kz = z / this.scale;
+        final int kx = x / this.getScale();
+        final int kz = z / this.getScale();
         final int key = kx + 8192 * kz;
         final Set<Site> ret = this.sitesByCoord.get(key);
         if (ret != null) for (final Site s : ret)
@@ -390,8 +404,8 @@ public class DorfMap
 
     public Set<WorldConstruction> getConstructionsForCoords(int x, int z)
     {
-        x = this.shiftX(x) / (this.scale * 16);
-        z = this.shiftZ(z) / (this.scale * 16);
+        x = this.shiftX(x) / (this.getScale() * 16);
+        z = this.shiftZ(z) / (this.getScale() * 16);
         final int key = x + 2048 * z;
         return this.constructionsByCoord.getOrDefault(key, Collections.emptySet());
     }
@@ -410,10 +424,11 @@ public class DorfMap
 
     public static enum SiteType
     {
-        CAVE("cave"), FORTRESS("fortress"), TOWN("town"), HIPPYHUTS("forest retreat"), DARKFORTRESS(
-                "dark fortress"), HAMLET("hamlet"), VAULT("vault"), DARKPITS("dark pits"), HILLOCKS("hillocks"), TOMB(
-                        "tomb"), TOWER("tower"), MOUNTAINHALLS("mountain halls"), CAMP("camp"), LAIR("lair"), SHRINE(
-                                "shrine"), LABYRINTH("labyrinth");
+        CAVE("cave"), FORTRESS("fortress"), MONASTARY("monastery"), FORT("fort"), CASTLE("castle"), TOWN(
+                "town"), HIPPYHUTS("forest retreat"), DARKFORTRESS("dark fortress"), HAMLET("hamlet"), VAULT(
+                        "vault"), DARKPITS("dark pits"), HILLOCKS("hillocks"), TOMB("tomb"), TOWER(
+                                "tower"), MOUNTAINHALLS("mountain halls"), CAMP("camp"), LAIR("lair"), SHRINE(
+                                        "shrine"), LABYRINTH("labyrinth");
 
         public final String name;
 
@@ -464,10 +479,10 @@ public class DorfMap
         public int[] getSiteMid()
         {
             final int[] mid = new int[2];
-            mid[0] = (this.map.unShiftX(this.corners[1][0] * this.map.scale) + this.map.unShiftX(this.corners[0][0]
-                    * this.map.scale)) / 2;
-            mid[1] = (this.map.unShiftZ(this.corners[0][1] * this.map.scale) + this.map.unShiftZ(this.corners[1][1]
-                    * this.map.scale)) / 2;
+            mid[0] = (this.map.unShiftX(this.corners[1][0] * this.map.getScale()) + this.map.unShiftX(this.corners[0][0]
+                    * this.map.getScale())) / 2;
+            mid[1] = (this.map.unShiftZ(this.corners[0][1] * this.map.getScale()) + this.map.unShiftZ(this.corners[1][1]
+                    * this.map.getScale())) / 2;
             return mid;
         }
 
@@ -487,10 +502,10 @@ public class DorfMap
         @Override
         public String toString()
         {
-            return this.name + " " + this.type + " " + this.id + " " + this.map.unShiftX(this.corners[0][0]
-                    * this.map.scale) + "," + this.map.unShiftZ(this.corners[0][1] * this.map.scale) + "->" + this.map
-                            .unShiftX(this.corners[1][0] * this.map.scale) + "," + this.map.unShiftZ(this.corners[1][1]
-                                    * this.map.scale);
+            return this.name + " " + this.type + " " + this.id + " " + this.map.unShiftX(this.corners[0][0] * this.map
+                    .getScale()) + "," + this.map.unShiftZ(this.corners[0][1] * this.map.getScale()) + "->" + this.map
+                            .unShiftX(this.corners[1][0] * this.map.getScale()) + "," + this.map.unShiftZ(
+                                    this.corners[1][1] * this.map.getScale());
         }
 
         @Override
@@ -508,22 +523,24 @@ public class DorfMap
 
         public boolean isInSite(final int x, final int z)
         {
-            final int width = this.rgbmap != null ? this.map.scale / 2 : 0;
-            if (x < this.corners[0][0] * this.map.scale + width || z < this.corners[0][1] * this.map.scale + width)
-                return false;
+            final int width = this.rgbmap != null ? this.map.getScale() / 2 : 0;
+            if (x < this.corners[0][0] * this.map.getScale() + width || z < this.corners[0][1] * this.map.getScale()
+                    + width) return false;
             if (this.rgbmap != null) // System.out.println("test");
                 // Equals as it starts at 0
-                if (x >= this.corners[0][0] * this.map.scale + this.rgbmap.length * this.map.scale
-                        / SiteStructureGenerator.SITETOBLOCK + this.map.scale / 2 || z >= this.corners[0][1]
-                                * this.map.scale + this.rgbmap[0].length * this.map.scale
-                                        / SiteStructureGenerator.SITETOBLOCK + this.map.scale / 2) return false;
+                if (x >= this.corners[0][0] * this.map.getScale() + this.rgbmap.length * this.map.getScale()
+                        / SiteStructureGenerator.SITETOBLOCK + this.map.getScale() / 2 || z >= this.corners[0][1]
+                                * this.map.getScale() + this.rgbmap[0].length * this.map.getScale()
+                                        / SiteStructureGenerator.SITETOBLOCK + this.map.getScale() / 2) return false;
             return true;
         }
     }
 
     public static enum StructureType
     {
-        MARKET("market"), UNDERWORLDSPIRE("underworld spire"), TEMPLE("temple");
+        MARKET("market"), UNDERWORLDSPIRE("underworld_spire"), TEMPLE("temple"), MEAD_HALL("mead_hall"), INN_TAVERN(
+                "inn_tavern"), KEEP("keep"), COUNTING_HOUSE("counting_house"), DUNGEON("dungeon"), TOWER("tower"), TOMB(
+                        "tomb"), GUILDHALL("guildhall"), LIBRARY("library");
 
         public final String name;
 
@@ -601,8 +618,8 @@ public class DorfMap
 
         public boolean isInRegion(int x, int z)
         {
-            x = this.map.shiftX(x) / (this.map.scale * 16);
-            z = this.map.shiftZ(z) / (this.map.scale * 16);
+            x = this.map.shiftX(x) / (this.map.getScale() * 16);
+            z = this.map.shiftZ(z) / (this.map.getScale() * 16);
             final int key = x + 2048 * z + this.depth * 4194304;
             return this.coords.contains(key);
         }
@@ -652,16 +669,16 @@ public class DorfMap
 
         public boolean isInRegion(int x, int z)
         {
-            x = this.map.shiftX(x) / (this.map.scale * 16);
-            z = this.map.shiftZ(z) / (this.map.scale * 16);
+            x = this.map.shiftX(x) / (this.map.getScale() * 16);
+            z = this.map.shiftZ(z) / (this.map.getScale() * 16);
             final int key = x + 2048 * z;
             return this.worldCoords.contains(key);
         }
 
         public int getYValue(int x, final int surfaceY, int z)
         {
-            x = this.map.shiftX(x) / this.map.scale;
-            z = this.map.shiftZ(z) / this.map.scale;
+            x = this.map.shiftX(x) / this.map.getScale();
+            z = this.map.shiftZ(z) / this.map.getScale();
             final int key = x + 8192 * z;
             if (!this.embarkCoords.containsKey(key)) return Integer.MIN_VALUE;
             final Integer i = this.embarkCoords.get(key);
@@ -672,8 +689,8 @@ public class DorfMap
 
         public boolean isInConstruct(int x, final int y, int z)
         {
-            x = this.map.shiftX(x) / this.map.scale;
-            z = this.map.shiftZ(z) / this.map.scale;
+            x = this.map.shiftX(x) / this.map.getScale();
+            z = this.map.shiftZ(z) / this.map.getScale();
             final int key = x + 8192 * z;
             return this.embarkCoords.containsKey(key);
         }
